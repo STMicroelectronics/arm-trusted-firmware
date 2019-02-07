@@ -1,0 +1,43 @@
+STMicroelectronics STM32MP1 Power Management Controller
+=======================================================
+
+The PWR IP is responsible for handling the power related resources such as
+clocks, power supplies and resets. It provides 6 wake-up pins that are handled
+by an interrupt-controller. Wake-up pin can be used to wake-up from STANDBY SoC
+state.
+
+Required properties:
+- compatible should be: "st,stm32mp1-pwr", "st,stm32-pwr"
+- reg: should be register base and length as documented in the
+  datasheet
+
+Optional Properties:
+- Nodes corresponding to PSCI commands issued by kernel:
+  - system_suspend_supported_soc_modes: list of supported SoC modes in suspend
+  - system_off_soc_mode: SoC mode for shutdown
+  - st,retram-enabled-in-standby-ddr-sr: enable retram during standby-ddr-sr
+
+The list of SoC modes is in include/dt-bindings/power/stm32mp1-power.h:
+  - modes for system_suspend
+	1 -> STM32_PM_CSTOP_ALLOW_STOP
+	2 -> STM32_PM_CSTOP_ALLOW_LP_STOP
+	3 -> STM32_PM_CSTOP_ALLOW_LPLV_STOP
+	4 -> STM32_PM_CSTOP_ALLOW_STANDBY_DDR_SR
+  - modes for system_off
+	6 -> STM32_PM_CSTOP_ALLOW_STANDBY_DDR_OFF
+	7 -> STM32_PM_SHUTDOWN
+
+Example:
+
+pwr: pwr@50001000 {
+	compatible = "st,stm32mp1-pwr", "st,stm32-pwr", "syscon", "simple-mfd";
+	reg = <0x50001000 0x400>;
+
+	system_suspend_supported_soc_modes = <
+		STM32_PM_CSLEEP_RUN
+		STM32_PM_CSTOP_ALLOW_LP_STOP
+		STM32_PM_CSTOP_ALLOW_STANDBY_DDR_SR
+	>;
+
+	system_off_soc_mode = <STM32_PM_CSTOP_ALLOW_STANDBY_DDR_OFF>;
+};

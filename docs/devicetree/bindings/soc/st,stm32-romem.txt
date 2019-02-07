@@ -1,0 +1,52 @@
+STMicroelectronics STM32 Factory-programmed data device tree bindings
+
+This represents STM32 Factory-programmed read only non-volatile area: locked
+flash, OTP, read-only HW regs... This contains various information such as:
+analog calibration data for temperature sensor (e.g. TS_CAL1, TS_CAL2),
+internal vref (VREFIN_CAL), unique device ID...
+
+Required properties:
+- compatible:		Should be one of:
+			"st,stm32f4-otp"
+			"st,stm32mp13-bsec"
+			"st,stm32mp15-bsec"
+- reg:			Offset and length of factory-programmed area.
+- #address-cells:	Should be '<1>'.
+- #size-cells:		Should be '<1>'.
+
+Optional Data cells:
+- Must be child nodes as described in nvmem.txt.
+
+Optional-properties:
+- "st,non-secure-otp" specifies that the OTP can be accessed by non-secure
+  world through secure world services. Only useful for upper OTPs. This
+  property mandates 32-bit granularity of the related nvmem area, that is
+  offset and length are both multiple of 4.
+
+Example on stm32f4:
+	romem: efuse@1fff7800 {
+		compatible = "st,stm32f4-otp";
+		reg = <0x1fff7800 0x400>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		/* Data cells: ts_cal1 at 0x1fff7a2c */
+		ts_cal1: calib@22c {
+			reg = <0x22c 0x2>;
+		};
+		...
+	};
+
+Example on stm32mp15:
+	bsec: efuse@5c005000 {
+		compatible = "st,stm32mp15-bsec";
+		reg = <0x5c005000 0x400>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		mac_addr: mac_addr@e4 {
+			reg = <0xe4 0x8>;
+			st,non-secure-otp;
+		};
+		...
+	};

@@ -1,0 +1,22 @@
+* STMicroelectronics STM32 SDMMC2 controller
+
+The highspeed MMC host controller on STM32 soc family
+provides an interface for MMC, SD and SDIO types of memory cards.
+
+This file documents differences between the core properties described
+by mmci.txt and the properties used by the sdmmc2 driver.
+
+Required properties:
+ - compatible: should be one of:
+   "st,stm32-sdmmc2"
+
+Example:
+	sdmmc1: sdmmc@0x58005000 {
+		compatible = "st,stm32-sdmmc2";
+		reg = <0x58005000 0x1000>;
+		clocks = <&rcc SDMMC1_K>;
+		resets = <&rcc SDMMC1_R>;
+		cap-sd-highspeed;
+		cap-mmc-highspeed;
+		status = "disabled";
+	};

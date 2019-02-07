@@ -1,0 +1,18 @@
+STMicroelectronics STM32 STGEN
+===============================
+
+The STM32 System Generic Counter generate a time count value. This
+is a 64 bits wide counter.
+
+Required properties:
+
+- compatible : Should be "st,stm32-stgen"
+- reg : Should be register base and length as documented in the datasheet
+
+Example:
+
+	stgen: stgen@5C008000 {
+		compatible = "st,stm32-stgen";
+		reg = <0x5C008000 0x1000>;
+		status = "okay";
+	};

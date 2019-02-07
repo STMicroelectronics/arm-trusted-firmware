@@ -1,0 +1,27 @@
+STM32 Independent WatchDoG (IWDG)
+---------------------------------
+
+Required properties:
+- compatible: should be "st,stm32mp1-iwdg".
+- reg: physical base address and length of the registers set for the device.
+- clocks: reference to the clock entry lsi. Additional pclk clock entry.
+  is required only for st,stm32mp1-iwdg.
+- clock-names: name of the clocks used.
+  "pclk", "lsi" for st,stm32mp1-iwdg.
+
+Optional properties:
+- timeout-sec: Watchdog timeout value in seconds.
+- secure-timeout-sec: Watchdog early timeout management in seconds.
+- stm32,enable-on-stop: Keep watchdog enable during stop.
+- stm32,enable-on-standby: Keep watchdog enable durung standby.
+
+Examples:
+
+iwdg2: iwdg@5a002000 {
+	compatible = "st,stm32mp1-iwdg";
+	reg = <0x5a002000 0x400>;
+	clocks = <&rcc IWDG2>, <&clk_lsi>;
+	clock-names = "pclk", "lsi";
+	instance = <2>;
+	timeout-sec = <30>;
+};

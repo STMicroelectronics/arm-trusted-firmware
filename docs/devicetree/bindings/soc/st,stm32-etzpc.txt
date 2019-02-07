@@ -1,0 +1,54 @@
+STM32 ETZPC
+---------------------------------
+
+Required properties:
+- compatible: should be "st,stm32-etzpc"
+- reg: physical base address and length of the registers set for the device
+- clocks: reference to the clock entry
+
+Optional property:
+- st,decprot: Configure option to properly set firewall for IPs.
+
+Examples:
+etzpc: etzpc@5C007000 {
+			compatible = "st,stm32-etzpc";
+			reg = <0x5C007000 0x400>;
+			clocks = <&rcc TZPC>;
+		};
+
+Firewall specifications
+=======================
+
+DECPROT macro must be used to properly configure IP firewalling. It must
+specify ID, domain and locking register status.
+
+The macro is defined in the binding header file [1].
+
+Example:
+	... {
+	st,decprot = <
+	DECPROT(STM32MP1_ETZPC_I2C4_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
+	DECPROT(STM32MP1_ETZPC_RNG1_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
+	DECPROT(STM32MP1_ETZPC_HASH1_ID, DECPROT_NS_RW,	DECPROT_UNLOCK)
+	DECPROT(STM32MP1_ETZPC_CRYP1_ID, DECPROT_NS_RW,	DECPROT_UNLOCK)
+	DECPROT(STM32MP1_ETZPC_GPIOZ_ID, DECPROT_NS_RW,	DECPROT_UNLOCK)>;
+	};
+
+Specify Peripheral IDs
+=======================
+
+Each peripheral is identified with a specific ID. Each platform defines the
+identifiers relevant to that platform. Peripheral IDs are defined in [1].
+
+Specify domain
+==============
+Firewall controls peripherals in specific domains:
+
+DECPROT_S_RW		0x0  -> Read/write Secure
+DECPROT_NS_R_S_W	0x1  -> Non secure read / Read/write Secure
+DECPROT_MCU_ISOLATION	0x2  -> MCU access only
+DECPROT_NS_RW		0x3  -> Non secure read/write
+
+
+[1] include/dt-bindings/soc/st,stm32-etzpc.h
+

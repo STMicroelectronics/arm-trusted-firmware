@@ -1,0 +1,94 @@
+* STMicroelectronics STPMIC1 Power Management IC
+
+Required parent device properties:
+- compatible:			"st,stpmic1"
+- reg:				The I2C slave address for the STPMIC1 chip.
+- interrupts:			The interrupt lines the device is connected to.
+				The second interrupt is used for wake-up.
+- #interrupt-cells:		Should be 2.
+- interrupt-controller: 	Describes the STPMIC1 as an interrupt
+  controller (has its own domain). Interrupt number are the following:
+	/* Interrupt Register 1 (0x50 for latch) */
+	IT_SWOUT_R=0
+	IT_SWOUT_F=1
+	IT_VBUS_OTG_R=2
+	IT_VBUS_OTG_F=3
+	IT_WAKEUP_R=4
+	IT_WAKEUP_F=5
+	IT_PONKEY_R=6
+	IT_PONKEY_F=7
+	/* Interrupt Register 2 (0x51 for latch) */
+	IT_OVP_BOOST=8
+	IT_OCP_BOOST=9
+	IT_OCP_SWOUT=10
+	IT_OCP_OTG=11
+	IT_CURLIM_BUCK4=12
+	IT_CURLIM_BUCK3=13
+	IT_CURLIM_BUCK2=14
+	IT_CURLIM_BUCK1=15
+	/* Interrupt Register 3 (0x52 for latch) */
+	IT_SHORT_SWOUT=16
+	IT_SHORT_SWOTG=17
+	IT_CURLIM_LDO6=18
+	IT_CURLIM_LDO5=19
+	IT_CURLIM_LDO4=20
+	IT_CURLIM_LDO3=21
+	IT_CURLIM_LDO2=22
+	IT_CURLIM_LDO1=23
+	/* Interrupt Register 3 (0x52 for latch) */
+	IT_SWIN_R=24
+	IT_SWIN_F=25
+	IT_RESERVED_1=26
+	IT_RESERVED_2=27
+	IT_VINLOW_R=28
+	IT_VINLOW_F=29
+	IT_TWARN_R=30
+	IT_TWARN_F=31
+
+STPMIC1 consists in a varied group of sub-devices.
+Each sub-device binding is be described in own documentation file.
+
+Device			 Description
+------			------------
+st,stpmic1-onkey	: Power on key, see ../input/st,stpmic1-onkey.txt
+st,stpmic1-regulators	: Regulators, see ../regulator/st,stpmic1-regulator.txt
+st,stpmic1-wdt		: Watchdog, see ../watchdog/st,stpmic1-wdt.txt
+
+Example:
+
+pmic: pmic@33 {
+	compatible = "st,stpmic1";
+	reg = <0x33>;
+	interrupt-parent = <&gpioa>;
+	interrupts = <0 2>;
+	interrupt-controller;
+	#interrupt-cells = <2>;
+
+	onkey {
+		compatible = "st,stpmic1-onkey";
+		interrupts = <IT_PONKEY_F 0>,<IT_PONKEY_R 1>;
+		interrupt-names = "onkey-falling", "onkey-rising";
+		power-off-time-sec = <10>;
+	};
+
+	watchdog {
+		compatible = "st,stpmic1-wdt";
+	};
+
+	regulators {
+		compatible = "st,stpmic1-regulators";
+
+		vdd_core: buck1 {
+			regulator-name = "vdd_core";
+			regulator-boot-on;
+			regulator-min-microvolt = <700000>;
+			regulator-max-microvolt = <1200000>;
+		};
+		vdd: buck3 {
+			regulator-name = "vdd";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-boot-on;
+			regulator-pull-down;
+		};
+	};

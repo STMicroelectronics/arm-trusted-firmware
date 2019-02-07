@@ -1,0 +1,20 @@
+STM32 TAMPER
+---------------------------------
+
+Required properties:
+- compatible: should be "st,stm32-tamp"
+- reg: physical base address and length of the registers set for the device
+- clocks: reference to the clock entry
+
+Optional property:
+- st,out3-pc13: Configure option register to map OUT3 on PC13
+- wakeup-source : Configure tamp as wakeup-src
+
+Examples:
+tamp: tamp@5C00A000 {
+	compatible = "st,stm32-tamp";
+	reg = <0x5C00A000 0x100>;
+	clocks = <&rcc_clk RTCAPB>;
+	st,out3-pc13;
+	wakeup-source;
+};

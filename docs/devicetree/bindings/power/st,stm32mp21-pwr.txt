@@ -1,0 +1,56 @@
+STMicroelectronics STM32MP21 Power Management Controller
+=======================================================
+
+The PWR IP is responsible for handling the power related resources such as
+clocks, power supplies and resets.
+When optional properties are absent, default values are used and those
+properties should be present only to overidde those values.
+
+Required properties:
+- compatible should be: "st,stm32mp21-pwr"
+- reg: should be register base and length as documented in the
+  datasheet
+- vddio(|[1-3]): sub-node for each VDD I/O description with valid name =
+  "vddio", "vddio1", "vddio2" and "vddio3".
+  The definition for each of these nodes is defined using the standard binding
+  for regulators at Documentation/devicetree/bindings/regulator/regulator.txt
+  or regulator.yaml, like "regulator-name", "regulator-min-microvolt",
+  "regulator-max-microvolt", "regulator-always-on"
+  - vdd-supply: Input supply phandle (VDD) for I/Os for "vddio" node
+  - vddio[1-3]-supply: Input supply phandle (VDIO1-4) for respectively
+                       "vddio1", "vddio2" and "vddio3" nodes,
+                       the I/Os independent from any other supply.
+
+Optional Properties:
+- st,popl-d1-ms : PWR_CPU_ON pulse low configuration (PWR_D1CR)
+- st,podh-d2-ms : PWR_ON delay high configuration (PWR_D2CR)
+- st,popl-d2-ms : PWR_ON pulse low configuration (PWR_D2CR)
+- st,lpcfg-d2 : PWR_ON pin configuration (PWR_D2CR)
+- st,lplvdly-d2 : LPLV delay value (PWR_D2CR), 3bits and with 6xLSI cycles unit
+                  (0:187 μs... 111:1.5 ms)
+- st,lpstop1dly-us: PWR_LP delay value in us for LP-Stop1 mode
+                    (RCC_PWRLPDLYCR.PWRLP_DLY)
+
+Example:
+
+pwr: pwr@44210000 {
+	compatible = "st,stm32mp21-pwr";
+	reg = <0x44210000 0x400>;
+
+	vddio1: vddio1 {
+		regulator-name = "vddio1";
+		vddio1-supply = <&vddio_sdcard>;
+	};
+	vddio2: vddio2 {
+		regulator-name = "vddio2";
+		vddio2-supply = <&v1v8>;
+	};
+	vddio3: vddio3 {
+		regulator-name = "vddio3";
+		vddio3-supply = <&vddio_pmic>;
+	};
+	vddio: vddio {
+		regulator-name = "vddio";
+		vdd-supply = <&vddio_pmic>;
+	};
+};

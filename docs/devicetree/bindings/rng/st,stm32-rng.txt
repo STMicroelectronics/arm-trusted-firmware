@@ -1,0 +1,30 @@
+STMicroelectronics STM32 HW RNG
+===============================
+
+The STM32 hardware random number generator is a simple fixed purpose IP and
+is fully separated from other crypto functions.
+
+Required properties:
+
+- compatible : Should be "st,stm32-rng"
+- reg : Should be register base and length as documented in the datasheet
+- clocks : The clock needed to enable the RNG
+
+Optional properties:
+- resets : The reset to properly start RNG
+- clock-error-detect : Enable the clock detection management
+- st,rng-cfg: The configuration bitfields to initialize the RNG. They must
+  be listed in the numerical order. If not specified, the default hard-coded
+  values will be used. Number of values depends on the presence of
+  st,rng-nist-custom property.
+- st,rng-cfg-nist-custom: Enable custom values for NIST compliant RNG.
+- st,rng-htcfg: The values to configure health tests. If not specified, the
+  default hard-coded values will be used.
+
+Example:
+
+	rng: rng@50060800 {
+		compatible = "st,stm32-rng";
+		reg = <0x50060800 0x400>;
+		clocks = <&rcc 0 38>;
+	};
