@@ -1,10 +1,11 @@
 /*
  * Copyright (c) 2016-2024, STMicroelectronics - All Rights Reserved
  *
- * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-License-Identifier: GPL-2.0+ OR BSD-3-Clause
  */
 
 #include <errno.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -39,14 +40,385 @@
 
 #define I2C_NSEC_PER_SEC	1000000000L
 
-/* I2C Timing hard-coded value, for I2C clock source is HSI at 64MHz */
-#define I2C_TIMING			0x10D07DB5
+/*
+ * struct i2c_spec_s - Private I2C timing specifications.
+ * @rate: I2C bus speed (Hz)
+ * @fall_max: Max fall time of both SDA and SCL signals (ns)
+ * @rise_max: Max rise time of both SDA and SCL signals (ns)
+ * @hddat_min: Min data hold time (ns)
+ * @vddat_max: Max data valid time (ns)
+ * @sudat_min: Min data setup time (ns)
+ * @l_min: Min low period of the SCL clock (ns)
+ * @h_min: Min high period of the SCL clock (ns)
+ */
+struct i2c_spec_s {
+	uint32_t rate;
+	uint32_t fall_max;
+	uint32_t rise_max;
+	uint32_t hddat_min;
+	uint32_t vddat_max;
+	uint32_t sudat_min;
+	uint32_t l_min;
+	uint32_t h_min;
+};
+
+/*
+ * struct i2c_timing_s - Private I2C output parameters.
+ * @scldel: Data setup time
+ * @sdadel: Data hold time
+ * @sclh: SCL high period (master mode)
+ * @sclh: SCL low period (master mode)
+ * @is_saved: True if relating to a configuration candidate
+ */
+struct i2c_timing_s {
+	uint8_t scldel;
+	uint8_t sdadel;
+	uint8_t sclh;
+	uint8_t scll;
+	bool is_saved;
+};
+
+/*
+ * I2C specification values as per version 6.0, 4th of April 2014 [1],
+ * table 10 page 48: Characteristics of the SDA and SCL bus lines for
+ * Standard, Fast, and Fast-mode Plus I2C-bus devices.
+ *
+ * [1] https://www.i2c-bus.org/specification/
+ */
+static const struct i2c_spec_s i2c_specs[] = {
+	/* Standard - 100KHz */
+	{
+		.rate = STANDARD_RATE,
+		.fall_max = 300,
+		.rise_max = 1000,
+		.hddat_min = 0,
+		.vddat_max = 3450,
+		.sudat_min = 250,
+		.l_min = 4700,
+		.h_min = 4000,
+	},
+	/* Fast - 400KHz */
+	{
+		.rate = FAST_RATE,
+		.fall_max = 300,
+		.rise_max = 300,
+		.hddat_min = 0,
+		.vddat_max = 900,
+		.sudat_min = 100,
+		.l_min = 1300,
+		.h_min = 600,
+	},
+	/* FastPlus - 1MHz */
+	{
+		.rate = FAST_PLUS_RATE,
+		.fall_max = 100,
+		.rise_max = 120,
+		.hddat_min = 0,
+		.vddat_max = 450,
+		.sudat_min = 50,
+		.l_min = 500,
+		.h_min = 260,
+	},
+};
+
 
 static void notif_i2c_timeout(struct i2c_handle_s *hi2c)
 {
 	hi2c->i2c_err |= I2C_ERROR_TIMEOUT;
 	hi2c->i2c_mode = I2C_MODE_NONE;
 	hi2c->i2c_state = I2C_STATE_READY;
+}
+
+static const struct i2c_spec_s *get_specs(uint32_t rate)
+{
+	size_t i;
+
+	for (i = 0U; i < ARRAY_SIZE(i2c_specs); i++) {
+		if (rate <= i2c_specs[i].rate) {
+			return &i2c_specs[i];
+		}
+	}
+
+	/* NOT REACHED */
+	return NULL;
+}
+
+#define RATE_MIN(rate)	(((rate) / 100U) * 80U)
+/*
+ * @brief  Compute the I2C device timings.
+ * @param  init: Ref to the initialization configuration structure
+ * @param  clock_src: I2C clock source frequency (Hz)
+ * @param  timing: Pointer to the final computed timing result
+ * @retval 0 if OK, negative value else
+ */
+static int i2c_compute_timing(struct stm32_i2c_init_s *init,
+			      uint32_t clock_src, uint32_t *timing)
+{
+	const struct i2c_spec_s *specs;
+	uint32_t speed_freq;
+	uint32_t i2cclk = udiv_round_nearest(I2C_NSEC_PER_SEC, clock_src);
+	uint32_t i2cbus;
+	uint32_t p_prev = I2C_TIMINGR_PRESC_MAX;
+	uint32_t af_delay_min;
+	uint32_t af_delay_max;
+	uint32_t dnf_delay;
+	uint32_t tsync;
+	uint32_t clk_min;
+	uint32_t clk_max;
+	int clk_error_prev;
+	uint16_t p;
+	uint16_t l;
+	uint16_t a;
+	uint16_t h;
+	int sdadel_min;
+	int sdadel_max;
+	uint32_t sdadel_min_u;
+	uint32_t sdadel_max_u;
+	uint32_t scldel_min;
+	int s = -1;
+	struct i2c_timing_s solutions[I2C_TIMINGR_PRESC_MAX];
+
+	specs = get_specs(init->bus_rate);
+	if (specs == NULL) {
+		ERROR("I2C speed out of bound {%u}\n", init->bus_rate);
+		return -EINVAL;
+	}
+
+	speed_freq = specs->rate;
+	i2cbus = udiv_round_nearest(I2C_NSEC_PER_SEC, speed_freq);
+	clk_error_prev = INT_MAX;
+
+	if ((init->rise_time > specs->rise_max) ||
+	    (init->fall_time > specs->fall_max)) {
+		ERROR(" I2C timings out of bound Rise{%u>%u}/Fall{%u>%u}\n",
+		      init->rise_time, specs->rise_max,
+		      init->fall_time, specs->fall_max);
+		return -EINVAL;
+	}
+
+	if (init->digital_filter_coef > STM32_I2C_DIGITAL_FILTER_MAX) {
+		ERROR("DNF out of bound %u/%u\n",
+		      init->digital_filter_coef, STM32_I2C_DIGITAL_FILTER_MAX);
+		return -EINVAL;
+	}
+
+	/*  Analog and Digital Filters */
+	af_delay_min = (init->analog_filter ?
+			STM32_I2C_ANALOG_FILTER_DELAY_MIN : 0);
+	af_delay_max = (init->analog_filter ?
+			STM32_I2C_ANALOG_FILTER_DELAY_MAX : 0);
+	dnf_delay = init->digital_filter_coef * i2cclk;
+
+	sdadel_min = specs->hddat_min + init->fall_time -
+		     af_delay_min - ((init->digital_filter_coef + 3) * i2cclk);
+
+	sdadel_max = specs->vddat_max - init->rise_time -
+		     af_delay_max - ((init->digital_filter_coef + 4) * i2cclk);
+
+	scldel_min = init->rise_time + specs->sudat_min;
+
+	if (sdadel_min < 0) {
+		sdadel_min_u = 0;
+	} else {
+		sdadel_min_u = (uint32_t)sdadel_min;
+	}
+
+	if (sdadel_max < 0) {
+		sdadel_max_u = 0;
+	} else {
+		sdadel_max_u = (uint32_t)sdadel_max;
+	}
+
+	VERBOSE("I2C SDADEL(min/max): %u/%u, SCLDEL(Min): %u\n",
+		sdadel_min_u, sdadel_max_u, scldel_min);
+
+	zeromem(&solutions, sizeof(solutions));
+
+	/* Compute possible values for PRESC, SCLDEL and SDADEL */
+	for (p = 0; p < I2C_TIMINGR_PRESC_MAX; p++) {
+		for (l = 0; l < I2C_TIMINGR_SCLDEL_MAX; l++) {
+			uint32_t scldel = (l + 1) * (p + 1) * i2cclk;
+
+			if (scldel < scldel_min) {
+				continue;
+			}
+
+			for (a = 0; a < I2C_TIMINGR_SDADEL_MAX; a++) {
+				uint32_t sdadel = (a * (p + 1) + 1) * i2cclk;
+
+				if ((sdadel >= sdadel_min_u) &&
+				    (sdadel <= sdadel_max_u) &&
+				    (p != p_prev)) {
+					solutions[p].scldel = l;
+					solutions[p].sdadel = a;
+					solutions[p].is_saved = true;
+					p_prev = p;
+					break;
+				}
+			}
+
+			if (p_prev == p) {
+				break;
+			}
+		}
+	}
+
+	if (p_prev == I2C_TIMINGR_PRESC_MAX) {
+		ERROR(" I2C no Prescaler solution\n");
+		return -EPERM;
+	}
+
+	tsync = af_delay_min + dnf_delay + (2 * i2cclk);
+	clk_max = I2C_NSEC_PER_SEC / RATE_MIN(specs->rate);
+	clk_min = I2C_NSEC_PER_SEC / specs->rate;
+
+	/*
+	 * Among prescaler possibilities discovered above figures out SCL Low
+	 * and High Period. Provided:
+	 * - SCL Low Period has to be higher than Low Period of the SCL Clock
+	 *   defined by I2C Specification. I2C Clock has to be lower than
+	 *   (SCL Low Period - Analog/Digital filters) / 4.
+	 * - SCL High Period has to be lower than High Period of the SCL Clock
+	 *   defined by I2C Specification.
+	 * - I2C Clock has to be lower than SCL High Period.
+	 */
+	for (p = 0; p < I2C_TIMINGR_PRESC_MAX; p++) {
+		uint32_t prescaler = (p + 1) * i2cclk;
+
+		if (!solutions[p].is_saved) {
+			continue;
+		}
+
+		for (l = 0; l < I2C_TIMINGR_SCLL_MAX; l++) {
+			uint32_t tscl_l = ((l + 1) * prescaler) + tsync;
+
+			if ((tscl_l < specs->l_min) ||
+			    (i2cclk >=
+			     ((tscl_l - af_delay_min - dnf_delay) / 4))) {
+				continue;
+			}
+
+			for (h = 0; h < I2C_TIMINGR_SCLH_MAX; h++) {
+				uint32_t tscl_h = ((h + 1) * prescaler) + tsync;
+				uint32_t tscl = tscl_l + tscl_h +
+						init->rise_time +
+						init->fall_time;
+
+				if ((tscl >= clk_min) && (tscl <= clk_max) &&
+				    (tscl_h >= specs->h_min) &&
+				    (i2cclk < tscl_h)) {
+					int clk_error = tscl - i2cbus;
+
+					if (clk_error < 0) {
+						clk_error = -clk_error;
+					}
+
+					if (clk_error < clk_error_prev) {
+						clk_error_prev = clk_error;
+						solutions[p].scll = l;
+						solutions[p].sclh = h;
+						s = p;
+					}
+				}
+			}
+		}
+	}
+
+	if (s < 0) {
+		ERROR(" I2C no solution at all\n");
+		return -EPERM;
+	}
+
+	/* Finalize timing settings */
+	*timing = I2C_SET_TIMINGR_PRESC(s) |
+		  I2C_SET_TIMINGR_SCLDEL(solutions[s].scldel) |
+		  I2C_SET_TIMINGR_SDADEL(solutions[s].sdadel) |
+		  I2C_SET_TIMINGR_SCLH(solutions[s].sclh) |
+		  I2C_SET_TIMINGR_SCLL(solutions[s].scll);
+
+	VERBOSE("I2C TIMINGR (PRESC/SCLDEL/SDADEL): %i/%i/%i\n",
+		s, solutions[s].scldel, solutions[s].sdadel);
+	VERBOSE("I2C TIMINGR (SCLH/SCLL): %i/%i\n",
+		solutions[s].sclh, solutions[s].scll);
+	VERBOSE("I2C TIMINGR: 0x%x\n", *timing);
+
+	return 0;
+}
+
+static uint32_t get_lower_rate(uint32_t rate)
+{
+	int i;
+
+	for (i = ARRAY_SIZE(i2c_specs) - 1; i >= 0; i--) {
+		if (rate > i2c_specs[i].rate) {
+			return i2c_specs[i].rate;
+		}
+	}
+
+	return i2c_specs[0].rate;
+}
+
+/*
+ * @brief  Setup the I2C device timings.
+ * @param  hi2c: Pointer to a struct i2c_handle_s structure that contains
+ *               the configuration information for the specified I2C.
+ * @param  init: Ref to the initialization configuration structure
+ * @param  timing: Pointer to the final computed timing result
+ * @retval 0 if OK, negative value else
+ */
+static int i2c_setup_timing(struct i2c_handle_s *hi2c,
+			    struct stm32_i2c_init_s *init,
+			    uint32_t *timing)
+{
+	int rc = 0;
+	uint32_t clock_src;
+
+	clock_src = (uint32_t)clk_get_rate(hi2c->clock);
+	if (clock_src == 0U) {
+		ERROR("I2C clock rate is 0\n");
+		return -EINVAL;
+	}
+
+	/*
+	 * If the timing has already been computed, and the frequency is the
+	 * same as when it was computed, then use the saved timing.
+	 */
+	if (clock_src == hi2c->saved_frequency) {
+		*timing = hi2c->saved_timing;
+		return 0;
+	}
+
+	do {
+		rc = i2c_compute_timing(init, clock_src, timing);
+		if (rc != 0) {
+			ERROR("Failed to compute I2C timings\n");
+			if (init->bus_rate > STANDARD_RATE) {
+				init->bus_rate = get_lower_rate(init->bus_rate);
+				WARN("Downgrade I2C speed to %uHz)\n",
+				     init->bus_rate);
+			} else {
+				break;
+			}
+		}
+	} while (rc != 0);
+
+	if (rc != 0) {
+		ERROR("Impossible to compute I2C timings\n");
+		return rc;
+	}
+
+	VERBOSE("I2C Freq(%u), Clk Source(%u)\n",
+		init->bus_rate, clock_src);
+	VERBOSE("I2C Rise(%u) and Fall(%u) Time\n",
+		init->rise_time, init->fall_time);
+	VERBOSE("I2C Analog Filter(%s), DNF(%u)\n",
+		(init->analog_filter ? "On" : "Off"),
+		init->digital_filter_coef);
+
+	hi2c->saved_timing = *timing;
+	hi2c->saved_frequency = clock_src;
+
+	return 0;
 }
 
 /*
@@ -109,18 +481,12 @@ int stm32_i2c_get_setup_from_fdt(void *fdt, int node,
 
 	read_val = fdt_read_uint32_default(fdt, node, "clock-frequency",
 					   STANDARD_RATE);
-	switch (read_val) {
-	case FAST_PLUS_RATE:
-		init->speed_mode = I2C_SPEED_FAST_PLUS;
-		break;
-	case FAST_RATE:
-		init->speed_mode = I2C_SPEED_FAST;
-		break;
-	case STANDARD_RATE:
-	default:
-		init->speed_mode = I2C_SPEED_STANDARD;
-		break;
+	if (read_val > FAST_PLUS_RATE) {
+		ERROR("Invalid bus speed (%u > %u)\n", read_val,
+		      FAST_PLUS_RATE);
+		return -FDT_ERR_BADVALUE;
 	}
+	init->bus_rate = read_val;
 
 	return dt_set_pinctrl_config(node);
 }
@@ -136,7 +502,7 @@ int stm32_i2c_init(struct i2c_handle_s *hi2c,
 		   struct stm32_i2c_init_s *init_data)
 {
 	int rc = 0;
-	uint32_t timing = I2C_TIMING;
+	uint32_t timing;
 
 	if (hi2c == NULL) {
 		return -ENOENT;
@@ -147,6 +513,11 @@ int stm32_i2c_init(struct i2c_handle_s *hi2c,
 	}
 
 	hi2c->i2c_state = I2C_STATE_BUSY;
+
+	rc = i2c_setup_timing(hi2c, init_data, &timing);
+	if (rc != 0) {
+		return rc;
+	}
 
 	clk_enable(hi2c->clock);
 
@@ -968,4 +1339,3 @@ bail:
 
 	return rc;
 }
-
