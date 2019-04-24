@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023, STMicroelectronics - All Rights Reserved
+ * Copyright (C) 2018-2025, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: GPL-2.0+ OR BSD-3-Clause
  */
@@ -22,12 +22,14 @@
 #include <platform_def.h>
 
 static struct stm32mp_ddr_priv ddr_priv_data;
+static bool ddr_self_refresh;
 
 int stm32mp1_ddr_clk_enable(struct stm32mp_ddr_priv *priv, uint32_t mem_speed)
 {
 	unsigned long ddrphy_clk, ddr_clk, mem_speed_hz;
 
-	ddr_enable_clock();
+	/* Enable all clocks, including DDRPHY */
+	ddr_enable_clock(true);
 
 	ddrphy_clk = clk_get_rate(DDRPHYC);
 
@@ -57,7 +59,6 @@ static int stm32mp1_ddr_setup(void)
 	struct stm32mp_ddr_config config;
 	int node;
 	uintptr_t uret;
-	size_t retsize;
 	void *fdt;
 
 	const struct stm32mp_ddr_param param[] = {
@@ -89,6 +90,13 @@ static int stm32mp1_ddr_setup(void)
 		return ret;
 	}
 
+	config.self_refresh = false;
+
+	if (stm32mp_is_wakeup_from_standby()) {
+		config.self_refresh = true;
+		config.zdata = stm32_get_zdata_from_context();
+	}
+
 	/* Disable axidcg clock gating during init */
 	mmio_clrbits_32(priv->rcc + RCC_DDRITFCR, RCC_DDRITFCR_AXIDCGEN);
 
@@ -106,34 +114,63 @@ static int stm32mp1_ddr_setup(void)
 		panic();
 	}
 
-	uret = stm32mp_ddr_test_data_bus();
-	if (uret != 0UL) {
-		ERROR("DDR data bus test: can't access memory @ 0x%lx\n",
-		      uret);
-		panic();
+	if (config.self_refresh) {
+		uret = stm32mp_ddr_test_rw_access();
+		if (uret != 0UL) {
+			ERROR("DDR rw test: Can't access memory @ 0x%lx\n",
+			      uret);
+			panic();
+		}
+	} else {
+		size_t retsize;
+
+		uret = stm32mp_ddr_test_data_bus();
+		if (uret != 0UL) {
+			ERROR("DDR data bus test: can't access memory @ 0x%lx\n",
+			      uret);
+			panic();
+		}
+
+		uret = stm32mp_ddr_test_addr_bus(config.info.size);
+		if (uret != 0UL) {
+			ERROR("DDR addr bus test: can't access memory @ 0x%lx\n",
+			      uret);
+			panic();
+		}
+
+		retsize = stm32mp_ddr_check_size();
+		if (retsize < config.info.size) {
+			ERROR("DDR size: 0x%zx does not match DT config: 0x%zx\n",
+			      retsize, config.info.size);
+			panic();
+		}
+
+		INFO("Memory size = 0x%zx (%zu MB)\n", retsize, retsize / (1024U * 1024U));
 	}
 
-	uret = stm32mp_ddr_test_addr_bus(config.info.size);
-	if (uret != 0UL) {
-		ERROR("DDR addr bus test: can't access memory @ 0x%lx\n",
-		      uret);
-		panic();
-	}
-
-	retsize = stm32mp_ddr_check_size();
-	if (retsize < config.info.size) {
-		ERROR("DDR size: 0x%zx does not match DT config: 0x%zx\n",
-		      retsize, config.info.size);
-		panic();
-	}
-
-	INFO("Memory size = 0x%zx (%zu MB)\n", retsize, retsize / (1024U * 1024U));
+	/*
+	 * Initialization sequence has configured DDR registers with settings.
+	 * The Self Refresh (SR) mode corresponding to these settings has now
+	 * to be set.
+	 */
+	ddr_set_sr_mode(ddr_read_sr_mode());
 
 	if (stm32mp_unmap_ddr() != 0) {
 		panic();
 	}
 
+	/* Save DDR self_refresh state */
+	ddr_self_refresh = config.self_refresh;
+
+	/* Flush the value that will be used during MMU OFF sequence */
+	flush_dcache_range((uintptr_t)&ddr_self_refresh, sizeof(ddr_self_refresh));
+
 	return 0;
+}
+
+bool stm32mp1_ddr_is_restored(void)
+{
+	return ddr_self_refresh;
 }
 
 int stm32mp1_ddr_probe(void)

@@ -18,6 +18,8 @@
 #ifndef __ASSEMBLER__
 #include <drivers/st/bsec.h>
 #include <drivers/st/stm32mp1_clk.h>
+#include <drivers/st/stm32mp1_ddr_regs.h>
+#include <drivers/st/stm32mp1_pwr.h>
 
 #include <boot_api.h>
 #include <stm32mp_common.h>

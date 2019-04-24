@@ -8,7 +8,6 @@
 #define STM32MP1_DDR_H
 
 #include <stdbool.h>
-#include <stdint.h>
 
 #include <drivers/st/stm32mp_ddr.h>
 
@@ -126,6 +125,8 @@ struct stm32mp_ddr_config {
 	struct stm32mp1_ddrctrl_perf c_perf;
 	struct stm32mp1_ddrphy_reg p_reg;
 	struct stm32mp1_ddrphy_timing p_timing;
+	bool self_refresh;
+	uint32_t zdata;
 };
 
 int stm32mp1_ddr_clk_enable(struct stm32mp_ddr_priv *priv, uint32_t mem_speed);
