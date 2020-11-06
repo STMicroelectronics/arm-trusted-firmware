@@ -145,6 +145,31 @@ uint32_t stm32_get_zdata_from_context(void)
 	return zdata;
 }
 
+bool stm32_pm_context_is_valid(void)
+{
+	struct backup_data_s *backup_data;
+	bool ret;
+
+	clk_enable(BKPSRAM);
+
+	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
+
+	switch (MAGIC_ID(backup_data->magic)) {
+	case MAILBOX_MAGIC_V1:
+	case MAILBOX_MAGIC_V2:
+	case MAILBOX_MAGIC_V3:
+		ret = true;
+		break;
+	default:
+		ret = false;
+		break;
+	}
+
+	clk_disable(BKPSRAM);
+
+	return ret;
+}
+
 void stm32_restore_ddr_training_area(void)
 {
 	struct backup_data_s *backup_data;

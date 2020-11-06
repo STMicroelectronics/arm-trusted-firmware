@@ -697,7 +697,7 @@ bool stm32mp_is_wakeup_from_standby(void)
 	}
 #endif
 
-	return true;
+	return stm32_pm_context_is_valid();
 #else /* STM32MP_SUPPORT_PM */
 	return false;
 #endif /* STM32MP_SUPPORT_PM */
