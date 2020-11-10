@@ -47,6 +47,7 @@ static struct dfu_state dfu_state;
 		} \
 	}
 
+#if !STM32MP_SSP
 static bool is_valid_header(fip_toc_header_t *header)
 {
 	if ((header->name == TOC_HEADER_NAME) && (header->serial_number != 0U)) {
@@ -55,6 +56,7 @@ static bool is_valid_header(fip_toc_header_t *header)
 
 	return false;
 }
+#endif
 
 static int dfu_callback_upload(uint8_t alt, uintptr_t *buffer, uint32_t *len,
 			       void *user_data)
@@ -225,13 +227,12 @@ int stm32cubeprog_usb_ssp(struct usb_handle *usb_core_handle,
 	}
 
 	if (cert_base == UNDEFINED_DOWN_ADDR) {
-		dfu_state_t *dfu = (dfu_state_t *)usb_core_handle->user_data;
+		struct dfu_state *dfu = (struct dfu_state *)usb_core_handle->user_data;
 
 		/* Send Provisioning message to programmer for reboot */
 		DFU_ERROR("Provisioning\n");
 	} else {
 		dfu_state.phase = PHASE_SSP;
-		dfu_state.image_id = MAX_IMAGE_IDS;
 		dfu_state.address = ssp_base;
 		dfu_state.base = ssp_base;
 		dfu_state.len = ssp_len;

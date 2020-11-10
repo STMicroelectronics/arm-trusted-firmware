@@ -1,0 +1,98 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause)
+/*
+ * Copyright (C) STMicroelectronics 2020 - All Rights Reserved
+ */
+
+/ {
+	cpus {
+		/delete-node/ cpu@1;
+	};
+
+#if STM32MP_USB_PROGRAMMER
+	aliases {
+		/delete-property/ serial1;
+		/delete-property/ serial2;
+		/delete-property/ serial3;
+	};
+#endif
+
+	/delete-node/ cpu0_opp_table;
+	/delete-node/ psci;
+
+	soc {
+		efuse@5c005000 {
+			cfg2_otp: cfg2_otp@8 {
+				reg = <0x8 0x4>;
+			};
+
+			ssp_otp: ssp_otp@20 {
+				reg = <0x20 0x4>;
+			};
+
+			chip_otp: chip_otp@a0 {
+				reg = <0xa0 0x40>;
+			};
+
+			rma_otp: rma_otp@e0 {
+				reg = <0xe0 0x4>;
+			};
+		};
+
+		/delete-node/ timer@40006000;
+#if STM32MP_USB_PROGRAMMER
+		/delete-node/ serial@4000e000;
+		/delete-node/ serial@4000f000;
+		/delete-node/ serial@40011000;
+		/delete-node/ serial@40018000;
+		/delete-node/ serial@40019000;
+		/delete-node/ serial@44003000;
+#endif
+		/delete-node/ timer@44006000;
+#if STM32MP_UART_PROGRAMMER
+		/delete-node/ usb-otg@49000000;
+#endif
+		/delete-node/ pwr_mcu@50001014;
+		/delete-node/ cryp@54001000;
+		/delete-node/ rng@54003000;
+		/delete-node/ memory-controller@58002000;
+		/delete-node/ spi@58003000;
+		/delete-node/ mmc@58005000;
+		/delete-node/ mmc@58007000;
+		/delete-node/ ddr@5a003000;
+#if STM32MP_UART_PROGRAMMER
+		/delete-node/ usbphyc@5a006000;
+#endif
+#if STM32MP_USB_PROGRAMMER
+		/delete-node/ serial@5c000000;
+#endif
+		/delete-node/ spi@5c001000;
+		/delete-node/ rtc@5c004000;
+		/delete-node/ etzpc@5c007000;
+		/delete-node/ stgen@5c008000;
+		/delete-node/ i2c@5c009000;
+		/delete-node/ tamp@5c00a000;
+
+		pinctrl@50002000 {
+			/delete-node/ fmc-0;
+			/delete-node/ qspi-clk-0;
+			/delete-node/ qspi-bk1-0;
+			/delete-node/ qspi-bk2-0;
+			/delete-node/ sdmmc1-b4-0;
+			/delete-node/ sdmmc1-dir-0;
+			/delete-node/ sdmmc2-b4-0;
+			/delete-node/ sdmmc2-b4-1;
+			/delete-node/ sdmmc2-d47-0;
+#if STM32MP_USB_PROGRAMMER
+			/delete-node/ uart7-0;
+			/delete-node/ uart7-1;
+			/delete-node/ usart2-0;
+			/delete-node/ usart3-0;
+			/delete-node/ usart3-1;
+#endif
+#if STM32MP_UART_PROGRAMMER
+			/delete-node/ usbotg_hs-0;
+			/delete-node/ usbotg-fs-dp-dm-0;
+#endif
+		};
+	};
+};

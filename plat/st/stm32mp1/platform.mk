@@ -87,6 +87,9 @@ endif
 PKA_USE_NIST_P256	?=	0
 PKA_USE_BRAINPOOL_P256T1 ?=	0
 
+# STM32 Secure Secret Provisioning mode (SSP)
+STM32MP_SSP		?=	0
+
 # Disable Neon support: runtime may conflict with non-secure world
 TF_CFLAGS		+=	-mfloat-abi=soft
 
@@ -180,6 +183,7 @@ $(eval $(call assert_booleans,\
 		STM32MP_CRYPTO_USE_SW \
 		STM32MP_DDR_32BIT_INTERFACE \
 		STM32MP_DDR_DUAL_AXI_PORT \
+		STM32MP_SSP \
 		STM32MP_STPMIC1L \
 		STM32MP_USE_EXTERNAL_HEAP \
 		STM32MP13 \
@@ -215,6 +219,7 @@ $(eval $(call add_defines,\
 		STM32MP_CRYPTO_USE_SW \
 		STM32MP_DDR_32BIT_INTERFACE \
 		STM32MP_DDR_DUAL_AXI_PORT \
+		STM32MP_SSP \
 		STM32MP_STPMIC1L \
 		STM32MP_USE_EXTERNAL_HEAP \
 		STM32MP13 \
@@ -315,6 +320,10 @@ BL2_SOURCES		+=	plat/st/stm32mp1/plat_ddr.c
 ifeq ($(STM32MP_SUPPORT_PM),1)
 BL2_SOURCES		+=	plat/st/stm32mp1/stm32mp1_critic_power.c
 BL2_SOURCES		+=	plat/st/stm32mp1/stm32mp1_critic_power_wrapper.S
+endif
+
+ifeq ($(STM32MP_SSP),1)
+include plat/st/stm32mp1/stm32mp1_ssp.mk
 endif
 
 ifeq ($(AARCH32_SP),sp_min)
