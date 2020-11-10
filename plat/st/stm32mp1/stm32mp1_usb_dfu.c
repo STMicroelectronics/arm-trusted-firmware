@@ -391,6 +391,11 @@ uint8_t usb_dfu_get_phase(uint8_t alt)
 		break;
 #endif
 #if STM32MP15
+#if STM32MP_SSP
+	case 0:
+		ret =  PHASE_SSP;
+		break;
+#endif
 	case 3:
 		ret = PHASE_SSBL;
 		break;
