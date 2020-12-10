@@ -68,7 +68,7 @@ static int dfu_callback_upload(uint8_t alt, uintptr_t *buffer, uint32_t *len,
 	switch (usb_dfu_get_phase(alt)) {
 	case PHASE_CMD:
 		/* Get Pḧase */
-#if STM32MP_SSP
+#if STM32MP_SSP && STM32MP15
 		if (dfu->phase == PHASE_SSP) {
 			dfu->buffer[0] = PHASE_FLASHLAYOUT;
 		} else {
@@ -101,8 +101,13 @@ static int dfu_callback_upload(uint8_t alt, uintptr_t *buffer, uint32_t *len,
 
 #if STM32MP_SSP
 	case PHASE_SSP:
+#if STM32MP13
+		dfu->buffer[0] = dfu->phase;
+#endif
+#if STM32MP15
 		/* Fix phase to flashlayout phase */
 		dfu->buffer[0] = PHASE_FLASHLAYOUT;
+#endif
 		dfu->buffer[1] = (uint8_t)(dfu_state.cert_base);
 		dfu->buffer[2] = (uint8_t)(dfu_state.cert_base >> 8);
 		dfu->buffer[3] = (uint8_t)(dfu_state.cert_base >> 16);

@@ -121,12 +121,19 @@ static int initialize_otp(void)
  */
 static int ssp_pub_key_prog(boot_api_context_t *boot_context)
 {
+#if STM32MP13
+	uint32_t *value = (uint32_t *)
+		boot_context->p_ssp_config->p_blob_payload->oem_rpkth;
+#endif
+#if STM32MP15
 	uint8_t key_hash[BOOT_API_SHA256_DIGEST_SIZE_IN_BYTES] __aligned(4);
 	uint8_t *pubk = (uint8_t *)
 		boot_context->p_ssp_config->p_blob_payload->oem_ecdsa_pubk;
 	uint32_t *value = (uint32_t *)key_hash;
+#endif
 	uint32_t i;
 
+#if STM32MP15
 	if (stm32_hash_register() != 0) {
 		return -EINVAL;
 	}
@@ -138,6 +145,7 @@ static int ssp_pub_key_prog(boot_api_context_t *boot_context)
 		ERROR("Hash of payload failed\n");
 		return -EINVAL;
 	}
+#endif
 
 	for (i = otp_pubkey.idx; i < (otp_pubkey.idx + otp_pubkey.nb); i++) {
 		if (bsec_program_otp(bswap32(*value), i) != BSEC_OK) {
@@ -171,10 +179,18 @@ static int ssp_close_device(void)
 		return -EINVAL;
 	}
 
+#if STM32MP13
+	if ((value & ~CFG0_OPEN_DEVICE) != 0U) {
+		ERROR("Device already closed\n");
+		return -EINVAL;
+	}
+#endif
+#if STM32MP15
 	if ((value & CFG0_CLOSED_DEVICE) != 0U) {
 		ERROR("Device already closed\n");
 		return -EINVAL;
 	}
+#endif
 
 	value |= CFG0_CLOSED_DEVICE;
 	if (bsec_program_otp(value, otp) != BSEC_OK) {
@@ -373,7 +389,7 @@ static int ssp_get_product_id(char *msg)
 {
 	uint32_t otp;
 	uint32_t otp_idx;
-	uint32_t chip_id;
+	uint32_t chip_id = stm32mp_get_chip_dev_id();
 
 	if (stm32_get_otp_index(CFG2_OTP, &otp_idx, NULL) != 0) {
 		VERBOSE("Get index error\n");
@@ -381,10 +397,6 @@ static int ssp_get_product_id(char *msg)
 	}
 
 	if (stm32_get_otp_value_from_idx(otp_idx, &otp) != 0) {
-		return -EINVAL;
-	}
-
-	if (stm32mp1_dbgmcu_get_chip_dev_id(&chip_id) < 0) {
 		return -EINVAL;
 	}
 
@@ -522,10 +534,15 @@ static int ssp_download_phase(boot_api_context_t *boot_ctx)
 	int result = 0;
 	uint8_t cert[CERTIFICATE_SIZE];
 
+#if STM32MP13
+	blob_file = (uint8_t *)boot_ctx->p_ssp_config->p_blob_license;
+#endif
+#if STM32MP15
 	blob_file = (uint8_t *)page_align(BLOB_FILE_MAX_ADDR -
 					  sizeof(boot_api_ssp_blob_license_t) -
 					  sizeof(boot_api_ssp_blob_payload_t),
 					  DOWN);
+#endif
 
 	if (prepare_certificate(cert, boot_ctx->p_ssp_config->p_chip_pubk) != 0) {
 		return -EINVAL;
@@ -910,6 +927,11 @@ void bl2_el3_plat_arch_setup(void)
 		mmio_clrbits_32(rcc_base + RCC_BDCR, RCC_BDCR_VSWRST);
 	}
 
+	/* Set minimum reset pulse duration to 31ms for discrete power supplied boards */
+	if (dt_pmic_status() <= 0) {
+		mmio_clrsetbits_32(rcc_base + RCC_RDLSICR, RCC_RDLSICR_MRD_MASK,
+				   31U << RCC_RDLSICR_MRD_SHIFT);
+	}
 
 	generic_delay_timer_init();
 
@@ -941,6 +963,8 @@ void bl2_el3_plat_arch_setup(void)
 	if (board_model != NULL) {
 		NOTICE("Model: %s\n", board_model);
 	}
+
+	stm32mp_print_boardinfo();
 
 	if ((boot_context->p_ssp_config == NULL) ||
 	    (boot_context->p_ssp_config->ssp_cmd !=

@@ -392,12 +392,22 @@ BOOT_API_MCIC_RETRAM_REGION_TO_HASH_IN_BYTES_TAMP_BCK_REG_IDX		23
 #define BOOT_API_RETURN_OK					0x77U
 
 /* Mapping of OTP Word and OTP bits managing SSP and useful to FSBL-SSP */
+#if STM32MP13
+/* OTP_CFG9 */
+#define BOOT_API_OTP_SSP_WORD_NB				9U
+/* SSP_REQ = OTP_CFG9[5] */
+#define BOOT_API_OTP_SSP_REQ_BIT_POS				5
+/* SSP_SUCCESS = OTP_CFG9[6] */
+#define BOOT_API_OTP_SSP_SUCCESS_BIT_POS			6
+#endif
+#if STM32MP15
 /* OTP_CFG8 */
 #define BOOT_API_OTP_SSP_WORD_NB				8U
 /* SSP_REQ = OTP_CFG8[8] */
 #define BOOT_API_OTP_SSP_REQ_BIT_POS				8
 /* SSP_SUCCESS = OTP_CFG8[9] */
 #define BOOT_API_OTP_SSP_SUCCESS_BIT_POS			9
+#endif
 
 /*
  * Possible values of boot context field
@@ -626,11 +636,24 @@ typedef struct {
 	 */
 	uint32_t payload_protocol_version;
 
+#if STM32MP13
+	/* OEM_RPKTH OEM Root Public Key table hash is the
+	 * hash[ hash(algo + pubK i) for i=0..N-1] where N
+	 * is the number of OEM public keys in product for
+	 * key revocation feature
+	 *
+	 * N = 8 for STM32MP13xx
+	 * size of field = 32 bytes = 256 bits
+	 */
+	uint8_t  oem_rpkth[BOOT_API_SHA256_DIGEST_SIZE_IN_BYTES];
+#endif
+#if STM32MP15
 	/*
 	 * OEM_ECDSA_PUBK Public Key defined by OEM
 	 * 64 bytes = 512 bits
 	 */
 	uint8_t  oem_ecdsa_pubk[BOOT_API_SSP_PUBK_KEY_SIZE_BYTES];
+#endif
 
 	/*
 	 * Size of Table of OEM Secrets encrypted with AES-GCM (Key,IV) from

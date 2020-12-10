@@ -1,0 +1,52 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause)
+/*
+ * Copyright (C) STMicroelectronics 2020 - All Rights Reserved
+ */
+
+/ {
+	aliases {
+		/delete-property/ mmc0;
+	};
+
+	soc {
+		efuse@5c005000 {
+			cfg0_otp: cfg0_otp@0 {
+				reg = <0x0 0x2>;
+			};
+			cfg2_otp: cfg2_otp@8 {
+				reg = <0x8 0x4>;
+			};
+			ssp_otp: cfg9_otp@24 {
+				reg = <0x24 0x4>;
+			};
+			chip_otp: chip_otp@a0 {
+				reg = <0xa0 0x40>;
+			};
+			rma_otp: rma_otp@e0 {
+				reg = <0xe0 0x4>;
+			};
+			pkh_otp: pkh_otp@60 {
+				reg = <0x60 0x20>;
+			};
+		};
+
+#if STM32MP_UART_PROGRAMMER
+		/delete-node/ usb-otg@49000000;
+#endif
+		/delete-node/ spi@58003000;
+		/delete-node/ mmc@58005000;
+		/delete-node/ mmc@58007000;
+#if STM32MP_UART_PROGRAMMER
+		/delete-node/ usbh-ohci@5800c000;
+		/delete-node/ usbh-ehci@5800d000;
+#endif
+#if STM32MP_UART_PROGRAMMER
+		/delete-node/ usbphyc@5a006000;
+#endif
+
+		pinctrl@50002000 {
+			/delete-node/ sdmmc1-b4-0;
+			/delete-node/ sdmmc2-b4-0;
+		};
+	};
+};

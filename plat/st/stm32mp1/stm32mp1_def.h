@@ -440,9 +440,11 @@ enum ddr_type {
 #if STM32MP13
 #define NAND_OTP			"cfg9-otp"
 #define NAND2_OTP			"cfg10-otp"
+#define SSP_OTP				"cfg9_otp"
 #endif
 #if STM32MP15
 #define NAND_OTP			"nand-otp"
+#define SSP_OTP				"ssp_otp"
 #endif
 #define MONOTONIC_OTP			"monotonic-otp"
 #define UID_OTP				"uid-otp"
@@ -450,7 +452,6 @@ enum ddr_type {
 #define ENCKEY_OTP			"oem-enc-key"
 #define BOARD_ID_OTP			"board-id"
 #define CFG2_OTP			"cfg2_otp"
-#define SSP_OTP				"ssp_otp"
 #define CHIP_CERTIFICATE_OTP		"chip_otp"
 #define RMA_OTP				"rma_otp"
 
@@ -486,7 +487,12 @@ enum ddr_type {
 #define CHIP_CERTIFICATE_MAX_SIZE	U(0x40)
 
 /* RMA */
+#if STM32MP13
+#define RMA_OTP_MASK			GENMASK_32(31, 0)
+#endif
+#if STM32MP15
 #define RMA_OTP_MASK			GENMASK_32(29, 0)
+#endif
 
 /* PART NUMBER */
 #if STM32MP13

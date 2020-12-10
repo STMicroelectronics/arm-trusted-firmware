@@ -129,7 +129,11 @@ static const uint8_t usb_stm32mp1_config_desc[USB_DFU_CONFIG_DESC_SIZ] = {
 /* The user strings: one by alternate as defined in USBD_DFU_IF_DESC */
 #if STM32MP13
 const char *const if_desc_string[USB_DFU_ITF_NUM] = {
+#if STM32MP_SSP
+	"@SSP /0xF3/1*512Ba",
+#else
 	"@SSBL /0x03/1*16Me",
+#endif
 	"@virtual /0xF1/1*512Ba"
 };
 #endif
@@ -384,7 +388,11 @@ uint8_t usb_dfu_get_phase(uint8_t alt)
 	switch (alt) {
 #if STM32MP13
 	case 0:
+#if STM32MP_SSP
+		ret = PHASE_SSP;
+#else
 		ret = PHASE_SSBL;
+#endif
 		break;
 	case 1:
 		ret = PHASE_CMD;

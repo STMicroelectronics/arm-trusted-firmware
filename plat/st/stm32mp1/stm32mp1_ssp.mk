@@ -48,11 +48,21 @@ PLAT_BL_COMMON_SOURCES	+=	drivers/arm/tzc/tzc400.c				\
 				plat/st/stm32mp1/stm32mp1_helper.S			\
 				plat/st/stm32mp1/stm32mp1_syscfg.c
 
+ifeq ($(STM32MP13),1)
+PLAT_BL_COMMON_SOURCES	+=	drivers/st/clk/clk-stm32-core.c				\
+				drivers/st/clk/clk-stm32mp13.c
+endif
+ifeq ($(STM32MP15),1)
 PLAT_BL_COMMON_SOURCES	+=	drivers/st/clk/stm32mp1_clk.c
+endif
 
 BL2_SOURCES		:=	drivers/io/io_storage.c					\
-				drivers/st/crypto/stm32_hash.c				\
 				plat/st/stm32mp1/stm32mp1_ssp.c
+
+ifeq ($(STM32MP15),1)
+BL2_SOURCES		+=	drivers/st/crypto/stm32_hash.c
+endif
+
 
 ifeq (${STM32MP_UART_PROGRAMMER},1)
 BL2_SOURCES		+=	drivers/st/uart/stm32_uart.c				\
@@ -69,7 +79,12 @@ BL2_SOURCES		+=	drivers/st/usb/stm32mp1_usb.c				\
 				plat/st/stm32mp1/stm32mp1_usb_dfu.c
 endif
 
+ifeq ($(STM32MP13),1)
+BL2_DTSI		:=	stm32mp13-ssp-bl2.dtsi
+endif
+ifeq ($(STM32MP15),1)
 BL2_DTSI		:=	stm32mp15-ssp-bl2.dtsi
+endif
 
 check_boot_ssp:
 	@if ([ ${STM32MP_UART_PROGRAMMER} = 1 ] && [ ${STM32MP_USB_PROGRAMMER} = 1 ]) || \
