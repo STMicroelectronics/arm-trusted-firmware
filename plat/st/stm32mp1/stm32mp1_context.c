@@ -27,13 +27,11 @@
  * Context provides magic, resume entry, zq0cr0 zdata and DDR training buffer.
  *
  * MAILBOX_MAGIC_V2:
- * Context provides magic, resume entry, zq0cr0 zdata, DDR training buffer
- * and PLL1 dual OPP settings structure (86 bytes).
+ * Context provides V1 content and PLL1 dual OPP settings structure (86 bytes).
  *
  * MAILBOX_MAGIC_V3:
- * Context provides magic, resume entry, zq0cr0 zdata, DDR training buffer
- * and PLL1 dual OPP settings structure, low power entry point, BL2 code start, end and BL2_END
- * (102 bytes).
+ * Context provides V2 content, low power entry point, BL2 code start, end and
+ * BL2_END (102 bytes). And, only for STM32MP13, adds MCE master key (16 bytes).
  */
 #define MAILBOX_MAGIC_V1		(0x0001U << 16U)
 #define MAILBOX_MAGIC_V2		(0x0002U << 16U)
@@ -63,6 +61,9 @@ struct backup_data_s {
 	uint32_t bl2_code_base;
 	uint32_t bl2_code_end;
 	uint32_t bl2_end;
+#if STM32MP13
+	uint8_t mce_mkey[MCE_KEY_SIZE_IN_BYTES];
+#endif
 };
 
 uint32_t stm32_pm_get_optee_ep(void)
@@ -190,3 +191,32 @@ void stm32_restore_ddr_training_area(void)
 
 	clk_disable(BKPSRAM);
 }
+
+#if STM32MP13
+void stm32mp1_pm_save_mce_mkey_in_context(uint8_t *data)
+{
+	struct backup_data_s *backup_data;
+
+	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
+
+	clk_enable(BKPSRAM);
+
+	memcpy(backup_data->mce_mkey, data, MCE_KEY_SIZE_IN_BYTES);
+
+	clk_disable(BKPSRAM);
+}
+
+void stm32mp1_pm_get_mce_mkey_from_context(uint8_t *data)
+{
+	struct backup_data_s *backup_data;
+
+	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
+
+	clk_enable(BKPSRAM);
+
+	memcpy(data, backup_data->mce_mkey, MCE_KEY_SIZE_IN_BYTES);
+
+	clk_disable(BKPSRAM);
+}
+
+#endif

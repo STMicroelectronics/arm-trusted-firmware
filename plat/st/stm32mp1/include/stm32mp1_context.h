@@ -17,6 +17,10 @@ uint32_t stm32_get_zdata_from_context(void);
 bool stm32_pm_context_is_valid(void);
 void stm32_restore_ddr_training_area(void);
 uint32_t stm32_pm_get_optee_ep(void);
+#if STM32MP13
+void stm32mp1_pm_save_mce_mkey_in_context(uint8_t *data);
+void stm32mp1_pm_get_mce_mkey_from_context(uint8_t *data);
+#endif
 #else /* STM32MP_SUPPORT_PM */
 static inline uint32_t stm32_get_zdata_from_context(void) {return 0U;}
 #endif /* STM32MP_SUPPORT_PM */
