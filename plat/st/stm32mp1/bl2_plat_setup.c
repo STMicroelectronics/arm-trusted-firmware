@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2025, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2026, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -297,6 +297,9 @@ void bl2_el3_plat_arch_setup(void)
 		goto skip_console_init;
 	}
 
+	/* Enter in boot mode */
+	stm32mp_syscfg_boot_mode_enable();
+
 	stm32mp_print_cpuinfo();
 
 	board_model = dt_get_board_model();
@@ -575,4 +578,7 @@ void bl2_el3_plat_prepare_exit(void)
 #endif /* STM32MP_UART_PROGRAMMER || STM32MP_USB_PROGRAMMER */
 
 	stm32mp1_security_setup();
+
+	/* end of boot mode */
+	stm32mp_syscfg_boot_mode_disable();
 }
