@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2019-2025, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: GPL-2.0+ OR BSD-3-Clause
  */
@@ -26,13 +26,21 @@
 #define TIMEOUT_US_1_MS			1000U
 
 /* FMC2 Compatibility */
+#ifdef STM32MP1X
 #define DT_FMC2_EBI_COMPAT		"st,stm32mp1-fmc2-ebi"
 #define DT_FMC2_NFC_COMPAT		"st,stm32mp1-fmc2-nfc"
 #define MAX_CS				2U
+#endif
+#ifdef STM32MP2X
+#define DT_FMC2_EBI_COMPAT		"st,stm32mp25-fmc2-ebi"
+#define DT_FMC2_NFC_COMPAT		"st,stm32mp25-fmc2-nfc"
+#define MAX_CS				4U
+#endif
 #define MAX_BANK			5U
 
 /* FMC2 Controller Registers */
 #define FMC2_BCR1			0x00U
+#define FMC2_CFGR			0x20U
 #define FMC2_PCR			0x80U
 #define FMC2_SR				0x84U
 #define FMC2_PMEM			0x88U
@@ -48,6 +56,8 @@
 
 /* FMC2_BCR1 register */
 #define FMC2_BCR1_FMC2EN		BIT(31)
+/* FMC2_CFGR register */
+#define FMC2_CFGR_FMC2EN		BIT(31)
 /* FMC2_PCR register */
 #define FMC2_PCR_PWAITEN		BIT(1)
 #define FMC2_PCR_PBKEN			BIT(2)
@@ -660,7 +670,6 @@ static void stm32_fmc2_write_data(struct nand_device *nand,
 static void stm32_fmc2_ctrl_init(void)
 {
 	uint32_t pcr = mmio_read_32(fmc2_base() + FMC2_PCR);
-	uint32_t bcr1 = mmio_read_32(fmc2_base() + FMC2_BCR1);
 
 	/* Enable wait feature and NAND flash memory bank */
 	pcr |= FMC2_PCR_PWAITEN;
@@ -688,9 +697,13 @@ static void stm32_fmc2_ctrl_init(void)
 	pcr |= FMC2_PCR_TAR(FMC2_PCR_TAR_DEFAULT);
 
 	/* Enable FMC2 controller */
-	bcr1 |= FMC2_BCR1_FMC2EN;
+#ifdef STM32MP1X
+	mmio_setbits_32(fmc2_base() + FMC2_BCR1, FMC2_BCR1_FMC2EN);
+#endif
+#ifdef STM32MP2X
+	mmio_setbits_32(fmc2_base() + FMC2_CFGR, FMC2_CFGR_FMC2EN);
+#endif
 
-	mmio_write_32(fmc2_base() + FMC2_BCR1, bcr1);
 	mmio_write_32(fmc2_base() + FMC2_PCR, pcr);
 	mmio_write_32(fmc2_base() + FMC2_PMEM, FMC2_PMEM_DEFAULT);
 	mmio_write_32(fmc2_base() + FMC2_PATT, FMC2_PATT_DEFAULT);
