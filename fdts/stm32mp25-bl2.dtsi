@@ -5,6 +5,9 @@
 
 / {
 	soc@0 {
+#if !STM32MP_RAW_NAND
+		/delete-node/ memory-controller@48200000;
+#endif
 #if !STM32MP_EMMC && !STM32MP_SDMMC
 		rifsc@42080000 {
 			/delete-node/ mmc@48220000;
