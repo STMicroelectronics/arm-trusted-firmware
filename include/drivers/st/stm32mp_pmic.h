@@ -48,4 +48,11 @@ static inline void print_pmic_info_and_debug(void)
  */
 int pmic_voltages_init(void);
 
+/*
+ * pmic_switch_off - switch off the platform with PMIC
+ *
+ * Panics on errors
+ */
+void pmic_switch_off(void);
+
 #endif /* STM32MP_PMIC_H */

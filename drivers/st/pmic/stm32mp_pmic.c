@@ -246,6 +246,16 @@ int pmic_voltages_init(void)
 	return 0;
 }
 
+void pmic_switch_off(void)
+{
+	if (stpmic1_switch_off() == 0) {
+		udelay(100);
+	}
+
+	/* Shouldn't be reached */
+	panic();
+}
+
 enum {
 	STPMIC1_BUCK1 = 0,
 	STPMIC1_BUCK2,
