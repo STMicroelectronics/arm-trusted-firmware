@@ -261,6 +261,28 @@
 			};
 		};
 
+		ospi1: spi@40430000 {
+			compatible = "st,stm32-omi";
+			reg = <0x40430000 0x400>, <0x60000000 0x8000000>;
+			reg-names = "ospi", "ospi_mm";
+			interrupts = <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>;
+			st,syscfg-dlyb = <&syscfg 0x1000>;
+			clocks = <&rcc CK_KER_OSPI1>;
+			resets = <&rcc OSPI1_R>, <&rcc OSPI1DLL_R>;
+			status = "disabled";
+		};
+
+		ospi2: spi@40440000 {
+			compatible = "st,stm32-omi";
+			reg = <0x40440000 0x400>, <0x68000000 0x8000000>;
+			reg-names = "ospi", "ospi_mm";
+			interrupts = <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>;
+			st,syscfg-dlyb = <&syscfg 0x1400>;
+			clocks = <&rcc CK_KER_OSPI2>;
+			resets = <&rcc OSPI2_R>, <&rcc OSPI2DLL_R>;
+			status = "disabled";
+		};
+
 		risaf2: risaf@420b0000 {
 			compatible = "st,stm32-risaf";
 			reg = <0x420b0000 0x1000>;
