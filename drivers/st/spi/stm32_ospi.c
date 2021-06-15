@@ -221,13 +221,11 @@ static unsigned int stm32_ospi_get_mode(uint8_t buswidth)
 	return buswidth == 4U ? 3U : buswidth;
 }
 
-static int stm32_ospi_exec_op(const struct spi_mem_op *op)
+static int stm32_ospi_send(const struct spi_mem_op *op, uint8_t fmode)
 {
 	uint64_t timeout;
 	uint32_t ccr;
 	uint32_t tcr;
-	size_t addr_max;
-	uint8_t fmode = _OSPI_CR_FMODE_INDW;
 	int ret;
 
 	VERBOSE("%s: cmd:%x mode:%d.%d.%d.%d addr:%" PRIx64 " len:%x\n",
@@ -238,17 +236,6 @@ static int stm32_ospi_exec_op(const struct spi_mem_op *op)
 	ret = stm32_ospi_wait_for_not_busy();
 	if (ret != 0) {
 		return ret;
-	}
-
-	addr_max = op->addr.val + op->data.nbytes + 1U;
-
-	if ((op->data.dir == SPI_MEM_DATA_IN) && (op->data.nbytes != 0U)) {
-		if ((addr_max < stm32_ospi.mm_size) &&
-		    (op->addr.buswidth != 0U)) {
-			fmode = _OSPI_CR_FMODE_MM;
-		} else {
-			fmode = _OSPI_CR_FMODE_INDR;
-		}
 	}
 
 	if (op->data.nbytes != 0U) {
@@ -325,6 +312,30 @@ abort:
 	}
 
 	return ret;
+}
+
+static int stm32_ospi_exec_op(const struct spi_mem_op *op)
+{
+	uint8_t fmode = _OSPI_CR_FMODE_INDW;
+
+	if ((op->data.dir == SPI_MEM_DATA_IN) && (op->data.nbytes != 0U)) {
+		fmode = _OSPI_CR_FMODE_INDR;
+	}
+
+	return stm32_ospi_send(op, fmode);
+}
+
+static int stm32_ospi_dirmap_read(const struct spi_mem_op *op)
+{
+	size_t addr_max;
+	uint8_t fmode = _OSPI_CR_FMODE_INDR;
+
+	addr_max = op->addr.val + op->data.nbytes + 1U;
+	if ((addr_max < stm32_ospi.mm_size) && (op->addr.buswidth != 0U)) {
+		fmode = _OSPI_CR_FMODE_MM;
+	}
+
+	return stm32_ospi_send(op, fmode);
 }
 
 static int stm32_ospi_claim_bus(unsigned int cs)
@@ -437,6 +448,7 @@ static const struct spi_bus_ops stm32_ospi_bus_ops = {
 	.set_speed = stm32_ospi_set_speed,
 	.set_mode = stm32_ospi_set_mode,
 	.exec_op = stm32_ospi_exec_op,
+	.dirmap_read = stm32_ospi_dirmap_read,
 };
 
 int stm32_ospi_init(void)
