@@ -300,7 +300,7 @@ int spi_nor_read(unsigned int offset, uintptr_t buffer, size_t length,
 			nor_dev.read_op.data.nbytes = length;
 		}
 
-		ret = spi_mem_exec_op(&nor_dev.read_op);
+		ret = spi_mem_dirmap_read(&nor_dev.read_op);
 		if (ret != 0) {
 			spi_nor_clean_bar();
 			return ret;
