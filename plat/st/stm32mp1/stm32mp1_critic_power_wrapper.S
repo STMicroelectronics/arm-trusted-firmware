@@ -13,7 +13,12 @@
 #include <smccc_helpers.h>
 
 	.global	stm32_pwr_down_wfi_load
+	.global	stm32_pwr_cstop_critic_exit
 	.global	stm32_pwr_down_wfi_wrapper
+#if STM32MP13
+	.global	stm32_pwr_back_from_stop2
+	.global	stm32_pwr_call_optee_ep
+#endif
 	.global	bl2_vector_table
 	.global	disable_mmu_secure
 	.global	__STACKS_END__
@@ -82,3 +87,41 @@ func stm32_pwr_down_wfi_wrapper
 
 	pop	{r4,r5,r6,pc}
 endfunc stm32_pwr_down_wfi_wrapper
+
+#if STM32MP13
+func stm32_pwr_back_from_stop2
+	# switch to monitor mode.
+	cps	#MODE32_mon
+
+	ldr	sp, =__STACKS_END__
+
+	ldr	r1, =bl2_vector_table
+	stcopr	r1, VBAR
+	stcopr	r1, MVBAR
+
+	# exit ddr from self refresh
+	bl	stm32_pwr_cstop_critic_exit
+
+	# Restore stack
+	ldr	r1, =saved_sp
+	ldr	sp, [r1]
+
+	# Restore VBAR
+	ldr	r1, =saved_vbar
+	ldr	r0, [r1]
+	stcopr	r0, VBAR
+
+	# Restore MVBAR
+	ldr	r1, =saved_mvbar
+	ldr	r0, [r1]
+	stcopr	r0, MVBAR
+
+	# Synchronize on memory access and instruction
+	# after resetting stack/IT handler
+	dsb
+	isb
+
+	bl stm32_pwr_call_optee_ep
+
+endfunc stm32_pwr_back_from_stop2
+#endif
