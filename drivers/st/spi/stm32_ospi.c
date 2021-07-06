@@ -81,6 +81,7 @@
 #define _OSPI_TCR_SSHIFT	BIT(30)
 
 #define _OSPI_MAX_CHIP		2U
+#define _OSPI_MAX_RESET		2U
 
 #define _OSPI_FIFO_TIMEOUT_US	30U
 #define _OSPI_CMD_TIMEOUT_US	1000U
@@ -456,8 +457,11 @@ int stm32_ospi_init(void)
 	size_t size;
 	int ospi_node;
 	struct dt_node_info info;
+	const fdt32_t *cuint;
 	void *fdt = NULL;
 	int ret;
+	int len;
+	uint32_t i;
 	unsigned int reset_id;
 
 	if (fdt_get_address(&fdt) == 0) {
@@ -474,7 +478,7 @@ int stm32_ospi_init(void)
 		return -FDT_ERR_NOTFOUND;
 	}
 
-	if ((info.clock < 0) || (info.reset < 0)) {
+	if (info.clock < 0) {
 		return -FDT_ERR_BADVALUE;
 	}
 
@@ -496,18 +500,26 @@ int stm32_ospi_init(void)
 	}
 
 	stm32_ospi.clock_id = (unsigned long)info.clock;
-	reset_id = (unsigned int)info.reset;
 
 	clk_enable(stm32_ospi.clock_id);
 
-	ret = stm32mp_reset_assert(reset_id, _TIMEOUT_US_1_MS);
-	if (ret != 0) {
-		panic();
-	}
+	cuint = fdt_getprop(fdt, ospi_node, "resets", &len);
+	cuint++;
 
-	ret = stm32mp_reset_deassert(reset_id, _TIMEOUT_US_1_MS);
-	if (ret != 0) {
-		panic();
+	/* Reset: array of <phandle, reset_id> */
+	for (i = 0U; i < ((uint32_t)len / (sizeof(uint32_t) * _OSPI_MAX_RESET));
+	     i++, cuint += _OSPI_MAX_RESET) {
+		reset_id = (unsigned int)fdt32_to_cpu(*cuint);
+
+		ret = stm32mp_reset_assert(reset_id, _TIMEOUT_US_1_MS);
+		if (ret != 0) {
+			panic();
+		}
+
+		ret = stm32mp_reset_deassert(reset_id, _TIMEOUT_US_1_MS);
+		if (ret != 0) {
+			panic();
+		}
 	}
 
 	mmio_write_32(ospi_base() + _OSPI_DCR1, _OSPI_DCR1_DEVSIZE);
