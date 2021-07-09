@@ -219,7 +219,14 @@ static int stm32_ospi_tx(const struct spi_mem_op *op, uint8_t fmode)
 
 static unsigned int stm32_ospi_get_mode(uint8_t buswidth)
 {
-	return buswidth == 4U ? 3U : buswidth;
+	switch (buswidth) {
+	case SPI_MEM_BUSWIDTH_8_LINE:
+		return 4U;
+	case SPI_MEM_BUSWIDTH_4_LINE:
+		return 3U;
+	default:
+		return buswidth;
+	}
 }
 
 static int stm32_ospi_send(const struct spi_mem_op *op, uint8_t fmode)
@@ -250,19 +257,20 @@ static int stm32_ospi_send(const struct spi_mem_op *op, uint8_t fmode)
 
 	mmio_clrsetbits_32(ospi_base() + _OSPI_TCR, _OSPI_TCR_DCYC, tcr);
 
-	mmio_clrsetbits_32(ospi_base() + _OSPI_CR, _OSPI_CR_FMODE, fmode << _OSPI_CR_FMODE_SHIFT);
+	mmio_clrsetbits_32(ospi_base() + _OSPI_CR, _OSPI_CR_FMODE,
+			   fmode << _OSPI_CR_FMODE_SHIFT);
 
 	ccr = stm32_ospi_get_mode(op->cmd.buswidth);
 
 	if (op->addr.nbytes != 0U) {
 		ccr |= (op->addr.nbytes - 1U) << _OSPI_CCR_ADSIZE_SHIFT;
 		ccr |= stm32_ospi_get_mode(op->addr.buswidth) <<
-			_OSPI_CCR_ADMODE_SHIFT;
+		       _OSPI_CCR_ADMODE_SHIFT;
 	}
 
 	if (op->data.nbytes != 0U) {
 		ccr |= stm32_ospi_get_mode(op->data.buswidth) <<
-			_OSPI_CCR_DMODE_SHIFT;
+		       _OSPI_CCR_DMODE_SHIFT;
 	}
 
 	mmio_write_32(ospi_base() + _OSPI_CCR, ccr);
@@ -423,7 +431,9 @@ static int stm32_ospi_set_mode(unsigned int mode)
 #if DEBUG
 	VERBOSE("%s: mode=0x%x\n", __func__, mode);
 
-	if ((mode & SPI_RX_QUAD) != 0U) {
+	if ((mode & SPI_RX_OCTAL) != 0U) {
+		VERBOSE("rx: octal\n");
+	} else if ((mode & SPI_RX_QUAD) != 0U) {
 		VERBOSE("rx: quad\n");
 	} else if ((mode & SPI_RX_DUAL) != 0U) {
 		VERBOSE("rx: dual\n");
@@ -431,7 +441,9 @@ static int stm32_ospi_set_mode(unsigned int mode)
 		VERBOSE("rx: single\n");
 	}
 
-	if ((mode & SPI_TX_QUAD) != 0U) {
+	if ((mode & SPI_TX_OCTAL) != 0U) {
+		VERBOSE("tx: octal\n");
+	} else if ((mode & SPI_TX_QUAD) != 0U) {
 		VERBOSE("tx: quad\n");
 	} else if ((mode & SPI_TX_DUAL) != 0U) {
 		VERBOSE("tx: dual\n");
