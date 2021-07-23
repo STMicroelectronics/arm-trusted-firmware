@@ -1925,6 +1925,11 @@ static bool clk_pll1_settings_are_valid(void)
 	return pll1_settings.valid_id == PLL1_SETTINGS_VALID_ID;
 }
 
+void set_clk_pll1_settings_to_valid(void)
+{
+	pll1_settings.valid_id = PLL1_SETTINGS_VALID_ID;
+}
+
 int stm32mp1_round_opp_khz(uint32_t *freq_khz)
 {
 	unsigned int i;

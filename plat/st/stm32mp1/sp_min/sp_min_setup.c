@@ -133,6 +133,7 @@ static void initialize_pll1_settings(void)
 	uint32_t cpu_voltage = 0U;
 
 	if (stm32_are_pll1_settings_valid_in_context()) {
+		set_clk_pll1_settings_to_valid();
 		return;
 	}
 

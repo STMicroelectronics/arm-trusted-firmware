@@ -61,6 +61,9 @@ int stm32mp1_clock_stopmode_resume(void);
 void restore_clock_pm_context(void);
 void save_clock_pm_context(void);
 
+/* "Added by BPI to set ID to valid on reset during sleep" */
+void set_clk_pll1_settings_to_valid(void);
+
 void stm32mp1_register_clock_parents_secure(unsigned long id);
 
 void stm32mp1_update_earlyboot_clocks_state(void);
