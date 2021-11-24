@@ -77,6 +77,9 @@ unsigned int plat_get_syscnt_freq2(void)
 
 static uintptr_t boot_ctx_address;
 static uint16_t boot_itf_selected;
+#ifdef STM32MP1X
+static uint32_t boot_action_saved;
+#endif
 
 void stm32mp_save_boot_ctx_address(uintptr_t address)
 {
@@ -84,6 +87,9 @@ void stm32mp_save_boot_ctx_address(uintptr_t address)
 
 	boot_ctx_address = address;
 	boot_itf_selected = boot_context->boot_interface_selected;
+#ifdef STM32MP1X
+	boot_action_saved = boot_context->boot_action;
+#endif
 }
 
 uintptr_t stm32mp_get_boot_ctx_address(void)
@@ -95,6 +101,13 @@ uint16_t stm32mp_get_boot_itf_selected(void)
 {
 	return boot_itf_selected;
 }
+
+#ifdef STM32MP1X
+uint32_t stm32mp_get_boot_action(void)
+{
+	return boot_action_saved;
+}
+#endif
 
 uintptr_t stm32mp_ddrctrl_base(void)
 {
