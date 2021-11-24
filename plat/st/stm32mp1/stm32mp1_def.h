@@ -22,6 +22,7 @@
 #include <boot_api.h>
 #include <stm32mp_common.h>
 #include <stm32mp_dt.h>
+#include <stm32mp1_context.h>
 #include <stm32mp1_dbgmcu.h>
 #include <stm32mp1_private.h>
 #include <stm32mp1_shared_resources.h>
@@ -627,6 +628,12 @@ static inline uintptr_t tamp_bkpr(uint32_t idx)
  * STM32MP13 PKA
  ******************************************************************************/
 #define PKA_BASE			U(0x54006000)
+
+/*******************************************************************************
+ * STM32MP1 OPP
+ ******************************************************************************/
+#define PLAT_MAX_OPP_NB			U(2)
+#define PLAT_MAX_PLLCFG_NB		U(6)
 
 /*******************************************************************************
  * REGULATORS

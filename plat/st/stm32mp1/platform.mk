@@ -8,6 +8,10 @@
 # metadata (2) and the FIP partitions (default is 2).
 STM32_EXTRA_PARTS	:=	4
 
+ifeq ($(AARCH32_SP),sp_min)
+STM32MP_SUPPORT_PM	:= 0
+endif
+
 include plat/st/common/common.mk
 
 ARM_CORTEX_A7		:=	yes
@@ -211,6 +215,10 @@ PLAT_BL_COMMON_SOURCES	+=	drivers/arm/tzc/tzc400.c				\
 				plat/st/stm32mp1/stm32mp1_dbgmcu.c			\
 				plat/st/stm32mp1/stm32mp1_helper.S			\
 				plat/st/stm32mp1/stm32mp1_syscfg.c
+
+ifeq ($(STM32MP_SUPPORT_PM),1)
+PLAT_BL_COMMON_SOURCES  +=	plat/st/stm32mp1/stm32mp1_context.c
+endif
 
 ifeq ($(STM32MP_STPMIC1L),1)
 PLAT_BL_COMMON_SOURCES	+=	drivers/st/pmic/stm32mp_pmic2.c				\
