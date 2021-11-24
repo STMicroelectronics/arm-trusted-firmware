@@ -666,8 +666,31 @@ uint32_t stm32_iwdg_shadow_update(uint32_t iwdg_inst, uint32_t flags)
 
 bool stm32mp_is_wakeup_from_standby(void)
 {
-	/* TODO add source code to determine if platform is waking up from standby mode */
-	return false;
+	uint32_t rstsr = mmio_read_32(stm32mp_rcc_base() + RCC_MP_RSTSCLRR);
+#if STM32MP15
+	uintptr_t bkpr_core1_addr = tamp_bkpr(BOOT_API_CORE1_BRANCH_ADDRESS_TAMP_BCK_REG_IDX);
+	uint32_t nsec_address;
+#endif
+
+	if ((rstsr & RCC_MP_RSTSCLRR_PADRSTF) != 0U) {
+		return false;
+	}
+
+	if (stm32mp_get_boot_action() != BOOT_API_CTX_BOOT_ACTION_WAKEUP_STANDBY) {
+		return false;
+	}
+
+#if STM32MP15
+	clk_enable(RTCAPB);
+	nsec_address = mmio_read_32(bkpr_core1_addr);
+	clk_disable(RTCAPB);
+
+	if (nsec_address == 0U) {
+		return false;
+	}
+#endif
+
+	return true;
 }
 
 uintptr_t stm32_get_bkpr_boot_mode_addr(void)
