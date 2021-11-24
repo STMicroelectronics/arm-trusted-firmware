@@ -11,6 +11,102 @@
 #include <stdio.h>
 
 /*
+ * Exported constants
+ */
+
+/*
+ * Boot Context related definitions
+ */
+
+/*
+ * Possible value of boot context field 'boot_action'
+ */
+#if STM32MP13
+/* Boot action is Process Secure Boot */
+#define BOOT_API_CTX_BOOT_ACTION_SECURE_BOOT_PROCESS		0x7879598EUL
+/* Boot action is Process Wakeup from STANDBY  */
+#define BOOT_API_CTX_BOOT_ACTION_WAKEUP_STANDBY			0x21276323UL
+/* Boot action is Process Engineering Boot */
+#define BOOT_API_CTX_BOOT_ACTION_ENGI_BOOT			0x4A05FE3AUL
+/* Boot Action is MPU P0 Local reset */
+#define BOOT_API_CTX_BOOT_ACTION_MPU_CORE0_RESET_PROCESS	0x0F6C12ABUL
+#endif
+#if STM32MP15
+/* Boot action is Process Cold Boot */
+#define BOOT_API_CTX_BOOT_ACTION_COLD_BOOT_PROCESS		0x09U
+/* Boot action is Process Wakeup from CSTANDBY */
+#define BOOT_API_CTX_BOOT_ACTION_WAKEUP_CSTANDBY		0x0AU
+/* Boot action is Process Wakeup from STANDBY  */
+#define BOOT_API_CTX_BOOT_ACTION_WAKEUP_STANDBY			0x0BU
+/* Boot action is Process Engineering Boot */
+#define BOOT_API_CTX_BOOT_ACTION_ENGI_BOOT			0x0CU
+/* Boot Action is MPU P0 Local reset */
+#define BOOT_API_CTX_BOOT_ACTION_MPU_CORE0_RESET_PROCESS	0x0F
+#endif
+
+/*
+ * Possible value of boot context field 'stby_exit_status'
+ */
+
+/* The boot reason is not a STANDBY Exit reason */
+#define BOOT_API_CTX_STBY_EXIT_STATUS_NO_STANDBY                0x00
+
+/* STANDBY Exit with MPU_BEN=1, MCU_BEN=0 */
+#define BOOT_API_CTX_STBY_EXIT_STATUS_WKUP_MPU_ONLY             0x01
+
+/*
+ * STANDBY Exit with MPU_BEN=1, MCU_BEN=1, MPU will go for cold boot
+ * MCU restarted by bootROM
+ */
+#define BOOT_API_CTX_STBY_EXIT_STATUS_WKUP_ALL_CORES            0x02
+
+/*
+ * STANDBY Exit with MPU_BEN=1, MCU_BEN=1, MPU will go for cold boot
+ * but MCU restart aborted (code integrity check) : have not been restarted
+ * by bootROM
+ */
+#define BOOT_API_CTX_STBY_EXIT_STATUS_WKUP_ALL_CORES_MCU_ABT    0x03
+
+/*
+ * STANDBY Exit with MPU_BEN=0, MCU_BEN=1, MPU gone to CSTANDBY,
+ * MCU restarted correctly by bootROM
+ * This value should never be read by FSBL, because not executed in that case
+ */
+#define BOOT_API_CTX_STBY_EXIT_STATUS_WKUP_MCU_ONLY             0x04
+
+/*
+ * STANDBY Exit with MPU_BEN=0, MCU_BEN=1, MCU restart aborted
+ * due code integrity check, then MPU will go for cold boot despite
+ * was not planned initially
+ */
+#define BOOT_API_CTX_STBY_EXIT_STATUS_WKUP_MCU_ONLY_MCU_ABT     0x05
+
+/*
+ * STANDBY Exit with MPU_BEN=1, MCU_BEN=1, MCU restart aborted
+ * due to MCU security perimeter issue
+ */
+#define \
+BOOT_API_CTX_STBY_EXIT_STATUS_WKUP_ALL_CORES_MCU_ABT_SEC_PERIMETER_ISSUE 0x06
+
+/*
+ * STANDBY Exit with MPU_BEN=0, MCU_BEN=1, MCU restart aborted
+ * due to MCU security perimeter issue, then MPU will go for cold boot
+ * despite was not planned initially
+ */
+#define \
+BOOT_API_CTX_STBY_EXIT_STATUS_WKUP_MCU_ONLY_MCU_ABT_SEC_PERIMETER_ISSUE	0x07
+
+/*
+ * Possible value of boot context field 'cstby_exit_status'
+ */
+/* The boot reason is not a CSTANDBY Exit reason */
+#define BOOT_API_CTX_CSTBY_EXIT_STATUS_NO_CSTBY			0x00
+/* CSTANDBY Exit with MCU detected as Not running */
+#define BOOT_API_CTX_CSTBY_EXIT_STATUS_MCU_NOT_RUNNING		0x01
+/* CSTANDBY Exit with MCU detected as Running  */
+#define BOOT_API_CTX_CSTBY_EXIT_STATUS_MCU_RUNNING		0x02
+
+/*
  * Possible value of boot context field 'auth_status'
  */
 #if STM32MP13
@@ -223,9 +319,27 @@ typedef struct {
 	uint32_t reserved1[13];
 #endif
 	uint32_t otp_afmux_values[3];
-	uint32_t reserved[3];
+	uint32_t reserved[2];
+	/*
+	 * Log to boot context, what was the kind of boot action
+	 * takes values from defines BOOT_API_BOOT_ACTION_XXX above
+	 */
+	uint32_t boot_action;
 #if STM32MP15
-	uint32_t reserved2[2];
+	/*
+	 * STANDBY Exit status to be checked by FSBL in case
+	 * field 'boot_action' == BOOT_API_CTX_BOOT_ACTION_WAKEUP_STANDBY
+	 * take values from defines above 'BOOT_API_CTX_STBY_EXIT_STATUS_XXX'
+	 * depending on encountered situation
+	 */
+	uint32_t stby_exit_status;
+	/*
+	 * CSTANDBY Exit status to be checked by FSBL in case
+	 * boot_action == BOOT_API_CTX_BOOT_ACTION_WAKEUP_CSTANDBY
+	 * take values from defines above 'BOOT_API_CTX_CSTBY_EXIT_STATUS_XXX'
+	 * depending on encountered situation
+	 */
+	uint32_t cstby_exit_status;
 #endif
 	uint32_t auth_status;
 
