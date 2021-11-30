@@ -664,6 +664,12 @@ uint32_t stm32_iwdg_shadow_update(uint32_t iwdg_inst, uint32_t flags)
 }
 #endif
 
+bool stm32mp1_addr_inside_backupsram(uintptr_t addr)
+{
+	return (addr >= STM32MP_BACKUP_RAM_BASE) &&
+		(addr < (STM32MP_BACKUP_RAM_BASE + STM32MP_BACKUP_RAM_SIZE));
+}
+
 bool stm32mp_is_wakeup_from_standby(void)
 {
 	uint32_t rstsr = mmio_read_32(stm32mp_rcc_base() + RCC_MP_RSTSCLRR);

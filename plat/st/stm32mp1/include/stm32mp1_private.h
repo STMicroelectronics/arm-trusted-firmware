@@ -14,6 +14,8 @@ void configure_mmu(void);
 void stm32mp1_arch_security_setup(void);
 void stm32mp1_security_setup(void);
 
+bool stm32mp1_addr_inside_backupsram(uintptr_t addr);
+
 void stm32mp_syscfg_init(void);
 void stm32mp_syscfg_enable_io_compensation_start(void);
 void stm32mp_syscfg_enable_io_compensation_finish(void);
