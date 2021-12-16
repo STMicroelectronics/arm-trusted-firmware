@@ -9,6 +9,7 @@
 #include <arch_helpers.h>
 #include <common/debug.h>
 #include <drivers/clk.h>
+#include <drivers/st/stm32mp1_ddr_helpers.h>
 #include <drivers/st/stm32mp1_ddr_regs.h>
 #include <dt-bindings/clock/stm32mp1-clks.h>
 #include <lib/utils.h>
@@ -121,6 +122,7 @@ void stm32_context_save_bl2_param(void)
 	backup_data->bl2_code_end = BL_CODE_END;
 	backup_data->bl2_end = BL2_END;
 	backup_data->magic = MAILBOX_MAGIC_V3;
+	backup_data->zq0cr0_zdata = ddr_get_io_calibration_val();
 
 	clk_disable(BKPSRAM);
 }
