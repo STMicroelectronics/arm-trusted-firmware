@@ -152,6 +152,7 @@ void stm32_save_boot_info(boot_api_context_t *boot_context);
 void stm32_get_boot_interface(uint32_t *interface, uint32_t *instance);
 /* Function to get BOOT_MODE backup register address */
 uintptr_t stm32_get_bkpr_boot_mode_addr(void);
+uintptr_t stm32_get_bkpr_stop2_ep_addr(void);
 
 /* Display board information from the value found in OTP fuse */
 void stm32_display_board_info(uint32_t board_id);

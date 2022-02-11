@@ -12,6 +12,7 @@
 
 #include <platform_def.h>
 
+#define BKPR_STOP2_EP	11U
 #define BKPR_FWU_INFO	48U
 #define BKPR_BOOT_MODE	96U
 
@@ -684,6 +685,11 @@ size_t stm32_risaf_get_memory_size(int instance)
 uintptr_t stm32_get_bkpr_boot_mode_addr(void)
 {
 	return tamp_bkpr(BKPR_BOOT_MODE);
+}
+
+uintptr_t stm32_get_bkpr_stop2_ep_addr(void)
+{
+	return tamp_bkpr(BKPR_STOP2_EP);
 }
 
 #if PSA_FWU_SUPPORT

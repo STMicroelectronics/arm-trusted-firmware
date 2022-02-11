@@ -22,6 +22,43 @@
 			reg = <0>;
 			enable-method = "psci";
 		};
+
+		domain-idle-states {
+			domain-stop1 {
+				compatible = "domain-idle-state";
+				arm,psci-suspend-param = <0x00000011>;
+			};
+
+			domain-lp-stop1 {
+				compatible = "domain-idle-state";
+				arm,psci-suspend-param = <0x00000021>;
+			};
+
+			domain-lplv-stop1 {
+				compatible = "domain-idle-state";
+				arm,psci-suspend-param = <0x00000211>;
+			};
+
+			domain-stop2 {
+				compatible = "domain-idle-state";
+				arm,psci-suspend-param = <0x40001333>;
+			};
+
+			domain-lp-stop2 {
+				compatible = "domain-idle-state";
+				arm,psci-suspend-param = <0x40002333>;
+			};
+
+			domain-lplv-stop2 {
+				compatible = "domain-idle-state";
+				arm,psci-suspend-param = <0x40023333>;
+			};
+
+			domain-standby {
+				compatible = "domain-idle-state";
+				arm,psci-suspend-param = <0x40033333>;
+			};
+		};
 	};
 
 	clocks {

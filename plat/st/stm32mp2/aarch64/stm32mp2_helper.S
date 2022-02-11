@@ -19,6 +19,7 @@
 	.globl	plat_crash_console_flush
 	.globl	plat_crash_console_putc
 	.globl	plat_report_exception
+	.globl	stm32_stop2_entrypoint
 
 func platform_mem_init
 	/* Nothing to do, don't need to init SYSRAM */
@@ -223,3 +224,17 @@ elr_el3_str:
 far_el3_str:
 	.asciz "\nFAR_EL3: "
 #endif /* IMAGE_BL2 */
+
+#ifdef IMAGE_BL31
+func stm32_stop2_entrypoint
+	bl	plat_is_my_cpu_primary
+	cbnz	w0, 1f
+0:	wfi
+	b.ne	0b
+1:
+	adrp	x1, stm32_sec_entrypoint
+	add	x1, x1, :lo12:stm32_sec_entrypoint
+	ldr	x0, [x1]
+	br	x0
+endfunc stm32_stop2_entrypoint
+#endif /* IMAGE_BL31 */
