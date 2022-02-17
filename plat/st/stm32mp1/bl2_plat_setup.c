@@ -353,7 +353,8 @@ skip_console_init:
 
 	if (dt_pmic_status() > 0) {
 		initialize_pmic();
-		if (pmic_voltages_init() != 0) {
+		if (!stm32mp_is_wakeup_from_standby() &&
+		    pmic_voltages_init() != 0) {
 			ERROR("PMIC voltages init failed\n");
 			panic();
 		}
