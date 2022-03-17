@@ -644,6 +644,8 @@ static inline uintptr_t tamp_bkpr(uint32_t idx)
 #define PLAT_NB_RDEVS			U(19)
 /* 2 FIXED */
 #define PLAT_NB_FIXED_REGUS		U(2)
+/* No GPIO regu */
+#define PLAT_NB_GPIO_REGUS		U(0)
 
 /*******************************************************************************
  * STM32MP1 CLOCKS

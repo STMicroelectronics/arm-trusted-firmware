@@ -177,6 +177,7 @@ PLAT_BL_COMMON_SOURCES		+=	drivers/clk/clk.c				\
 					drivers/st/gpio/stm32_gpio.c			\
 					drivers/st/regulator/regulator_core.c		\
 					drivers/st/regulator/regulator_fixed.c		\
+					drivers/st/regulator/regulator_gpio.c			\
 					plat/st/common/stm32mp_dt.c
 
 BL2_SOURCES			+=	${FCONF_SOURCES} ${FCONF_DYN_SOURCES}
