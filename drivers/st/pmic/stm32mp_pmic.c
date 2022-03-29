@@ -59,7 +59,11 @@ int dt_pmic_status(void)
 		return status;
 	}
 
+#if defined(IMAGE_BL2)
+	status = DT_SECURE;
+#else
 	status = (int)fdt_get_status(node);
+#endif
 
 	return status;
 }
@@ -116,6 +120,10 @@ static int dt_pmic_i2c_config(struct dt_node_info *i2c_info,
 	if (i2c_info->base == 0U) {
 		return -FDT_ERR_NOTFOUND;
 	}
+
+#if defined(IMAGE_BL2)
+	i2c_info->status = DT_SECURE;
+#endif
 
 	return stm32_i2c_get_setup_from_fdt(fdt, i2c_node, init);
 }
