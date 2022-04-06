@@ -14,7 +14,13 @@
 /*
  * SYSCFG register offsets (base relative)
  */
+#define SYSCFG_OCTOSPIAMCR		0x2C00U
 #define SYSCFG_DEVICEID			0x6400U
+
+/*
+ * SYSCFG_OCTOSPIAMCR Register
+ */
+#define SYSCFG_OCTOSPIAMCR_OAM_MASK	GENMASK_32(2, 0)
 
 /*
  * SYSCFG_DEVICEID Register
@@ -28,4 +34,22 @@
 uint32_t stm32mp_syscfg_get_chip_dev_id(void)
 {
 	return mmio_read_32(SYSCFG_BASE + SYSCFG_DEVICEID) & SYSCFG_DEVICEID_DEV_ID_MASK;
+}
+
+size_t stm32mp_syscfg_get_mm_size(uint8_t bank)
+{
+	uint32_t amcr = mmio_read_32(SYSCFG_BASE + SYSCFG_OCTOSPIAMCR);
+	uint32_t oam = amcr & SYSCFG_OCTOSPIAMCR_OAM_MASK;
+	size_t addr_mapping1;
+	size_t addr_mapping2;
+
+	if (oam > 3U) {
+		addr_mapping2 = SZ_256M;
+	} else {
+		addr_mapping2 = oam * SZ_64M;
+	}
+
+	addr_mapping1 = SZ_256M - addr_mapping2;
+
+	return (bank == 0U) ? addr_mapping1 : addr_mapping2;
 }
