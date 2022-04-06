@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2022-2024, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: GPL-2.0+ OR BSD-3-Clause
  */
@@ -22,7 +22,7 @@
 #include <lib/utils_def.h>
 
 /* Timeout for device interface reset */
-#define _TIMEOUT_US_1_MS		1000U
+#define _TIMEOUT_US_1_MS	1000U
 
 /* OCTOSPI registers */
 #define _OSPI_CR		0x00U
@@ -88,7 +88,10 @@
 #define _OSPI_BUSY_TIMEOUT_US	100U
 #define _OSPI_ABT_TIMEOUT_US	100U
 
-#define _DT_OSPI_COMPAT		"st,stm32-omi"
+#define _OMM_MAX_OSPI		2U
+
+#define _DT_IOM_COMPAT		"st,stm32mp25-omm"
+#define _DT_OSPI_COMPAT		"st,stm32mp25-omi"
 
 #define _FREQ_100MHZ		100000000U
 
@@ -466,71 +469,125 @@ static const struct spi_bus_ops stm32_ospi_bus_ops = {
 
 int stm32_ospi_init(void)
 {
-	size_t size;
+	int iom_node;
 	int ospi_node;
-	struct dt_node_info info;
-	const fdt32_t *cuint;
-	void *fdt = NULL;
 	int ret;
 	int len;
-	uint32_t i;
+	const fdt32_t *cuint;
+	void *fdt = NULL;
+	unsigned int i;
+	unsigned int nb_ospi_nodes = 0U;
 	unsigned int reset_id;
+	uintptr_t bank_address[_OMM_MAX_OSPI] = { 0U, 0U };
+	uintptr_t mm_base;
+	uint8_t bank_assigned = 0U;
+	uint8_t bank;
+	size_t mm_size;
 
 	if (fdt_get_address(&fdt) == 0) {
 		return -FDT_ERR_NOTFOUND;
 	}
 
-	ospi_node = dt_get_node(&info, -1, _DT_OSPI_COMPAT);
+	iom_node = fdt_node_offset_by_compatible(fdt, -1, _DT_IOM_COMPAT);
+	if (iom_node < 0) {
+		return iom_node;
+	}
+
+	if (fdt_get_status(iom_node) == DT_DISABLED) {
+		return -FDT_ERR_NOTFOUND;
+	}
+
+	ret = fdt_get_reg_props_by_name(fdt, iom_node, "omm_mm",
+					&mm_base, &mm_size);
+	if (ret != 0) {
+		return ret;
+	}
+
+	cuint = fdt_getprop(fdt, iom_node, "ranges", NULL);
+	if (cuint == NULL) {
+		return -FDT_ERR_BADVALUE;
+	}
+
+	for (i = 0U; i < _OMM_MAX_OSPI; i++) {
+		bank = fdt32_to_cpu(*cuint);
+		if ((bank >= _OMM_MAX_OSPI) ||
+		    ((bank_assigned & BIT(bank)) != 0U)) {
+			return -FDT_ERR_BADVALUE;
+		}
+
+		bank_assigned |= BIT(bank);
+		bank_address[bank] = fdt32_to_cpu(*(cuint + 2U));
+		cuint += 4U;
+	}
+
+	if (dt_set_pinctrl_config(iom_node) != 0) {
+		return -FDT_ERR_BADVALUE;
+	}
+
+	fdt_for_each_subnode(ospi_node, fdt, iom_node) {
+		nb_ospi_nodes++;
+	}
+
+	if (nb_ospi_nodes != 1U) {
+		WARN("Only one OSPI node supported\n");
+		return -FDT_ERR_BADVALUE;
+	}
+
+	/* Parse OSPI controller node */
+	ospi_node = fdt_node_offset_by_compatible(fdt, iom_node,
+						  _DT_OSPI_COMPAT);
 	if (ospi_node < 0) {
-		ERROR("No OSPI ctrl found\n");
+		return ospi_node;
+	}
+
+	if (fdt_get_status(ospi_node) == DT_DISABLED) {
 		return -FDT_ERR_NOTFOUND;
 	}
 
-	if (info.status == DT_DISABLED) {
-		return -FDT_ERR_NOTFOUND;
-	}
-
-	if (info.clock < 0) {
+	cuint = fdt_getprop(fdt, ospi_node, "reg", NULL);
+	if (cuint == NULL) {
 		return -FDT_ERR_BADVALUE;
 	}
 
-	ret = fdt_get_reg_props_by_name(fdt, ospi_node, "ospi",
-					&stm32_ospi.reg_base, &size);
-	if (ret != 0) {
-		return ret;
-	}
-
-	ret = fdt_get_reg_props_by_name(fdt, ospi_node, "ospi_mm",
-					&stm32_ospi.mm_base,
-					&stm32_ospi.mm_size);
-	if (ret != 0) {
-		return ret;
-	}
-
-	if (dt_set_pinctrl_config(ospi_node) != 0) {
+	bank = fdt32_to_cpu(*cuint);
+	if (bank >= _OMM_MAX_OSPI) {
 		return -FDT_ERR_BADVALUE;
 	}
 
-	stm32_ospi.clock_id = (unsigned long)info.clock;
+	stm32_ospi.reg_base = fdt32_to_cpu(*(cuint + 1U)) + bank_address[bank];
+	stm32_ospi.mm_size = stm32mp_syscfg_get_mm_size(bank);
+	stm32_ospi.mm_base = bank == 0U ?
+			     mm_base : mm_base + mm_size - stm32_ospi.mm_size;
 
+	cuint = fdt_getprop(fdt, ospi_node, "clocks", NULL);
+	if (cuint == NULL) {
+		return -FDT_ERR_BADVALUE;
+	}
+
+	cuint++;
+	stm32_ospi.clock_id = (unsigned long)fdt32_to_cpu(*cuint);
 	clk_enable(stm32_ospi.clock_id);
 
 	cuint = fdt_getprop(fdt, ospi_node, "resets", &len);
-	cuint++;
+	if (cuint != NULL) {
+		cuint++;
 
-	/* Reset: array of <phandle, reset_id> */
-	for (i = 0U; i < ((uint32_t)len / (sizeof(uint32_t) * _OSPI_MAX_RESET));
-	     i++, cuint += _OSPI_MAX_RESET) {
-		reset_id = (unsigned int)fdt32_to_cpu(*cuint);
+		/* Reset: array of <phandle, reset_id> */
+		for (i = 0U;
+		     i < ((uint32_t)len / (sizeof(uint32_t) * _OSPI_MAX_RESET));
+		     i++, cuint += _OSPI_MAX_RESET) {
+			reset_id = (unsigned int)fdt32_to_cpu(*cuint);
 
-		ret = stm32mp_reset_assert(reset_id, _TIMEOUT_US_1_MS);
-		if (ret != 0) {
-			panic();
-		}
+			ret = stm32mp_reset_assert(reset_id, _TIMEOUT_US_1_MS);
+			if (ret != 0) {
+				panic();
+			}
 
-		ret = stm32mp_reset_deassert(reset_id, _TIMEOUT_US_1_MS);
-		if (ret != 0) {
-			panic();
+			ret = stm32mp_reset_deassert(reset_id,
+						     _TIMEOUT_US_1_MS);
+			if (ret != 0) {
+				panic();
+			}
 		}
 	}
 
