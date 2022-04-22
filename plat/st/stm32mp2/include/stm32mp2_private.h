@@ -12,6 +12,18 @@ void configure_mmu(void);
 uint32_t stm32mp_syscfg_get_chip_dev_id(void);
 size_t stm32mp_syscfg_get_mm_size(uint8_t bank);
 
+/* IO compensation identifiers */
+enum syscfg_io_ids {
+	SYSFG_VDDIO1_ID,
+	SYSFG_VDDIO2_ID,
+	SYSFG_VDDIO3_ID,
+	SYSFG_VDDIO4_ID,
+	SYSFG_VDD_IO_ID,
+	SYSFG_NB_IO_ID
+};
+
+void stm32mp_syscfg_enable_io_compensation(enum syscfg_io_ids id);
+
 /* Get RISAF platform instance ID from peripheral IO memory base address */
 int stm32_risaf_get_instance(uintptr_t base);
 
