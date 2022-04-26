@@ -256,6 +256,14 @@
 				status = "disabled";
 			};
 
+			iwdg1: watchdog@44010000 {
+				compatible = "st,stm32mp1-iwdg";
+				reg = <0x44010000 0x400>;
+				clocks = <&rcc CK_BUS_IWDG1>, <&rcc LSI_CK>;
+				clock-names = "pclk", "lsi";
+				status = "disabled";
+			};
+
 			i2c8: i2c@46040000 {
 				compatible = "st,stm32mp25-i2c";
 				reg = <0x46040000 0x400>;
