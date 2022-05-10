@@ -248,6 +248,10 @@ ifneq ($(filter 1,${STM32MP_RAW_NAND} ${STM32MP_SPI_NAND} ${STM32MP_SPI_NOR}),)
 BL2_SOURCES			+=	plat/st/stm32mp2/stm32mp2_boot_device.c
 endif
 
+ifeq (${STM32MP_UART_PROGRAMMER},1)
+BL2_SOURCES			+=	drivers/st/uart/stm32_uart.c
+endif
+
 ifeq (${STM32MP_USB_PROGRAMMER},1)
 #The DFU stack uses only one end point, reduce the USB stack footprint
 $(eval $(call add_define_val,CONFIG_USBD_EP_NB,1U))
