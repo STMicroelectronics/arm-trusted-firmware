@@ -209,6 +209,7 @@ static int ssp_secrets_check(boot_api_context_t *boot_ctx)
 	uint32_t check_val;
 	uint32_t otp_bytes = boot_ctx->p_ssp_config->p_blob_payload->oem_secret_size_bytes;
 	uint32_t otp_decrypted;
+	uint32_t *val;
 
 	if (otp_bytes == 0U) {
 		return -EINVAL;
@@ -242,8 +243,16 @@ static int ssp_secrets_check(boot_api_context_t *boot_ctx)
 		return -EINVAL;
 	}
 
+	val = (uint32_t *)boot_ctx->p_ssp_config->p_ssp_oem_secrets_decrypted;
+
 	/* Check all OTP available */
 	for (i = SSP_OTP_SECRET_BASE; i < SSP_OTP_SECRET_BASE + otp_decrypted - 1U; i++) {
+		val++;
+
+		if (*val == 0U) {
+			continue;
+		}
+
 		if (stm32_get_otp_value_from_idx(i, &check_val) != 0) {
 			return -EINVAL;
 		}
@@ -264,6 +273,7 @@ static int ssp_secrets_flash(boot_api_context_t *boot_ctx)
 {
 	uint32_t i;
 	uint32_t *val;
+	uint32_t otp_val;
 	uint32_t otp_bytes =
 		boot_ctx->p_ssp_config->p_blob_payload->oem_secret_size_bytes;
 	uint32_t otp_decrypted;
@@ -285,6 +295,20 @@ static int ssp_secrets_flash(boot_api_context_t *boot_ctx)
 	/* Burn RMA password */
 	if (bsec_program_otp((*val & RMA_OTP_MASK), otp_rma.idx) !=  BSEC_OK) {
 		WARN("RMA programing failed\n");
+		return -EINVAL;
+	}
+
+	if (bsec_shadow_read_otp(&otp_val, otp_rma.idx) != BSEC_OK) {
+		return -EINVAL;
+	}
+
+	if ((otp_val & RMA_OTP_MASK) != (*val & RMA_OTP_MASK)) {
+		WARN("RMA programming failed\n");
+		return -EINVAL;
+	}
+
+	if (bsec_permanent_lock_otp(otp_rma.idx) != BSEC_OK) {
+		WARN("Error locking RMA OTP\n");
 		return -EINVAL;
 	}
 
@@ -460,6 +484,29 @@ static int prepare_certificate(uint8_t *cert, const uint8_t *pubkey)
 	}
 
 	return 0;
+}
+
+/*
+ * Clean OTP value that might be still in shadow registers
+ */
+static void cleanup_otp_value(void)
+{
+	unsigned int i;
+
+	/* RMA clear and lock */
+	if (bsec_write_otp(0U, otp_rma.idx) != BSEC_OK) {
+		return;
+	}
+
+	if (bsec_set_sr_lock(otp_rma.idx) != BSEC_OK) {
+		return;
+	}
+
+	for (i = SSP_OTP_SECRET_BASE; i < SSP_OTP_SECRET_END + 1U; i++) {
+		if (bsec_write_otp(0U, i) != BSEC_OK) {
+			return;
+		}
+	}
 }
 
 /*
@@ -639,6 +686,8 @@ static int ssp_secret_programming(boot_api_context_t *boot_context)
 	}
 
 clean:
+	cleanup_otp_value();
+
 	ssp_cleanup(boot_context);
 
 	if (result != 0) {
