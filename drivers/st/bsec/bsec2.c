@@ -449,7 +449,7 @@ uint32_t bsec_program_otp(uint32_t val, uint32_t otp)
  * otp: OTP number.
  * return value: BSEC_OK if no error.
  */
-#if defined(IMAGE_BL32)
+#if defined(IMAGE_BL32) || defined(STM32MP_SSP)
 uint32_t bsec_permanent_lock_otp(uint32_t otp)
 {
 	uint32_t result;
