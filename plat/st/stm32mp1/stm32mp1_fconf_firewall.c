@@ -10,6 +10,7 @@
 #include <common/fdt_wrappers.h>
 #include <drivers/arm/tzc400.h>
 #include <drivers/clk.h>
+#include <drivers/st/stm32mp1_ram.h>
 #include <dt-bindings/clock/stm32mp1-clks.h>
 #include <lib/fconf/fconf.h>
 #include <lib/object_pool.h>
@@ -56,6 +57,11 @@ void stm32mp1_security_setup(void)
 {
 	uint8_t i;
 
+	/* DDR content will be restored, do not change the firewall protection */
+	if (stm32mp1_ddr_is_restored()) {
+		return;
+	}
+
 	assert(nb_regions > 0U);
 
 	tzc400_init(STM32MP1_TZC_BASE);
@@ -84,6 +90,11 @@ static int fconf_populate_stm32mp1_firewall(uintptr_t config)
 
 	/* Assert the node offset point to "st,mem-firewall" compatible property */
 	const char *compatible_str = "st,mem-firewall";
+
+	/* DDR content will be restored, do not change the firewall protection */
+	if (stm32mp1_ddr_is_restored()) {
+		return 0;
+	}
 
 	node = fdt_node_offset_by_compatible(dtb, -1, compatible_str);
 	if (node < 0) {
