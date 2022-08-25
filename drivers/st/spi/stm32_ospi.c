@@ -50,6 +50,7 @@
 
 /* OCTOSPI device configuration register 1 */
 #define _OSPI_DCR1_CKMODE	BIT(0)
+#define _OSPI_DCR1_DLYBYP	BIT(3)
 #define _OSPI_DCR1_CSHT		GENMASK_32(13, 8)
 #define _OSPI_DCR1_CSHT_SHIFT	8U
 #define _OSPI_DCR1_DEVSIZE	GENMASK_32(20, 16)
@@ -591,7 +592,8 @@ int stm32_ospi_init(void)
 		}
 	}
 
-	mmio_write_32(ospi_base() + _OSPI_DCR1, _OSPI_DCR1_DEVSIZE);
+	mmio_write_32(ospi_base() + _OSPI_DCR1,
+		      _OSPI_DCR1_DEVSIZE | _OSPI_DCR1_DLYBYP);
 
 	return spi_mem_init_slave(fdt, ospi_node, &stm32_ospi_bus_ops);
 };
