@@ -63,6 +63,7 @@ struct backup_data_s {
 	uint32_t bl2_end;
 #if STM32MP13
 	uint8_t mce_mkey[MCE_KEY_SIZE_IN_BYTES];
+	struct stm32_mce_region_s mce_regions[MCE_IP_MAX_REGION_NB];
 #endif
 };
 
@@ -219,4 +220,37 @@ void stm32mp1_pm_get_mce_mkey_from_context(uint8_t *data)
 	clk_disable(BKPSRAM);
 }
 
+void stm32mp1_pm_save_mce_region(uint32_t index, struct stm32_mce_region_s *config)
+{
+	struct backup_data_s *backup_data;
+
+	if (index >= MCE_IP_MAX_REGION_NB) {
+		panic();
+	}
+
+	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
+
+	clk_enable(BKPSRAM);
+
+	memcpy(&backup_data->mce_regions[index], config, sizeof(struct stm32_mce_region_s));
+
+	clk_disable(BKPSRAM);
+}
+
+void stm32mp1_pm_get_mce_region(uint32_t index, struct stm32_mce_region_s *config)
+{
+	struct backup_data_s *backup_data;
+
+	if (index >= MCE_IP_MAX_REGION_NB) {
+		panic();
+	}
+
+	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
+
+	clk_enable(BKPSRAM);
+
+	memcpy(config, &backup_data->mce_regions[index], sizeof(struct stm32_mce_region_s));
+
+	clk_disable(BKPSRAM);
+}
 #endif
