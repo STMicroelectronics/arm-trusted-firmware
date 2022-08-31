@@ -413,7 +413,15 @@ skip_console_init:
 
 	fconf_populate("TB_FW", STM32MP_DTB_BASE);
 
-	stm32mp_io_setup();
+	if (stm32mp_skip_boot_device_after_standby()) {
+		bl_mem_params_node_t *bl_mem_params = get_bl_mem_params_node(FW_CONFIG_ID);
+
+		assert(bl_mem_params != NULL);
+
+		bl_mem_params->image_info.h.attr |= IMAGE_ATTRIB_SKIP_LOADING;
+	} else {
+		stm32mp_io_setup();
+	}
 }
 
 #if STM32MP13
@@ -426,6 +434,7 @@ static void prepare_encryption(void)
 #if STM32MP_SUPPORT_PM
 	if (stm32mp_is_wakeup_from_standby()) {
 		stm32mp1_pm_get_mce_mkey_from_context(mkey);
+		stm32_mce_reload_configuration();
 	} else {
 		/* Generate MCE master key from RNG */
 		if (stm32_rng_read(mkey, MCE_KEY_SIZE_IN_BYTES) != 0) {
@@ -491,6 +500,10 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 		/* Restore DDR training area on resume after encryption was enabled */
 		if (wakeup_ddr_sr) {
 			stm32_restore_ddr_training_area();
+		}
+
+		if (stm32mp_skip_boot_device_after_standby()) {
+			return 0;
 		}
 #endif /* STM32MP_SUPPORT_PM */
 
@@ -571,8 +584,11 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 
 	case BL32_IMAGE_ID:
 #if STM32MP_SUPPORT_PM
-		if (wakeup_ddr_sr) {
+		if (wakeup_ddr_sr && stm32mp_skip_boot_device_after_standby()) {
 			bl_mem_params->ep_info.pc = stm32_pm_get_optee_ep();
+			if (stm32mp1_addr_inside_backupsram(bl_mem_params->ep_info.pc)) {
+				clk_enable(BKPSRAM);
+			}
 			break;
 		}
 #endif /* STM32MP_SUPPORT_PM */
@@ -583,17 +599,6 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 
 			/* BL32 is OP-TEE header */
 			bl_mem_params->ep_info.pc = bl_mem_params->image_info.image_base;
-
-#if STM32MP_SUPPORT_PM
-			if (wakeup_ddr_sr) {
-				bl_mem_params->ep_info.pc = stm32_pm_get_optee_ep();
-				if (stm32mp1_addr_inside_backupsram(bl_mem_params->ep_info.pc)) {
-					clk_enable(BKPSRAM);
-				}
-
-				break;
-			}
-#endif /* STM32MP_SUPPORT_PM */
 
 			pager_mem_params = get_bl_mem_params_node(BL32_EXTRA1_IMAGE_ID);
 			assert(pager_mem_params != NULL);
@@ -642,7 +647,9 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 		assert(bl32_mem_params != NULL);
 		bl32_mem_params->ep_info.lr_svc = bl_mem_params->ep_info.pc;
 #if PSA_FWU_SUPPORT
-		stm32_fwu_set_boot_idx();
+		if (plat_fwu_is_enabled()) {
+			stm32_fwu_set_boot_idx();
+		}
 #endif /* PSA_FWU_SUPPORT */
 		break;
 

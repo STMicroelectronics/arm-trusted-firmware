@@ -525,6 +525,10 @@ int bl2_plat_handle_pre_image_load(unsigned int image_id)
 	static bool gpt_init_done __maybe_unused;
 	uint16_t boot_itf = stm32mp_get_boot_itf_selected();
 
+	if (stm32mp_skip_boot_device_after_standby()) {
+		return 0;
+	}
+
 	switch (boot_itf) {
 #if STM32MP_SDMMC || STM32MP_EMMC
 	case BOOT_API_CTX_BOOT_INTERFACE_SEL_FLASH_EMMC:
@@ -890,6 +894,6 @@ int plat_fwu_set_metadata_image_source(unsigned int image_id,
 
 bool plat_fwu_is_enabled(void)
 {
-	return true;
+	return !stm32mp_skip_boot_device_after_standby();
 }
 #endif /* PSA_FWU_SUPPORT */
