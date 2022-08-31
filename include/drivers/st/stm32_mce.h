@@ -41,4 +41,6 @@ bool stm32_mce_is_globally_locked(void);
 bool stm32_mce_is_hw_encryption_functional(void);
 
 int stm32_mce_get_address_encryption_state(uint32_t address, uint32_t *state);
+
+void stm32_mce_reload_configuration(void);
 #endif /* STM32_MCE_H */

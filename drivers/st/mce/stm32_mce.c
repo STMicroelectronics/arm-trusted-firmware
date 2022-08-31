@@ -347,6 +347,28 @@ int stm32_mce_get_address_encryption_state(uint32_t address, uint32_t *state)
 	return 0;
 }
 
+void stm32_mce_reload_configuration(void)
+{
+	uint32_t idx;
+
+	for (idx = 0U; idx < MCE_IP_MAX_REGION_NB; idx++) {
+		struct stm32_mce_region_s region;
+
+		stm32mp1_pm_get_mce_region(idx, &region);
+
+		if (region.end_address == 0U) {
+			break;
+		}
+
+		VERBOSE("%s: mce cell found with value = 0x%x 0x%x 0x%x\n", __func__,
+			region.start_address, region.end_address, region.encrypt_mode);
+
+		if (stm32_mce_configure_region(idx, &region) != 0) {
+			panic();
+		}
+	}
+}
+
 static int fconf_populate_mce(uintptr_t config)
 {
 	int node, len;
@@ -393,6 +415,8 @@ static int fconf_populate_mce(uintptr_t config)
 		if (stm32_mce_configure_region(i, &region) != 0) {
 			panic();
 		}
+
+		stm32mp1_pm_save_mce_region(i, &region);
 	}
 
 	return 0;
