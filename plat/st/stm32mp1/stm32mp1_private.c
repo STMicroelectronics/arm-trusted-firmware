@@ -703,6 +703,30 @@ bool stm32mp_is_wakeup_from_standby(void)
 #endif /* STM32MP_SUPPORT_PM */
 }
 
+bool stm32mp_skip_boot_device_after_standby(void)
+{
+#if STM32MP_SUPPORT_PM
+	static int skip = -1;
+
+	if (skip == -1) {
+		if (stm32mp_is_wakeup_from_standby()) {
+			skip = 1;
+#if STM32MP15
+			if (stm32_pm_get_optee_ep() == 0U) {
+				skip = 0;
+			}
+#endif
+		} else {
+			skip = 0;
+		}
+	}
+
+	return skip == 1;
+#else /* STM32MP_SUPPORT_PM */
+	return false;
+#endif /* STM32MP_SUPPORT_PM */
+}
+
 uintptr_t stm32_get_bkpr_boot_mode_addr(void)
 {
 	return tamp_bkpr(TAMP_BOOT_MODE_BACKUP_REG_ID);

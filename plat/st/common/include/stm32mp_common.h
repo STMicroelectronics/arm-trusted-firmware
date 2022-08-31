@@ -88,6 +88,7 @@ uintptr_t get_uart_address(uint32_t instance_nb);
 /* Setup the UART console */
 int stm32mp_uart_console_setup(void);
 
+bool stm32mp_skip_boot_device_after_standby(void);
 bool stm32mp_is_wakeup_from_standby(void);
 
 /*

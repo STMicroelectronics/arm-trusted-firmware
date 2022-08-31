@@ -520,6 +520,11 @@ bool stm32mp_is_wakeup_from_standby(void)
 	return false;
 }
 
+bool stm32mp_skip_boot_device_after_standby(void)
+{
+	return false;
+}
+
 int stm32_risaf_get_instance(uintptr_t base)
 {
 	switch (base) {
