@@ -237,7 +237,7 @@ static int stm32_ospi_send(const struct spi_mem_op *op, uint8_t fmode)
 {
 	uint64_t timeout;
 	uint32_t ccr;
-	uint32_t tcr;
+	uint32_t dcyc = 0U;
 	int ret;
 
 	VERBOSE("%s: cmd:%x mode:%d.%d.%d.%d addr:%" PRIx64 " len:%x\n",
@@ -254,12 +254,11 @@ static int stm32_ospi_send(const struct spi_mem_op *op, uint8_t fmode)
 		mmio_write_32(ospi_base() + _OSPI_DLR, op->data.nbytes - 1U);
 	}
 
-	tcr = _OSPI_TCR_SSHIFT;
 	if ((op->dummy.buswidth != 0U) && (op->dummy.nbytes != 0U)) {
-		tcr |= op->dummy.nbytes * 8U / op->dummy.buswidth;
+		dcyc = op->dummy.nbytes * 8U / op->dummy.buswidth;
 	}
 
-	mmio_clrsetbits_32(ospi_base() + _OSPI_TCR, _OSPI_TCR_DCYC, tcr);
+	mmio_clrsetbits_32(ospi_base() + _OSPI_TCR, _OSPI_TCR_DCYC, dcyc);
 
 	mmio_clrsetbits_32(ospi_base() + _OSPI_CR, _OSPI_CR_FMODE,
 			   fmode << _OSPI_CR_FMODE_SHIFT);
@@ -592,6 +591,7 @@ int stm32_ospi_init(void)
 		}
 	}
 
+	mmio_write_32(ospi_base() + _OSPI_TCR, _OSPI_TCR_SSHIFT);
 	mmio_write_32(ospi_base() + _OSPI_DCR1,
 		      _OSPI_DCR1_DEVSIZE | _OSPI_DCR1_DLYBYP);
 
