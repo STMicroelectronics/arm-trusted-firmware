@@ -80,7 +80,9 @@ void __no_pauth bl2_main(u_register_t arg0, u_register_t arg1, u_register_t arg2
 	bl2_arch_setup();
 
 #if PSA_FWU_SUPPORT
-	fwu_init();
+	if (plat_fwu_is_enabled()) {
+		fwu_init();
+	}
 #endif /* PSA_FWU_SUPPORT */
 
 	crypto_mod_init();

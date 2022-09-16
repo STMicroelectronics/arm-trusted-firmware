@@ -248,4 +248,9 @@ int plat_fwu_set_metadata_image_source(unsigned int image_id,
 
 	return result;
 }
+
+bool plat_fwu_is_enabled(void)
+{
+	return true;
+}
 #endif /* PSA_FWU_SUPPORT */

@@ -534,6 +534,7 @@ int plat_fwu_set_metadata_image_source(unsigned int image_id,
 				       uintptr_t *image_spec);
 void plat_fwu_set_images_source(const struct fwu_metadata *metadata);
 uint32_t plat_fwu_get_boot_idx(void);
+bool plat_fwu_is_enabled(void);
 
 /*
  * Optional function to indicate if cache management operations can be

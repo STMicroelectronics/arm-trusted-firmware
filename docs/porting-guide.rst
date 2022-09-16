@@ -1252,6 +1252,18 @@ resets while booting from the active bank, the platform can then switch to boot
 from a different bank. This function then returns the bank that the platform
 should boot its images from.
 
+Function : plat_fwu_is_enabled() [when PSA_FWU_SUPPORT == 1]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    Argument : void
+    Return   : bool
+
+This function is mandatory when PSA_FWU_SUPPORT is enabled. It checks at
+platform level that all conditions are met to initialize FWU process.
+
+
 Common optional modifications
 -----------------------------
 
