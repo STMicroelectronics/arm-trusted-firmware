@@ -154,16 +154,18 @@ int plat_get_spi_nand_data(struct spinand_device *device)
 #if STM32MP_SPI_NOR
 int plat_get_nor_data(struct nor_device *device)
 {
+	/* Quad read command used with MX25L51245G */
 	device->size = SZ_64M;
+	device->flags |= SPI_NOR_USE_BANK;
 
 	zeromem(&device->read_op, sizeof(struct spi_mem_op));
-	device->read_op.cmd.opcode = SPI_NOR_OP_READ_FAST_4B;
+	device->read_op.cmd.opcode = SPI_NOR_OP_READ_1_1_4;
 	device->read_op.cmd.buswidth = SPI_MEM_BUSWIDTH_1_LINE;
-	device->read_op.addr.nbytes = 4U;
+	device->read_op.addr.nbytes = 3U;
 	device->read_op.addr.buswidth = SPI_MEM_BUSWIDTH_1_LINE;
 	device->read_op.dummy.nbytes = 1U;
 	device->read_op.dummy.buswidth = SPI_MEM_BUSWIDTH_1_LINE;
-	device->read_op.data.buswidth = SPI_MEM_BUSWIDTH_1_LINE;
+	device->read_op.data.buswidth = SPI_MEM_BUSWIDTH_4_LINE;
 	device->read_op.data.dir = SPI_MEM_DATA_IN;
 
 	return 0;
