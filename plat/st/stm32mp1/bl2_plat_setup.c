@@ -40,6 +40,13 @@
 #include <stm32mp1_context.h>
 #include <stm32mp1_dbgmcu.h>
 
+#if !STM32MP1_OPTEE_IN_SYSRAM
+IMPORT_SYM(uintptr_t, __BSS_START__, BSS_START);
+IMPORT_SYM(uintptr_t, __BSS_END__, BSS_END);
+IMPORT_SYM(uintptr_t, __DATA_START__, DATA_START);
+IMPORT_SYM(uintptr_t, __DATA_END__, DATA_END);
+#endif
+
 #if DEBUG
 static const char debug_msg[] = {
 	"***************************************************\n"
@@ -671,6 +678,11 @@ void bl2_el3_plat_prepare_exit(void)
 		inv_dcache_range(DWL_BUFFER_BASE, DWL_BUFFER_SIZE);
 	}
 #endif /* STM32MP_UART_PROGRAMMER || STM32MP_USB_PROGRAMMER */
+
+#if !STM32MP1_OPTEE_IN_SYSRAM
+	flush_dcache_range(BSS_START, BSS_END - BSS_START);
+	flush_dcache_range(DATA_START, DATA_END - DATA_START);
+#endif
 
 	stm32mp1_security_setup();
 
