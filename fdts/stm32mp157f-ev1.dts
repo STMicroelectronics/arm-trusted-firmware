@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause)
+/*
+ * Copyright (C) 2026, STMicroelectronics - All Rights Reserved
+ */
+
+#include "stm32mp157c-ev1.dts"
+
+/ {
+	model = "STMicroelectronics STM32MP157F eval daughter on eval mother";
+	compatible = "st,stm32mp157f-ev1", "st,stm32mp157f-ed1", "st,stm32mp157";
+};
