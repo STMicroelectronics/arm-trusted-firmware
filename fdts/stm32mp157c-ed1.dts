@@ -196,6 +196,7 @@
 };
 
 &rcc {
+	compatible = "st,stm32mp1-rcc-secure", "st,stm32mp1-rcc", "syscon";
 	st,clksrc = <
 		CLK_MPU_PLL1P
 		CLK_AXI_PLL2P
