@@ -151,6 +151,27 @@
 	};
 };
 
+&ommanager {
+	pinctrl-names = "default";
+	pinctrl-0 = <&ospi1_clk_pins_a
+		     &ospi1_io03_pins_a
+		     &ospi1_cs0_pins_a>;
+	status = "okay";
+
+	spi@40430000 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "okay";
+
+		flash0: flash@0 {
+			compatible = "jedec,spi-nor";
+			reg = <0>;
+			spi-rx-bus-width = <4>;
+			spi-max-frequency = <133000000>;
+		};
+	};
+};
+
 &pwr {
 	vddio1: vddio1 {
 		vddio1-supply = <&vddio_sdcard>;
