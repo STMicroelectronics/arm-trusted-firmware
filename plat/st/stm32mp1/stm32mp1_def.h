@@ -74,6 +74,7 @@
 #define STM32MP1_REV_Z		U(0x1001)
 #endif
 #if STM32MP15
+#define STM32MP1_REV_Y		U(0x2003)
 #define STM32MP1_REV_Z		U(0x2001)
 #endif
 
