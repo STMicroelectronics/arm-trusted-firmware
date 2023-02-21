@@ -11,6 +11,11 @@ void configure_mmu(void);
 
 uint32_t stm32mp_syscfg_get_chip_dev_id(void);
 size_t stm32mp_syscfg_get_mm_size(uint8_t bank);
+int stm32mp_syscfg_dlyb_init(uint8_t bank, bool bypass_mode,
+			     uint16_t period_ps);
+int stm32mp_syscfg_dlyb_find_tap(uint8_t bank, int (*check_transfer)(void),
+				 bool rx_only);
+void stm32mp_syscfg_dlyb_stop(uint8_t bank);
 
 /* IO compensation identifiers */
 enum syscfg_io_ids {
