@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2025, STMicroelectronics - All Rights Reserved
+ * Copyright (C) 2018-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -47,6 +47,8 @@ uintptr_t stm32mp_pwr_base(void);
 /* Return the base address of the RCC peripheral */
 uintptr_t stm32mp_rcc_base(void);
 
+void stm32mp_gic_cpuif_enable(void);
+void stm32mp_gic_cpuif_disable(void);
 void stm32mp_gic_pcpu_init(void);
 void stm32mp_gic_init(void);
 
