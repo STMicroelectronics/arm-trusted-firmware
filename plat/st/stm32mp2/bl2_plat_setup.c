@@ -32,6 +32,7 @@
 #include <platform_def.h>
 #include <stm32mp_common.h>
 #include <stm32mp_dt.h>
+#include <stm32mp2_context.h>
 
 #define BOOT_CTX_ADDR	0x0e000020UL
 
@@ -307,10 +308,22 @@ static void prepare_encryption(void)
 {
 	uint8_t mkey[RISAF_KEY_SIZE_IN_BYTES];
 
-	/* Generate RISAF encryption key from RNG */
+#if STM32MP_SUPPORT_PM
+	if (stm32mp_is_wakeup_from_standby()) {
+		stm32mp_pm_get_enc_mkey_from_context(mkey);
+	} else {
+		/* Generate RISAF encryption key from RNG */
+		if (stm32_rng_read(mkey, RISAF_KEY_SIZE_IN_BYTES) != 0) {
+			panic();
+		}
+
+		stm32mp_pm_save_enc_mkey_in_context(mkey);
+	}
+#else /* STM32MP_SUPPORT_PM */
 	if (stm32_rng_read(mkey, RISAF_KEY_SIZE_IN_BYTES) != 0) {
 		panic();
 	}
+#endif /* STM32MP_SUPPORT_PM */
 
 	if (stm32mp2_risaf_write_encryption_key(RISAF4_INST, mkey) != 0) {
 		panic();
