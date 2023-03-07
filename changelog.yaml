@@ -1279,6 +1279,9 @@ subsections:
           - title: Reset
             scope: st-reset
 
+          - title: Resource Isolation Framework
+            scope: st-rif
+
           - title: SDMMC2
             scope: st-sdmmc2
 
