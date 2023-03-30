@@ -41,11 +41,19 @@
 		};
 
 #ifdef AARCH32_SP_OPTEE
+#if STM32MP1_OPTEE_IN_SYSRAM
 		tos_fw {
 			load-address = <0x0 STM32MP_OPTEE_BASE>;
 			max-size = <STM32MP_OPTEE_SIZE>;
 			id = <BL32_IMAGE_ID>;
 		};
+#else
+		tos_fw {
+			load-address = <0x0 DDR_SEC_BASE>;
+			max-size = <DDR_SEC_SIZE>;
+			id = <BL32_IMAGE_ID>;
+		};
+#endif /* STM32MP1_OPTEE_IN_SYSRAM */
 #else
 		tos_fw {
 			load-address = <0x0 STM32MP_BL32_BASE>;
