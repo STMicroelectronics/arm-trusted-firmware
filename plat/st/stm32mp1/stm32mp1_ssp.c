@@ -920,10 +920,6 @@ void bl2_el3_plat_arch_setup(void)
 
 	boot_api_context_t *boot_context =
 		(boot_api_context_t *)stm32mp_get_boot_ctx_address();
-	bool serial_uart_interface __unused =
-				(boot_context->boot_interface_selected ==
-				 BOOT_API_CTX_BOOT_INTERFACE_SEL_SERIAL_UART);
-	uintptr_t uart_prog_addr __unused;
 
 	if (bsec_probe() != 0) {
 		panic();
@@ -985,10 +981,12 @@ void bl2_el3_plat_arch_setup(void)
 	generic_delay_timer_init();
 
 #if STM32MP_UART_PROGRAMMER
-	uart_prog_addr = get_uart_address(boot_context->boot_interface_instance);
-
 	/* Disable programmer UART before changing clock tree */
-	if (serial_uart_interface) {
+	if (boot_context->boot_interface_selected ==
+	    BOOT_API_CTX_BOOT_INTERFACE_SEL_SERIAL_UART) {
+		uintptr_t uart_prog_addr =
+			get_uart_address(boot_context->boot_interface_instance);
+
 		stm32_uart_stop(uart_prog_addr);
 	}
 #endif
@@ -1000,6 +998,8 @@ void bl2_el3_plat_arch_setup(void)
 	if (dt_pmic_status() > 0) {
 		initialize_pmic();
 	}
+
+	stm32_save_boot_info(boot_context);
 
 #if DEBUG
 	if (stm32mp_uart_console_setup() != 0) {
