@@ -30,12 +30,21 @@
 /* This is the power level corresponding to a CPU */
 #define PSCI_CPU_PWR_LVL	U(0)
 
+#if PSCI_EXTENDED_STATE_ID
+/*
+ * For Extented StateID format, the composite state use bits 27:0 with one
+ * nibble by local state (recommended ARM encoding = ARM_RECOM_STATE_ID_ENC),
+ * the maximum power level supported by PSCI is 7 (28/4).
+ */
+#define PSCI_MAX_PWR_LVL	U(7)
+#else
 /*
  * The maximum power level supported by PSCI. Since PSCI CPU_SUSPEND
  * uses the old power_state parameter format which has 2 bits to specify the
  * power level, this constant is defined to be 3.
  */
 #define PSCI_MAX_PWR_LVL	U(3)
+#endif
 
 /*******************************************************************************
  * Defines for runtime services function ids
