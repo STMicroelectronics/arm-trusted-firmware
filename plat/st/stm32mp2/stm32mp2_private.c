@@ -152,8 +152,10 @@ static const uintptr_t stm32mp2_uart_addresses[STM32MP_NB_OF_UART] = {
 	UART5_BASE,
 	USART6_BASE,
 	UART7_BASE,
+#if STM32MP25
 	UART8_BASE,
 	UART9_BASE,
+#endif /* STM32MP25 */
 };
 
 uintptr_t get_uart_address(uint32_t instance_nb)

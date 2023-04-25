@@ -311,9 +311,13 @@ enum ddr_type {
 #define UART5_BASE				U(0x40110000)
 #define USART6_BASE				U(0x40220000)
 #define UART7_BASE				U(0x40370000)
+#if STM32MP25
 #define UART8_BASE				U(0x40380000)
 #define UART9_BASE				U(0x402C0000)
 #define STM32MP_NB_OF_UART			U(9)
+#else /* STM32MP25 */
+#define STM32MP_NB_OF_UART			U(7)
+#endif /* STM32MP25 */
 
 /* For UART crash console */
 #define STM32MP_DEBUG_USART_CLK_FRQ		64000000
