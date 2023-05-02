@@ -83,6 +83,8 @@ ifeq ($(shell test $(DTC_VERSION) -ge 10601; echo $$?),0)
 DTC_FLAGS			+=	-Wno-interrupt_provider
 endif
 
+TFA_EXTERNAL_DT		?=	fdts/external-dt/tf-a
+
 # Macros and rules to build TF binary
 STM32_TF_LINKERFILE		:=	${BUILD_PLAT}/${PLAT}.ld
 STM32_TF_ELF_LDFLAGS		:=	$(call ld_prefix,--hash-style=gnu)

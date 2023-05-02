@@ -125,6 +125,16 @@ sp_dts_name = $(patsubst %.dts,%$(if $(and \
     $(filter-out %-sp_min.dts,$(notdir $(1))) \
   ),-sp_min).dts,$(notdir $(1)))
 
+ifneq (,$(wildcard fdts/$(patsubst %.dtb,%.dts,$(DTB_FILE_NAME))))
+DT_SOURCE_PATH		:=	fdts
+else
+ifneq (,$(wildcard $(TFA_EXTERNAL_DT)/$(patsubst %.dtb,%.dts,$(DTB_FILE_NAME))))
+DT_SOURCE_PATH		:=	$(TFA_EXTERNAL_DT)
+else
+$(error Cannot find $(patsubst %.dtb,%.dts,$(DTB_FILE_NAME)) file)
+endif
+endif
+
 # Macros and rules to build TF binary
 STM32_TF_STM32		:=	$(addprefix ${BUILD_PLAT}/tf-a-, $(patsubst %.dtb,%.stm32,$(DTB_FILE_NAME)))
 STM32_LD_FILE		:=	plat/st/stm32mp1/stm32mp1.ld.S
@@ -139,7 +149,7 @@ endif
 STM32MP_FW_CONFIG_NAME	:=	$(patsubst %.dtb,%-fw-config.dtb,$(DTB_FILE_NAME))
 STM32MP_FW_CONFIG	:=	${BUILD_PLAT}/fdts/$(STM32MP_FW_CONFIG_NAME)
 ifneq (${AARCH32_SP},none)
-FDT_SOURCES		+=	$(addprefix fdts/, $(patsubst %.dtb,%.dts,$(STM32MP_FW_CONFIG_NAME)))
+FDT_SOURCES		+=	$(addprefix $(DT_SOURCE_PATH)/, $(patsubst %.dtb,%.dts,$(STM32MP_FW_CONFIG_NAME)))
 endif
 # Add the FW_CONFIG to FIP and specify the same to certtool
 $(eval $(call TOOL_ADD_PAYLOAD,${STM32MP_FW_CONFIG},--fw-config))

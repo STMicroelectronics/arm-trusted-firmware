@@ -119,6 +119,16 @@ endif
 FDT_SOURCES			:=	$(addprefix ${BUILD_PLAT}/fdts/, $(patsubst %.dtb,%-bl2.dts,$(DTB_FILE_NAME)))
 FDT_SOURCES			+=	$(addprefix ${BUILD_PLAT}/fdts/, $(patsubst %.dtb,%-bl31.dts,$(DTB_FILE_NAME)))
 
+ifneq (,$(wildcard fdts/$(patsubst %.dtb,%.dts,$(DTB_FILE_NAME))))
+DT_SOURCE_PATH			:=	fdts
+else
+ifneq (,$(wildcard $(TFA_EXTERNAL_DT)/$(patsubst %.dtb,%.dts,$(DTB_FILE_NAME))))
+DT_SOURCE_PATH			:=	$(TFA_EXTERNAL_DT)
+else
+$(error Cannot find $(patsubst %.dtb,%.dts,$(DTB_FILE_NAME)) file)
+endif
+endif
+
 # Macros and rules to build TF binary
 STM32_TF_STM32			:=	$(addprefix ${BUILD_PLAT}/tf-a-, $(patsubst %.dtb,%.stm32,$(DTB_FILE_NAME)))
 STM32_LD_FILE			:=	plat/st/stm32mp2/${ARCH}/stm32mp2.ld.S
@@ -132,7 +142,7 @@ STM32MP_DDR_FW_PATH		?=	drivers/st/ddr/phy/firmware/bin/stm32mp2
 STM32MP_DDR_FW_NAME		:=	${DDR_TYPE}_pmu_train.bin
 STM32MP_DDR_FW			:=	${STM32MP_DDR_FW_PATH}/${STM32MP_DDR_FW_NAME}
 endif
-FDT_SOURCES			+=	$(addprefix fdts/, $(patsubst %.dtb,%.dts,$(STM32MP_FW_CONFIG_NAME)))
+FDT_SOURCES			+=	$(addprefix $(DT_SOURCE_PATH)/, $(patsubst %.dtb,%.dts,$(STM32MP_FW_CONFIG_NAME)))
 
 # Add the FW_CONFIG to FIP and specify the same to certtool
 $(eval $(call TOOL_ADD_PAYLOAD,${STM32MP_FW_CONFIG},--fw-config))
@@ -415,7 +425,7 @@ endif
 endif
 
 # Create DTB file for BL31
-${BUILD_PLAT}/fdts/%-bl31.dts: fdts/%.dts fdts/${BL31_DTSI} | $$(@D)/
+${BUILD_PLAT}/fdts/%-bl31.dts: $(DT_SOURCE_PATH)/%.dts fdts/${BL31_DTSI} | $$(@D)/
 	@echo '#include "$(patsubst fdts/%,%,$<)"' > $@
 	@echo '#include "${BL31_DTSI}"' >> $@
 
