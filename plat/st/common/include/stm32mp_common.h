@@ -66,6 +66,7 @@ int stm32_get_otp_index(const char *otp_name, uint32_t *otp_idx,
 			uint32_t *otp_len);
 int stm32_get_otp_value(const char *otp_name, uint32_t *otp_val);
 int stm32_get_otp_value_from_idx(const uint32_t otp_idx, uint32_t *otp_val);
+int stm32_lock_enc_key_otp(void);
 /* update UID_WORD_NB array */
 int stm32_get_uid_otp(uint32_t uid[]);
 
