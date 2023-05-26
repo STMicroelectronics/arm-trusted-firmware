@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2022, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2017-2023, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -793,13 +793,13 @@ static void ssp_start(boot_api_context_t *boot_context)
 	}
 
 	/*
-	 * Keep VDDCORE && VDD enabled if pmic used to generate
+	 * Keep VDDCORE && VDD enabled if PMIC used to generate
 	 * the required MPSYSRST.
 	 */
 	if (dt_pmic_status() > 0) {
 		struct rdev *regul;
 
-		regul = dt_get_cpu_regulator();
+		regul = dt_get_sysram_regulator();
 		if (regul == NULL) {
 			panic();
 		}
