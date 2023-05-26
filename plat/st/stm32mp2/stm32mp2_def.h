@@ -783,6 +783,7 @@ enum ddr_type {
 #define DT_BSEC_COMPAT				"st,stm32mp25-bsec"
 #define DT_DDR_COMPAT				"st,stm32mp2-ddr"
 #define DT_IWDG_COMPAT				"st,stm32mp1-iwdg"
+#define DT_MMIO_SRAM				"mmio-sram"
 #if STM32MP21
 #define DT_PWR_COMPAT				"st,stm32mp21-pwr"
 #define DT_RCC_CLK_COMPAT			"st,stm32mp21-rcc"
