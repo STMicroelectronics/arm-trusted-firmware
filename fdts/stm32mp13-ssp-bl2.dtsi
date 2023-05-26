@@ -8,6 +8,12 @@
 		/delete-property/ mmc0;
 	};
 
+	sysram: sram@2ffe0000 {
+		compatible = "mmio-sram";
+		reg = <0x2ffe0000 0x20000>;
+		vddcore-supply = <&vddcore>;
+	};
+
 	soc {
 		efuse@5c005000 {
 			cfg0_otp: cfg0_otp@0 {

@@ -19,6 +19,12 @@
 	/delete-node/ cpu0_opp_table;
 	/delete-node/ psci;
 
+	sysram: sram@2ffc0000 {
+		compatible = "mmio-sram";
+		reg = <0x2ffc0000 0x40000>;
+		vddcore-supply = <&vddcore>;
+	};
+
 	soc {
 		efuse@5c005000 {
 			cfg2_otp: cfg2_otp@8 {
