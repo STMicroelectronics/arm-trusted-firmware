@@ -28,6 +28,7 @@
 
 /* Registers values */
 #define IWDG_KR_RELOAD_KEY	0xAAAA
+#define IWDG_KR_ENABLE_KEY	0xCCCC
 
 struct stm32_iwdg_instance {
 	uintptr_t base;
@@ -69,6 +70,20 @@ void stm32_iwdg_refresh(void)
 			clk_disable(iwdg->clock);
 		}
 	}
+}
+
+static void stm32_iwdg_start(struct stm32_iwdg_instance *iwdg)
+{
+	/* 0x00000000 is not a valid address for IWDG peripherals */
+	if (iwdg->base == 0U) {
+		panic();
+	}
+
+	clk_enable(iwdg->clock);
+
+	mmio_write_32(iwdg->base + IWDG_KR_OFFSET, IWDG_KR_ENABLE_KEY);
+
+	clk_disable(iwdg->clock);
 }
 
 int stm32_iwdg_init(void)
@@ -148,6 +163,13 @@ int stm32_iwdg_init(void)
 			return -1;
 		}
 #endif
+
+		if ((hw_init & IWDG_HW_ENABLED) == 0) {
+			/* Use default timeout, ignore DT's "timeout-sec" */
+			stm32_iwdg_start(iwdg);
+
+			iwdg->flags |= IWDG_HW_ENABLED;
+		}
 	}
 
 	VERBOSE("%u IWDG instance%s found\n", count, (count > 1U) ? "s" : "");
