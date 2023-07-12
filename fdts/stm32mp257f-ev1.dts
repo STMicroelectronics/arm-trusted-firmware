@@ -164,6 +164,11 @@
 	};
 };
 
+&iwdg1 {
+	timeout-sec = <32>;
+	status = "okay";
+};
+
 &ommanager {
 	pinctrl-names = "default";
 	pinctrl-0 = <&ospi1_clk_pins_a
