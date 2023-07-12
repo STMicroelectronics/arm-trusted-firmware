@@ -15,6 +15,7 @@
 #include <drivers/mmc.h>
 #include <drivers/st/regulator_fixed.h>
 #include <drivers/st/stm32_hash.h>
+#include <drivers/st/stm32_iwdg.h>
 #include <drivers/st/stm32_rifsc.h>
 #include <drivers/st/stm32_rng.h>
 #include <drivers/st/stm32mp2_ddr_helpers.h>
@@ -227,6 +228,12 @@ void bl2_el3_plat_arch_setup(void)
 	 */
 	mmio_write_32(RISAB3_BASE + RISAB_CR, RISAB_CR_SRWIAD);
 #endif /* STM32MP_DDR_FIP_IO_STORAGE || TRUSTED_BOARD_BOOT */
+
+	if (stm32_iwdg_init() < 0) {
+		panic();
+	}
+
+	stm32_iwdg_refresh();
 
 	stm32_save_boot_info(boot_context);
 

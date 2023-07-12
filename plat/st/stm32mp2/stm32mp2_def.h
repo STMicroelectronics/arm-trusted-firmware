@@ -416,9 +416,9 @@ enum ddr_type {
 #define PACKAGE_OTP_PKG_SHIFT			U(0)
 
 /* IWDG OTP */
-#define HCONF1_OTP_IWDG_HW_POS			U(0)
-#define HCONF1_OTP_IWDG_FZ_STOP_POS		U(1)
-#define HCONF1_OTP_IWDG_FZ_STANDBY_POS		U(2)
+#define HCONF1_OTP_IWDG_HW_MASK(i)		BIT_32((i) * 3U)
+#define HCONF1_OTP_IWDG_FZ_STOP_MASK(i)		BIT_32((i) * 3U + 1U)
+#define HCONF1_OTP_IWDG_FZ_STANDBY_MASK(i)	BIT_32((i) * 3U + 2U)
 
 /* NAND OTP */
 /* NAND parameter storage flag */
