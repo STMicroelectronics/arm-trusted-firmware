@@ -203,7 +203,7 @@ void stm32mp_syscfg_dlyb_stop(uint8_t bank)
 }
 
 int stm32mp_syscfg_dlyb_find_tap(uint8_t bank, int (*check_transfer)(void),
-				 bool rx_only)
+				 bool rx_only, uint8_t *window_len)
 {
 	struct syscfg_tap_window rx_tap_w[SYSCFG_DLYBOS_TAPSEL_NB];
 	int ret;
@@ -280,6 +280,7 @@ int stm32mp_syscfg_dlyb_find_tap(uint8_t bank, int (*check_transfer)(void),
 		}
 
 		rx_tap = rx_window_end - rx_window_len / 2U;
+		*window_len = rx_window_len;
 		VERBOSE("%s: RX_TAP_SEL set to %d\n", __func__, rx_tap);
 
 		return stm32_syscfg_dlyb_set_tap(bank, rx_tap, true);
@@ -317,6 +318,46 @@ int stm32mp_syscfg_dlyb_find_tap(uint8_t bank, int (*check_transfer)(void),
 	VERBOSE("%s: TX_TAP_SEL set to %d\n", __func__, best_tx_tap);
 
 	return stm32_syscfg_dlyb_set_tap(bank, best_tx_tap, false);
+}
+
+int stm32mp_syscfg_dlyb_set_cr(uint8_t bank, uint32_t dlyb_cr)
+{
+	bool bypass_mode = false;
+	uint16_t period_ps;
+	uint8_t rx_tap;
+	uint8_t tx_tap;
+	int ret;
+
+	period_ps = (dlyb_cr & SYSCFG_DLYBOS_BYP_CMD_MASK) >>
+		    SYSCFG_DLYBOS_BYP_CMD_SHIFT;
+	if ((dlyb_cr & SYSCFG_DLYBOS_BYP_EN) != 0U) {
+		bypass_mode = true;
+	}
+
+	ret = stm32mp_syscfg_dlyb_init(bank, bypass_mode, period_ps);
+	if (ret != 0) {
+		return ret;
+	}
+
+	/* restore Rx and TX tap */
+	rx_tap = (dlyb_cr & SYSCFG_DLYBOS_CR_RXTAPSEL_MASK) >>
+		 SYSCFG_DLYBOS_CR_RXTAPSEL_SHIFT;
+	ret = stm32_syscfg_dlyb_set_tap(bank, rx_tap, true);
+	if (ret != 0) {
+		return ret;
+	}
+
+	tx_tap = (dlyb_cr & SYSCFG_DLYBOS_CR_TXTAPSEL_MASK) >>
+		 SYSCFG_DLYBOS_CR_TXTAPSEL_SHIFT;
+
+	return stm32_syscfg_dlyb_set_tap(bank, tx_tap, false);
+}
+
+void stm32mp_syscfg_dlyb_get_cr(uint8_t bank, uint32_t *dlyb_cr)
+{
+	uintptr_t cr = SYSCFG_BASE + syscfg_dlybos_cr_offset[bank];
+
+	*dlyb_cr = mmio_read_32(cr);
 }
 
 /* ½ memory clock period in pico second */

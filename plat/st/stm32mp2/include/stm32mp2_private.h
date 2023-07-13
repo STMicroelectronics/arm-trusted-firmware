@@ -14,7 +14,9 @@ size_t stm32mp_syscfg_get_mm_size(uint8_t bank);
 int stm32mp_syscfg_dlyb_init(uint8_t bank, bool bypass_mode,
 			     uint16_t period_ps);
 int stm32mp_syscfg_dlyb_find_tap(uint8_t bank, int (*check_transfer)(void),
-				 bool rx_only);
+				 bool rx_only, uint8_t *window_len);
+int stm32mp_syscfg_dlyb_set_cr(uint8_t bank, uint32_t dlyb_cr);
+void stm32mp_syscfg_dlyb_get_cr(uint8_t bank, uint32_t *dlyb_cr);
 void stm32mp_syscfg_dlyb_stop(uint8_t bank);
 
 /* IO compensation identifiers */

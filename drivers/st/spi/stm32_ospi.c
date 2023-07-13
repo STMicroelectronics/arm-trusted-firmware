@@ -439,7 +439,12 @@ static int stm32_ospi_readid(void)
 
 static int stm32_ospi_calibration(unsigned int freq)
 {
+	uint32_t dlyb_cr;
+	uint8_t window_len_tcr0 = 0;
+	uint8_t window_len_tcr1 = 0;
 	int ret;
+	int ret_tcr0;
+	int ret_tcr1;
 
 	/*
 	 * Set memory device at low frequency (50 MHz) and sent
@@ -467,13 +472,42 @@ static int stm32_ospi_calibration(unsigned int freq)
 	}
 
 	/* Perform only RX TAP selection */
-	ret = stm32mp_syscfg_dlyb_find_tap(stm32_ospi.bank, stm32_ospi_readid,
-					   true);
-	if (ret != 0) {
-		WARN("Calibration phase failed\n");
+	ret_tcr0 = stm32mp_syscfg_dlyb_find_tap(stm32_ospi.bank,
+						stm32_ospi_readid,
+						true, &window_len_tcr0);
+	if (ret_tcr0 == 0) {
+		stm32mp_syscfg_dlyb_get_cr(stm32_ospi.bank, &dlyb_cr);
 	}
 
-	return ret;
+	stm32mp_syscfg_dlyb_stop(stm32_ospi.bank);
+
+	ret = stm32mp_syscfg_dlyb_init(stm32_ospi.bank, false, 0);
+	if (ret != 0) {
+		return ret;
+	}
+
+	mmio_setbits_32(ospi_base() + _OSPI_TCR, _OSPI_TCR_SSHIFT);
+
+	ret_tcr1 = stm32mp_syscfg_dlyb_find_tap(stm32_ospi.bank,
+						 stm32_ospi_readid,
+						 true, &window_len_tcr1);
+	if ((ret_tcr0 != 0) && (ret_tcr1 != 0)) {
+		WARN("Calibration phase failed\n");
+
+		return ret_tcr0;
+	}
+
+	if (window_len_tcr0 >= window_len_tcr1) {
+		mmio_clrbits_32(ospi_base() + _OSPI_TCR, _OSPI_TCR_SSHIFT);
+		stm32mp_syscfg_dlyb_stop(stm32_ospi.bank);
+
+		ret = stm32mp_syscfg_dlyb_set_cr(stm32_ospi.bank, dlyb_cr);
+		if (ret != 0) {
+			return ret;
+		}
+	}
+
+	return 0;
 }
 
 static int stm32_ospi_claim_bus(unsigned int cs)
@@ -501,6 +535,7 @@ static int stm32_ospi_claim_bus(unsigned int cs)
 					(prescaler + 1);
 
 		stm32mp_syscfg_dlyb_stop(stm32_ospi.bank);
+		mmio_clrbits_32(ospi_base() + _OSPI_TCR, _OSPI_TCR_SSHIFT);
 		calibration_done = true;
 
 		/* Calibration needed above 50 MHz */
@@ -510,6 +545,8 @@ static int stm32_ospi_claim_bus(unsigned int cs)
 				     _DLYB_FREQ_50MHZ);
 
 				stm32mp_syscfg_dlyb_stop(stm32_ospi.bank);
+				mmio_clrbits_32(ospi_base() + _OSPI_TCR,
+						_OSPI_TCR_SSHIFT);
 
 				return stm32_ospi_set_speed(_DLYB_FREQ_50MHZ);
 			}
@@ -706,7 +743,6 @@ int stm32_ospi_init(void)
 		}
 	}
 
-	mmio_write_32(ospi_base() + _OSPI_TCR, _OSPI_TCR_SSHIFT);
 	mmio_write_32(ospi_base() + _OSPI_DCR1, _OSPI_DCR1_DEVSIZE);
 
 	return spi_mem_init_slave(fdt, ospi_node, &stm32_ospi_bus_ops);
