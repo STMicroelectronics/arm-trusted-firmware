@@ -313,6 +313,17 @@ skip_console_init:
 		panic();
 	}
 
+#if STM32MP_DDR_FIP_IO_STORAGE && STM32MP_SUPPORT_PM
+	/* Skip DDR FW ID = the first image to load for standby exit */
+	if (stm32mp_is_wakeup_from_standby()) {
+		bl_mem_params_node_t *bl_mem_params;
+
+		bl_mem_params = get_bl_mem_params_node(DDR_FW_ID);
+		assert(bl_mem_params != NULL);
+		bl_mem_params->image_info.h.attr |= IMAGE_ATTRIB_SKIP_LOADING;
+	}
+#endif
+
 	stm32mp_io_setup();
 }
 
@@ -368,6 +379,7 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 	};
 	uint32_t otp_idx __maybe_unused;
 	uint32_t otp_len __maybe_unused;
+	bool wakeup_standby;
 
 	assert(bl_mem_params != NULL);
 
@@ -396,6 +408,8 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 				FW_CONFIG_ID);
 		fconf_populate("FW_CONFIG", STM32MP_FW_CONFIG_BASE);
 
+		wakeup_standby = stm32mp_is_wakeup_from_standby();
+
 		/* Iterate through all the fw config IDs */
 		for (i = 0U; i < ARRAY_SIZE(image_ids); i++) {
 			bl_mem_params = get_bl_mem_params_node(image_ids[i]);
@@ -409,7 +423,14 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 			bl_mem_params->image_info.image_base = config_info->config_addr;
 			bl_mem_params->image_info.image_max_size = config_info->config_max_size;
 
-			bl_mem_params->image_info.h.attr &= ~IMAGE_ATTRIB_SKIP_LOADING;
+			/*
+			 * If not going back from STANDBY (preserve the DDR in Self-Refresh)
+			 * or partition not located in DDR
+			 * the partitions must be loaded = remove the SKIP flag
+			 */
+			if (!wakeup_standby || (config_info->config_addr < STM32MP_DDR_BASE)) {
+				bl_mem_params->image_info.h.attr &= ~IMAGE_ATTRIB_SKIP_LOADING;
+			}
 
 			switch (image_ids[i]) {
 			case BL31_IMAGE_ID:

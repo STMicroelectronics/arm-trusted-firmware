@@ -8,9 +8,11 @@
 #include <errno.h>
 
 #include <drivers/st/stm32_iwdg.h>
+#include <lib/mmio.h>
 #include <lib/xlat_tables/xlat_tables_v2.h>
 
 #include <platform_def.h>
+#include <stm32mp2_context.h>
 
 #define BKPR_STOP2_EP	11U
 #define BKPR_FWU_INFO	48U
@@ -613,8 +615,27 @@ uint32_t stm32_iwdg_shadow_update(uint32_t iwdg_inst, uint32_t flags)
 
 bool stm32mp_is_wakeup_from_standby(void)
 {
-	/* TODO add source code to determine if platform is waking up from standby mode */
+#if STM32MP_SUPPORT_PM
+	static int standby = -1;
+	uint32_t rstsr;
+
+	if (standby == -1) {
+		rstsr = mmio_read_32(stm32mp_rcc_base() + RCC_C1BOOTRSTSCLRR);
+
+		if ((rstsr & RCC_C1BOOTRSTSCLRR_PADRSTF) != 0U) {
+			return false;
+		}
+		if (stm32_pm_context_is_valid()) {
+			standby = 1;
+		} else {
+			standby = 0;
+		}
+	}
+
+	return standby == 1;
+#else /* STM32MP_SUPPORT_PM */
 	return false;
+#endif /* STM32MP_SUPPORT_PM */
 }
 
 bool stm32mp_skip_boot_device_after_standby(void)
