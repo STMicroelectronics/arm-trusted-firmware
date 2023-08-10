@@ -7,7 +7,9 @@
 #include <assert.h>
 #include <stdint.h>
 
+#include <bl31/bl31.h>
 #include <common/bl_common.h>
+#include <common/runtime_svc.h>
 #include <drivers/generic_delay_timer.h>
 #include <drivers/st/stm32_console.h>
 #include <drivers/st/stm32mp_reset.h>
@@ -15,6 +17,7 @@
 #include <plat/common/platform.h>
 
 #include <platform_def.h>
+#include <stm32mp2_context.h>
 
 static entry_point_info_t bl32_image_ep_info;
 static entry_point_info_t bl33_image_ep_info;
@@ -126,6 +129,22 @@ void bl31_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 void bl31_plat_arch_setup(void)
 {
 	stm32mp_gic_init();
+
+#if STM32MP_SUPPORT_PM
+	if (stm32mp_is_wakeup_from_standby()) {
+		/* Initialize the runtime services e.g. PSCI. */
+		runtime_svc_init();
+
+		stm32_pm_context_restore();
+
+		/* Jump manually to BL31 warm entry point, with MMU disabled. */
+		dsbsy();
+		flush_dcache_range(STM32MP_SYSRAM_BASE, STM32MP_SYSRAM_SIZE / 2U);
+		disable_mmu_el3();
+		bl31_warm_entrypoint();
+		panic();
+	}
+#endif /* STM32MP_SUPPORT_PM */
 }
 
 void bl31_platform_setup(void)
