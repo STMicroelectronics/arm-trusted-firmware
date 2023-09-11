@@ -150,7 +150,7 @@ void stm32mp_syscfg_enable_io_compensation(enum syscfg_io_ids id)
 	mmio_clrbits_32(cccr_addr, SYSCFG_CCCR_CS);
 }
 
-#if STM32MP_SPI_NAND || STM32MP_SPI_NOR
+#if STM32MP_SPI_NAND || STM32MP_SPI_NOR || STM32MP_HYPERFLASH
 /*
  * SYSCFG DLYBOS register offsets (base relative)
  */

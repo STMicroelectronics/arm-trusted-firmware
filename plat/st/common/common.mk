@@ -38,6 +38,7 @@ STM32MP_SDMMC			?=	0
 STM32MP_RAW_NAND		?=	0
 STM32MP_SPI_NAND		?=	0
 STM32MP_SPI_NOR			?=	0
+STM32MP_HYPERFLASH		?=	0
 
 # Put both BL2 and FIP in eMMC boot partition
 STM32MP_EMMC_BOOT		?=	0
@@ -121,6 +122,7 @@ $(eval $(call assert_booleans,\
 		PLAT_XLAT_TABLES_DYNAMIC \
 		STM32MP_EMMC \
 		STM32MP_EMMC_BOOT \
+		STM32MP_HYPERFLASH \
 		STM32MP_RAW_NAND \
 		STM32MP_RECONFIGURE_CONSOLE \
 		STM32MP_SDMMC \
@@ -143,6 +145,7 @@ $(eval $(call add_defines,\
 		STM32_TF_VERSION \
 		STM32MP_EMMC \
 		STM32MP_EMMC_BOOT \
+		STM32MP_HYPERFLASH \
 		STM32MP_RAW_NAND \
 		STM32MP_RECONFIGURE_CONSOLE \
 		STM32MP_SDMMC \
@@ -267,6 +270,13 @@ ifneq (${STM32MP_FORCE_MTD_START_OFFSET},)
 $(eval $(call add_define_val,STM32MP_NAND_FIP_OFFSET,${STM32MP_FORCE_MTD_START_OFFSET}))
 endif
 BL2_SOURCES			+=	drivers/mtd/nand/core.c
+endif
+
+ifeq (${STM32MP_HYPERFLASH},1)
+ifneq (${STM32MP_FORCE_MTD_START_OFFSET},)
+$(eval $(call add_define_val,STM32MP_HYPERFLASH_FIP_OFFSET,${STM32MP_FORCE_MTD_START_OFFSET}))
+endif
+BL2_SOURCES			+=	drivers/mtd/hyperflash/hyperflash.c
 endif
 
 ifneq ($(filter 1,${STM32MP_UART_PROGRAMMER} ${STM32MP_USB_PROGRAMMER}),)

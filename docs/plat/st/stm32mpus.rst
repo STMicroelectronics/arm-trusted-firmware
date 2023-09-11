@@ -39,6 +39,7 @@ Available storage medias are:
 - ``STM32MP_RAW_NAND``
 - ``STM32MP_SPI_NAND``
 - ``STM32MP_SPI_NOR``
+- ``STM32MP_HYPERFLASH``
 
 Serial boot devices:
 
