@@ -127,6 +127,7 @@ void bl2_platform_setup(void)
 
 static void reset_backup_domain(void)
 {
+#if !STM32MP_M33_TDCID
 	uintptr_t pwr_base = stm32mp_pwr_base();
 	uintptr_t rcc_base = stm32mp_rcc_base();
 
@@ -159,6 +160,7 @@ static void reset_backup_domain(void)
 
 		mmio_clrbits_32(rcc_base + RCC_BDCR, RCC_BDCR_VSWRST);
 	}
+#endif /* !STM32MP_M33_TDCID */
 }
 
 static void authentication_check(boot_api_context_t *boot_context)
@@ -231,6 +233,7 @@ void bl2_el3_plat_arch_setup(void)
 	}
 
 #if STM32MP_DDR_FIP_IO_STORAGE || TRUSTED_BOARD_BOOT
+#if !STM32MP_M33_TDCID
 	/*
 	 * RISAB3 setup (dedicated for SRAM1)
 	 *
@@ -239,6 +242,7 @@ void bl2_el3_plat_arch_setup(void)
 	 * DDR firmwares are saved there before being loaded in DDRPHY memory.
 	 */
 	mmio_write_32(RISAB3_BASE + RISAB_CR, RISAB_CR_SRWIAD);
+#endif /* !STM32MP_M33_TDCID */
 #endif /* STM32MP_DDR_FIP_IO_STORAGE || TRUSTED_BOARD_BOOT */
 
 	if (stm32_iwdg_init() < 0) {
@@ -306,6 +310,7 @@ skip_console_init:
 #endif /* STM32MP25 */
 #endif /* STM32MP_USB_PROGRAMMER */
 
+#if !STM32MP_M33_TDCID
 	/*
 	 * RISAB5 setup (dedicated for RETRAM)
 	 *
@@ -319,6 +324,7 @@ skip_console_init:
 	if (stm32mp2_pwr_init_io_domains() != 0) {
 		panic();
 	}
+#endif /* !STM32MP_M33_TDCID */
 
 #if STM32MP_DDR_FIP_IO_STORAGE && STM32MP_SUPPORT_PM
 	/* Skip DDR FW ID = the first image to load for standby exit */
@@ -336,6 +342,7 @@ skip_console_init:
 
 static void prepare_encryption(void)
 {
+#if !STM32MP_M33_TDCID
 	uint8_t mkey[RISAF_KEY_SIZE_IN_BYTES];
 
 #if STM32MP_SUPPORT_PM
@@ -364,6 +371,7 @@ static void prepare_encryption(void)
 		panic();
 	}
 #endif /* STM32MP21 */
+#endif /* !STM32MP_M33_TDCID */
 }
 
 /*******************************************************************************
