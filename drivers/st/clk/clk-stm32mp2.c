@@ -1084,7 +1084,7 @@ static const struct stm32_clk_ops clk_stm32_flexgen_ops = {
 #define RCC_16_MHZ	UL(16000000)
 
 #ifdef IMAGE_BL2
-#if !STM32MP21
+#if !STM32MP_M33_TDCID && !STM32MP21
 static int clk_stm32_osc_msi_set_rate(struct stm32_clk_priv *priv, int id, unsigned long rate,
 				      unsigned long prate)
 {
@@ -1109,7 +1109,7 @@ static int clk_stm32_osc_msi_set_rate(struct stm32_clk_priv *priv, int id, unsig
 
 	return ret;
 }
-#endif /* !STM32MP21 */
+#endif /* !STM32MP_M33_TDCID && !STM32MP21 */
 #endif /* IMAGE_BL2 */
 
 static unsigned long clk_stm32_osc_msi_recalc_rate(struct stm32_clk_priv *priv,
@@ -1132,8 +1132,10 @@ static unsigned long clk_stm32_osc_msi_recalc_rate(struct stm32_clk_priv *priv,
 static const struct stm32_clk_ops clk_stm32_osc_msi_ops = {
 	.recalc_rate	= clk_stm32_osc_msi_recalc_rate,
 	.is_enabled	= clk_stm32_osc_gate_is_enabled,
+#if !STM32MP_M33_TDCID
 	.enable		= clk_stm32_osc_gate_enable,
 	.disable	= clk_stm32_osc_gate_disable,
+#endif
 	.init		= clk_stm32_osc_init,
 };
 
@@ -1537,6 +1539,7 @@ static void stm32mp2_a35_ss_on_hsi(void)
 #ifdef IMAGE_BL2
 static void stm32mp2_clk_muxsel_on_hsi(struct stm32_clk_priv *priv)
 {
+#if !STM32MP_M33_TDCID
 	mmio_clrbits_32(priv->base + RCC_MUXSELCFGR,
 			RCC_MUXSELCFGR_MUXSEL0_MASK |
 			RCC_MUXSELCFGR_MUXSEL1_MASK |
@@ -1546,8 +1549,14 @@ static void stm32mp2_clk_muxsel_on_hsi(struct stm32_clk_priv *priv)
 			RCC_MUXSELCFGR_MUXSEL5_MASK |
 			RCC_MUXSELCFGR_MUXSEL6_MASK |
 			RCC_MUXSELCFGR_MUXSEL7_MASK);
+#else
+	/* MUXSEL5 for PLL1 selection = CA35 clock source, always accessible */
+	mmio_clrbits_32(priv->base + RCC_MUXSELCFGR,
+			RCC_MUXSELCFGR_MUXSEL5_MASK);
+#endif
 }
 
+#if !STM32MP_M33_TDCID
 static void stm32mp2_clk_xbar_on_hsi(struct stm32_clk_priv *priv)
 {
 	uintptr_t xbar0cfgr = priv->base + RCC_XBAR0CFGR;
@@ -1559,6 +1568,7 @@ static void stm32mp2_clk_xbar_on_hsi(struct stm32_clk_priv *priv)
 				   XBAR_SRC_HSI);
 	}
 }
+#endif
 
 static int stm32mp2_a35_pll1_start(void)
 {
@@ -1843,6 +1853,7 @@ static int clk_stm32_pll_init(struct stm32_clk_priv *priv, int pll_idx)
 
 static int stm32mp2_clk_pll_configure(struct stm32_clk_priv *priv)
 {
+#if !STM32MP_M33_TDCID
 	enum pll_id i;
 	int err;
 
@@ -1859,6 +1870,9 @@ static int stm32mp2_clk_pll_configure(struct stm32_clk_priv *priv)
 	}
 
 	return 0;
+#else
+	return clk_stm32_pll_init(priv, _PLL1);
+#endif
 }
 
 static int wait_predivsr(uint16_t channel)
@@ -2016,6 +2030,7 @@ static int stm32mp2_clk_flexgen_configure(struct stm32_clk_priv *priv)
 	return 0;
 }
 
+#if !STM32MP_M33_TDCID
 static void stm32_enable_oscillator_hse(struct stm32_clk_priv *priv)
 {
 	struct stm32_clk_platdata *pdata = priv->pdata;
@@ -2059,16 +2074,20 @@ static void stm32_enable_oscillator_lse(struct stm32_clk_priv *priv)
 
 	_clk_stm32_gate_enable(priv, osc_data->gate_id);
 }
+#endif
 
 static int stm32mp2_clk_switch_to_hsi(struct stm32_clk_priv *priv)
 {
 	stm32mp2_a35_ss_on_hsi();
 	stm32mp2_clk_muxsel_on_hsi(priv);
+#if !STM32MP_M33_TDCID
 	stm32mp2_clk_xbar_on_hsi(priv);
+#endif
 
 	return 0;
 }
 
+#if !STM32MP_M33_TDCID
 static int stm32_clk_oscillators_wait_lse_ready(struct stm32_clk_priv *priv)
 {
 	int ret = 0;
@@ -2105,6 +2124,7 @@ static void stm32_clk_oscillators_enable(struct stm32_clk_priv *priv)
 	stm32_enable_oscillator_msi(priv);
 	_clk_stm32_enable(priv, _CK_LSI);
 }
+#endif
 
 static int stm32_clk_configure_div(struct stm32_clk_priv *priv, uint32_t data)
 {
@@ -2227,7 +2247,9 @@ static int stm32mp2_init_clock_tree(void)
 	stm32mp_stgen_restore_rate();
 	generic_delay_timer_init();
 
+#if !STM32MP_M33_TDCID
 	stm32_clk_oscillators_enable(priv);
+#endif
 
 	/* Come back to HSI */
 	ret = stm32mp2_clk_switch_to_hsi(priv);
@@ -2240,11 +2262,13 @@ static int stm32mp2_init_clock_tree(void)
 		panic();
 	}
 
+#if !STM32MP_M33_TDCID
 	/* Wait LSE ready before to use it */
 	ret = stm32_clk_oscillators_wait_lse_ready(priv);
 	if (ret != 0) {
 		panic();
 	}
+#endif
 
 	ret = stm32mp2_clk_flexgen_configure(priv);
 	if (ret != 0) {
