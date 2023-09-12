@@ -107,6 +107,8 @@ Dedicated STM32MP2 build flags:
 
 - | ``STM32MP_DDR_FIP_IO_STORAGE``: to store DDR firmware in FIP.
   | Default: 1
+- | ``STM32MP_M33_TDCID``: Enable this flag if Cortex-A35 does not have the Trusted Domain Compartment ID (owned by Cortex-M33)
+  | Default: 0
 - | ``STM32MP21``: to select STM32MP21 variant configuration.
   | Default: 0
 - | ``STM32MP23``: to select STM32MP23 variant configuration.
