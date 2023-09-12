@@ -101,11 +101,13 @@ void bl2_platform_setup(void)
 {
 	int ret;
 
+#if !STM32MP_M33_TDCID
 	ret = stm32mp2_ddr_probe();
 	if (ret != 0) {
 		ERROR("DDR probe: error %d\n", ret);
 		panic();
 	}
+#endif
 
 	if (stm32mp2_risaf_init() < 0) {
 		panic();
@@ -216,11 +218,13 @@ void bl2_el3_plat_arch_setup(void)
 
 	reset_backup_domain();
 
+#if !STM32MP_M33_TDCID
 	/*
 	 * Initialize DDR sub-system clock. This needs to be done before enabling DDR PLL (PLL2),
 	 * and so before stm32mp2_clk_init().
 	 */
 	ddr_sub_system_clk_init();
+#endif
 
 	if (stm32mp2_clk_init() < 0) {
 		panic();

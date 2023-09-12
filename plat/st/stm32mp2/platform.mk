@@ -92,6 +92,7 @@ DWL_BUFFER_BASE 		?=	0x87000000
 STM32MP_DDR3_TYPE		?=	0
 STM32MP_DDR4_TYPE		?=	0
 STM32MP_LPDDR4_TYPE		?=	0
+ifeq ($(STM32MP_M33_TDCID),0)
 ifeq (${STM32MP_DDR3_TYPE},1)
 DDR_TYPE			:=	ddr3
 endif
@@ -105,6 +106,10 @@ endif
 # DDR features
 STM32MP_DDR_DUAL_AXI_PORT	:=	1
 STM32MP_DDR_FIP_IO_STORAGE	:=	1
+else #STM32MP_M33_TDCID
+STM32MP_DDR_DUAL_AXI_PORT	:=	0
+STM32MP_DDR_FIP_IO_STORAGE	:=	0
+endif #STM32MP_M33_TDCID
 
 # Device tree
 ifeq ($(STM32MP21),1)
@@ -314,6 +319,7 @@ endif
 BL2_SOURCES			+=	plat/st/stm32mp2/stm32mp2_usb_dfu.c
 endif
 
+ifeq ($(STM32MP_M33_TDCID),0)
 BL2_SOURCES			+=	drivers/st/ddr/stm32mp2_ddr.c				\
 					drivers/st/ddr/stm32mp2_ddr_helpers.c			\
 					drivers/st/ddr/stm32mp2_ram.c
@@ -338,6 +344,7 @@ BL2_SOURCES			+=	drivers/st/ddr/phy/phyinit/src/ddrphy_phyinit_d_loadimem.c				\
 					drivers/st/ddr/phy/phyinit/src/ddrphy_phyinit_g_execfw.c				\
 					drivers/st/ddr/phy/phyinit/src/ddrphy_phyinit_writeoutmem.c				\
 					drivers/st/ddr/phy/phyinit/usercustom/ddrphy_phyinit_usercustom_g_waitfwdone.c
+endif #STM32MP_M33_TDCID
 
 # BL31 sources
 BL31_SOURCES			+=	${FDT_WRAPPERS_SOURCES}
@@ -366,7 +373,10 @@ BL31_SOURCES			+=	plat/st/common/stm32mp_svc_setup.c			\
 BL31_SOURCES			+=	services/arm_arch_svc/arm_arch_svc_setup.c
 
 # Compilation rules
+.SUFFIXES:
+ifeq ($(STM32MP_M33_TDCID),0)
 .PHONY: check_ddr_type
+
 bl2: check_ddr_type
 
 check_ddr_type:
@@ -377,6 +387,7 @@ check_ddr_type:
 		echo "One and only one DDR type must be defined"; \
 		false; \
 	fi
+endif #STM32MP_M33_TDCID
 
 # Generate separate DDR FIP image
 ifeq (${STM32MP_DDR_FIP_IO_STORAGE},1)
