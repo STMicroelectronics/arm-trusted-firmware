@@ -132,6 +132,9 @@
 /* PWR_CR10 register fields */
 #define PWR_CR10_RETRBSEN_MASK			GENMASK_32(1, 0)
 #define PWR_CR10_RETRBSEN_SHIFT			U(0)
+#define PWR_CR10_RETRBSEN_DISABLE		U(0)
+#define PWR_CR10_RETRBSEN_STANDBY_VBAT		U(1)
+#define PWR_CR10_RETRBSEN_STANDBY		U(2)
 
 /* PWR_CR11 register fields */
 #define PWR_CR11_DDRRETDIS			BIT_32(0)

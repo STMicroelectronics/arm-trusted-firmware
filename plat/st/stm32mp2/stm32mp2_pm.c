@@ -29,6 +29,9 @@
 #include <stm32mp2_context.h>
 #include <stm32mp2_private.h>
 
+#define RAMCFG_RETRAMCR		0x180U
+#define SRAMHWERDIS		BIT(12)
+
 /* GIC interrupt number */
 #define RCC_WAKEUP_IRQn		254
 
@@ -853,6 +856,13 @@ static void stm32_pm_init(void)
 	mmio_setbits_32(rcc_base + RCC_LEGBOOTCR, RCC_LEGBOOTCR_LEGACY_BEN);
 
 	mmio_write_32(rcc_base + RCC_C1SREQCLRR, RCC_C1SREQSETR_STPREQ_MASK);
+
+	/* Maintain BKPSRAM & RETRAM content in Standby */
+	mmio_write_32(pwr_base + PWR_CR9, PWR_CR9_BKPRBSEN);
+	mmio_write_32(pwr_base + PWR_CR10, PWR_CR10_RETRBSEN_STANDBY);
+
+	/* Prevent RETRAM erase */
+	mmio_write_32(RAMCFG_BASE + RAMCFG_RETRAMCR, SRAMHWERDIS);
 
 	/*
 	 * If PWR_D1CR_LPCFG_D1 is set to 0,
