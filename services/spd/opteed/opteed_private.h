@@ -156,6 +156,9 @@ void opteed_cpu_on_finish_handler(u_register_t unused);
 extern optee_context_t opteed_sp_context[OPTEED_CORE_COUNT];
 extern uint32_t opteed_rw;
 extern struct optee_vectors *optee_vector_table;
+
+void opteed_restore(void);
+
 #endif /*__ASSEMBLER__*/
 
 #endif /* OPTEED_PRIVATE_H */

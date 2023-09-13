@@ -867,3 +867,15 @@ DECLARE_RT_SVC(
 	NULL,
 	opteed_smc_handler
 );
+
+/* Define an OPTEED service to restore the SPD when BL31 data are lost */
+void opteed_restore(void)
+{
+	/*
+	 * OPTEE has been successfully initialized.
+	 * Register power management hooks with PSCI
+	 */
+	psci_register_spd_pm_hook(&opteed_pm);
+
+	register_opteed_interrupt_handler();
+}
