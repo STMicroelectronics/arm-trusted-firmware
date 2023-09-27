@@ -76,6 +76,21 @@
 #define SYSCFG_DLYBOS_TAPSEL_NB		33U
 #define SYSCFG_DLYBOS_CMD_NB		24U
 
+/* ICN registers */
+#define SYSCFG_ICNQPCR1			U(0x2000)
+#define SYSCFG_ICNQPCR2			U(0x2004)
+#define SYSCFG_ICNEWRCR			U(0x2008)
+#define SYSCFG_ICNCGCR			U(0x200C)
+#define SYSCFG_ICNGPUBWLCR		U(0x2010)
+#define SYSCFG_ICNE2EBWRCR		U(0x2014)
+#define SYSCFG_ICNPCIBWLCR		U(0x201C)
+#define SYSCFG_ICNETHBWLCR		U(0x2020)
+#define SYSCFG_ICNUSB3BWLCR		U(0x2024)
+#define SYSCFG_ICNCPU1BWLCR		U(0x2028)
+#define SYSCFG_ICNLTDCBWLCR		U(0x202C)
+#define SYSCFG_ICNDCMIPPBWLCR		U(0x2030)
+#define SYSCFG_ICNVDEBWLCR		U(0x2034)
+
 struct syscfg_tap_window {
 	uint8_t end;
 	uint8_t length;
@@ -458,3 +473,29 @@ int stm32mp_syscfg_dlyb_init(uint8_t bank, bool bypass_mode,
 	return 0;
 }
 #endif
+
+/*
+ * @brief  Set ICN QOS priority per master.
+ *	   By default, SYSCFG_ICN* register keep their reset values
+ * @retval 0.
+ */
+void stm32mp_syscfg_set_icn_qos(void)
+{
+/*
+ *	Reset values, un-comment and change if required
+ *
+ *	mmio_write_32(SYSCFG_BASE + SYSCFG_ICNQPCR1, U(0xCCCBBB3E));
+ *	mmio_write_32(SYSCFG_BASE + SYSCFG_ICNQPCR2, U(0x2449865A));
+ *	mmio_write_32(SYSCFG_BASE + SYSCFG_ICNEWRCR, U(0x0));
+ *	mmio_write_32(SYSCFG_BASE + SYSCFG_ICNCGCR, U(0x0));
+ *	mmio_write_32(SYSCFG_BASE + SYSCFG_ICNGPUBWLCR, U(0x0000400B));
+ *	mmio_write_32(SYSCFG_BASE + SYSCFG_ICNE2EBWRCR, U(0x00000052));
+ *	mmio_write_32(SYSCFG_BASE + SYSCFG_ICNPCIBWLCR, U(0x00002002));
+ *	mmio_write_32(SYSCFG_BASE + SYSCFG_ICNETHBWLCR, U(0x00001002));
+ *	mmio_write_32(SYSCFG_BASE + SYSCFG_ICNUSB3BWLCR, U(0x00004002));
+ *	mmio_write_32(SYSCFG_BASE + SYSCFG_ICNCPU1BWLCR, U(0x00002002));
+ *	mmio_write_32(SYSCFG_BASE + SYSCFG_ICNLTDCBWLCR, U(0x00008002));
+ *	mmio_write_32(SYSCFG_BASE + SYSCFG_ICNDCMIPPBWLCR, U(0x00005002));
+ *	mmio_write_32(SYSCFG_BASE + SYSCFG_ICNVDEBWLCR, U(0x00003502));
+ */
+}

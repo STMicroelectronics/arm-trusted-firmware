@@ -118,6 +118,9 @@ void bl2_platform_setup(void)
 		ERROR("DDR mapping: error %d\n", ret);
 		panic();
 	}
+
+	/* Set QOS ICN priority */
+	stm32mp_syscfg_set_icn_qos();
 }
 
 static void reset_backup_domain(void)
