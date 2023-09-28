@@ -51,6 +51,23 @@
 /*******************************************************************************
  * CHIP ID
  ******************************************************************************/
+#if STM32MP21
+#define STM32MP2_CHIP_ID			U(0x503)
+
+#define STM32MP211A_PART_NB			U(0x40073E7D)
+#define STM32MP211C_PART_NB			U(0x0007307D)
+#define STM32MP211D_PART_NB			U(0xC0073E7D)
+#define STM32MP211F_PART_NB			U(0x8007307D)
+#define STM32MP213A_PART_NB			U(0x40073E1D)
+#define STM32MP213C_PART_NB			U(0x0007301D)
+#define STM32MP213D_PART_NB			U(0xC0073E1D)
+#define STM32MP213F_PART_NB			U(0x8007301D)
+#define STM32MP215A_PART_NB			U(0x40033E0D)
+#define STM32MP215C_PART_NB			U(0x0003300D)
+#define STM32MP215D_PART_NB			U(0xC0033E0D)
+#define STM32MP215F_PART_NB			U(0x8003300D)
+#endif /* STM32MP21 */
+
 #if STM32MP23
 #define STM32MP2_CHIP_ID			U(0x505)
 

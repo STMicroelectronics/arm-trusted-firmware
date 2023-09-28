@@ -221,6 +221,44 @@ void stm32mp_get_soc_name(char name[STM32_SOC_NAME_SIZE])
 
 	/* MPUs Part Numbers */
 	switch (get_part_number()) {
+#if STM32MP21
+	case STM32MP211A_PART_NB:
+		cpu_s = "211A";
+		break;
+	case STM32MP211C_PART_NB:
+		cpu_s = "211C";
+		break;
+	case STM32MP211D_PART_NB:
+		cpu_s = "211D";
+		break;
+	case STM32MP211F_PART_NB:
+		cpu_s = "211F";
+		break;
+	case STM32MP213A_PART_NB:
+		cpu_s = "213A";
+		break;
+	case STM32MP213C_PART_NB:
+		cpu_s = "213C";
+		break;
+	case STM32MP213D_PART_NB:
+		cpu_s = "213D";
+		break;
+	case STM32MP213F_PART_NB:
+		cpu_s = "213F";
+		break;
+	case STM32MP215A_PART_NB:
+		cpu_s = "215A";
+		break;
+	case STM32MP215C_PART_NB:
+		cpu_s = "215C";
+		break;
+	case STM32MP215D_PART_NB:
+		cpu_s = "215D";
+		break;
+	case STM32MP215F_PART_NB:
+		cpu_s = "215F";
+		break;
+#endif /* STM32MP21 */
 #if STM32MP23
 	case STM32MP231A_PART_NB:
 		cpu_s = "231A";
@@ -399,6 +437,9 @@ void stm32mp_print_boardinfo(void)
 /* Return true when SoC provides a single Cortex-A35 core, and false otherwise */
 bool stm32mp_is_single_core(void)
 {
+#if STM32MP21
+	return true;
+#else /* STM32MP21 */
 	bool single_core = false;
 
 	switch (get_part_number()) {
@@ -421,6 +462,7 @@ bool stm32mp_is_single_core(void)
 	}
 
 	return single_core;
+#endif /* STM32MP21 */
 }
 
 /* Return true when device is in closed state */
@@ -435,6 +477,14 @@ bool stm32mp_is_auth_supported(void)
 	bool supported = false;
 
 	switch (get_part_number()) {
+#if STM32MP21
+	case STM32MP211C_PART_NB:
+	case STM32MP211F_PART_NB:
+	case STM32MP213C_PART_NB:
+	case STM32MP213F_PART_NB:
+	case STM32MP215C_PART_NB:
+	case STM32MP215F_PART_NB:
+#endif /* STM32MP21 */
 #if STM32MP23
 	case STM32MP231C_PART_NB:
 	case STM32MP231F_PART_NB:
