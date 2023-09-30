@@ -91,7 +91,10 @@ STM32MP_DDR_DUAL_AXI_PORT	:=	1
 STM32MP_DDR_FIP_IO_STORAGE	:=	1
 
 # Device tree
-ifeq ($(STM32MP23),1)
+ifeq ($(STM32MP21),1)
+BL2_DTSI			:=	stm32mp21-bl2.dtsi
+BL31_DTSI			:=	stm32mp21-bl31.dtsi
+else ifeq ($(STM32MP23),1)
 BL2_DTSI			:=	stm32mp23-bl2.dtsi
 BL31_DTSI			:=	stm32mp23-bl31.dtsi
 else ifeq ($(STM32MP25),1)

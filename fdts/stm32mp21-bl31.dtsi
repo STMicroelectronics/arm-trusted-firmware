@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause)
+/*
+ * Copyright (C) STMicroelectronics 2024 - All Rights Reserved
+ */
+
+/ {
+	soc@0 {
+		/delete-node/ memory-controller@48200000;
+
+		bus@42080000 {
+			/delete-node/ spi@40430000;
+			/delete-node/ mmc@48220000;
+			/delete-node/ mmc@48230000;
+		};
+	};
+};
