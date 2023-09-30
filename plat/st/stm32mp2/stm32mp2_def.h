@@ -117,9 +117,17 @@
  ******************************************************************************/
 #define STM32MP_SYSRAM_BASE			U(0x0E000000)
 #define STM32MP_SYSRAM_SIZE			U(0x00040000)
+#if STM32MP21
+#define SRAM1_BASE				U(0x0E060000)
+#else /* STM32MP21 */
 #define SRAM1_BASE				U(0x0E040000)
+#endif /* STM32MP21 */
 #define SRAM1_SIZE_FOR_TFA			U(0x00010000)
+#if STM32MP21
+#define RETRAM_BASE				U(0x0E040000)
+#else /* STM32MP21 */
 #define RETRAM_BASE				U(0x0E080000)
+#endif /* STM32MP21 */
 #define RETRAM_SIZE				U(0x00020000)
 
 #if defined(IMAGE_BL2) && STM32MP_USB_PROGRAMMER
