@@ -269,8 +269,10 @@ enum ddr_type {
 #define GPIOG_BASE				U(0x442A0000)
 #define GPIOH_BASE				U(0x442B0000)
 #define GPIOI_BASE				U(0x442C0000)
+#if !STM32MP21
 #define GPIOJ_BASE				U(0x442D0000)
 #define GPIOK_BASE				U(0x442E0000)
+#endif /* !STM32MP21 */
 #define GPIOZ_BASE				U(0x46200000)
 #define GPIO_BANK_OFFSET			U(0x10000)
 
