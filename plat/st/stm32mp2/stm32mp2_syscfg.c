@@ -242,6 +242,11 @@ int stm32mp_syscfg_dlyb_find_tap(uint8_t bank, int (*check_transfer)(void),
 			}
 
 			if (check_transfer() != 0) {
+				if ((!rx_only && (ret == -ETIMEDOUT)) ||
+				    (ret == -EOPNOTSUPP)) {
+					break;
+				}
+
 				rx_len = 0U;
 			} else {
 				rx_len++;
@@ -251,6 +256,10 @@ int stm32mp_syscfg_dlyb_find_tap(uint8_t bank, int (*check_transfer)(void),
 					rx_window_end = rx_tap;
 				}
 			}
+		}
+
+		if (ret == -EOPNOTSUPP) {
+			break;
 		}
 
 		rx_tap_w[tx_tap].end = rx_window_end;
@@ -270,6 +279,12 @@ int stm32mp_syscfg_dlyb_find_tap(uint8_t bank, int (*check_transfer)(void),
 		VERBOSE("%s: rx_tap_w[%d].end = %d rx_tap_w[%d].length = %d\n",
 			__func__, tx_tap, rx_tap_w[tx_tap].end,
 			tx_tap, rx_tap_w[tx_tap].length);
+	}
+
+	if (ret == -EOPNOTSUPP) {
+		ERROR("%s: calibration can not be done on this device\n", __func__);
+
+		return ret;
 	}
 
 	if (rx_only) {
