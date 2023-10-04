@@ -37,6 +37,11 @@
 
 #define BOOT_CTX_ADDR	0x0e000020UL
 
+IMPORT_SYM(uintptr_t, __BSS_START__, BSS_START);
+IMPORT_SYM(uintptr_t, __BSS_END__, BSS_END);
+IMPORT_SYM(uintptr_t, __DATA_START__, DATA_START);
+IMPORT_SYM(uintptr_t, __DATA_END__, DATA_END);
+
 static void print_reset_reason(void)
 {
 	uint32_t rstsr = mmio_read_32(stm32mp_rcc_base() + RCC_C1BOOTRSTSCLRR);
@@ -487,4 +492,10 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 	}
 
 	return err;
+}
+
+void bl2_el3_plat_prepare_exit(void)
+{
+	flush_dcache_range(BSS_START, BSS_END - BSS_START);
+	flush_dcache_range(DATA_START, DATA_END - DATA_START);
 }
