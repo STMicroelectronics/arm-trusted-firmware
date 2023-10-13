@@ -768,6 +768,16 @@ bool stm32mp_bkpram_get_access(void)
 #else /* STM32MP15 */
 bool stm32mp_bkpram_get_access(void)
 {
+	/* Remove erase signal before cleaning Backup SRAM */
+	uint32_t cr2_v = mmio_read_32(TAMP_BASE + TAMP_CR2);
+	uint32_t sr_v = mmio_read_32(TAMP_BASE + TAMP_SR);
+	uint32_t erase_flag = (sr_v & (TAMP_CR2_MASK_NOER | TAMP_SR_MASK_ITAMPx)) &
+			      (((~cr2_v) & TAMP_CR2_MASK_NOER) | TAMP_SR_MASK_ITAMPx);
+
+	if (erase_flag != 0U) {
+		mmio_write_32(TAMP_BASE + TAMP_SCR, erase_flag);
+	}
+
 	return true;
 }
 #endif
