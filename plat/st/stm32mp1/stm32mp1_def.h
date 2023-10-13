@@ -541,7 +541,13 @@ enum ddr_type {
 #define TAMP_BASE			U(0x5C00A000)
 #define TAMP_BKP_REGISTER_BASE		(TAMP_BASE + U(0x100))
 #define TAMP_BKP_REG_CLK		RTCAPB
+#define TAMP_CR2			U(0x4)
+#define TAMP_CR2_MASK_NOER		GENMASK_32(7, 0)
+#define TAMP_CR3			U(0x8)
+#define TAMP_CR3_MASK_NOER		GENMASK_32(12, 0)
+#define TAMP_SR				U(0x30)
 #define TAMP_COUNTR			U(0x40)
+#define TAMP_ERCFGR			U(0x54)
 
 #if !(defined(__LINKER__) || defined(__ASSEMBLER__))
 static inline uintptr_t tamp_bkpr(uint32_t idx)

@@ -741,3 +741,33 @@ uintptr_t stm32_get_bkpr_fwu_info_addr(void)
 	return tamp_bkpr(TAMP_BOOT_FWU_INFO_REG_ID);
 }
 #endif /* PSA_FWU_SUPPORT */
+
+#if STM32MP13
+bool stm32mp_bkpram_get_access(void)
+{
+	static bool state = true;
+
+	if (!state) {
+		return state;
+	}
+
+	clk_enable(RTCAPB);
+
+	if ((mmio_read_32(TAMP_BASE + TAMP_ERCFGR) != 0U) &&
+	    (mmio_read_32(TAMP_BASE + TAMP_SR) != 0U) &&
+	    (((mmio_read_32(TAMP_BASE + TAMP_CR2) & TAMP_CR2_MASK_NOER) == 0U) ||
+	     ((mmio_read_32(TAMP_BASE + TAMP_CR3) & TAMP_CR3_MASK_NOER) == 0U))) {
+		NOTICE("TAMPER detected : Degraded mode\n");
+		state = false;
+	}
+
+	clk_disable(RTCAPB);
+
+	return state;
+}
+#else /* STM32MP15 */
+bool stm32mp_bkpram_get_access(void)
+{
+	return true;
+}
+#endif

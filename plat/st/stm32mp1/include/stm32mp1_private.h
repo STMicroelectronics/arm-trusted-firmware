@@ -35,6 +35,8 @@ void stm32mp1_deconfigure_uart_pins(void);
 
 void stm32mp1_init_scmi_server(void);
 
+bool stm32mp_bkpram_get_access(void);
+
 /* Wrappers for OTP / BSEC functions */
 static inline uint32_t stm32_otp_read(uint32_t *val, uint32_t otp)
 {
