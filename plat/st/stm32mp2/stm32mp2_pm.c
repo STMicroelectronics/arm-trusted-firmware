@@ -706,6 +706,42 @@ static int stm32_validate_ns_entrypoint(uintptr_t entrypoint)
 	return PSCI_E_SUCCESS;
 }
 
+/*
+ * The PSCI code uses this API to let the platform participate in state
+ * coordination during a power management operation. It compares the platform
+ * specific local power states requested by each cpu for a given power domain
+ * and returns the coordinated target power state that the domain should
+ * enter.
+ * This implementation assumes that the power state is RUN for simple
+ * CPU STANDBY called by fast path in psci_cpu_suspend(), and assumes that the
+ * power state are ordered in increasing depth of the power.
+ * As a result, the  coordinated target local power state for a power domain
+ * will be the minimum of the requested local power states wich is NOT RUN.
+ * And it return a invalid state ()= OFF_STATE + 1) when state is RUN for all
+ * the cpu.
+ */
+plat_local_state_t plat_get_target_pwr_state(unsigned int lvl,
+					     const plat_local_state_t *states,
+					     unsigned int ncpu)
+{
+	plat_local_state_t target = PLAT_MAX_OFF_STATE + 1U, temp;
+	const plat_local_state_t *st = states;
+	unsigned int n = ncpu;
+
+	assert(ncpu > 0U);
+
+	do {
+		temp = *st;
+		st++;
+		if ((temp < target) && (temp != STM32MP_LOCAL_STATE_RUN)) {
+			target = temp;
+		}
+		n--;
+	} while (n > 0U);
+
+	return target;
+}
+
 /**
  * stm32_get_sys_suspend_power_state() -  Get power state for system suspend
  *
