@@ -209,7 +209,12 @@ int psci_system_suspend(uintptr_t entrypoint, u_register_t context_id)
 int psci_cpu_off(void)
 {
 	int rc;
+#if PSCI_OS_INIT_MODE
+	/* When coordination is done by OS, only update local state for CORE */
+	unsigned int target_pwrlvl = PSCI_CPU_PWR_LVL;
+#else
 	unsigned int target_pwrlvl = PLAT_MAX_PWR_LVL;
+#endif
 
 	/*
 	 * Do what is needed to power off this CPU and possible higher power
