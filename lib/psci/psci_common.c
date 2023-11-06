@@ -373,11 +373,8 @@ void psci_update_req_local_pwr_states(unsigned int end_pwrlvl,
 		prev[lvl - 1U] = *psci_get_req_local_pwr_states(lvl, cpu_idx);
 
 		/* Update the new requested local power state */
-		if (lvl <= end_pwrlvl) {
-			req_state = state_info->pwr_domain_state[lvl];
-		} else {
-			req_state = state_info->pwr_domain_state[end_pwrlvl];
-		}
+		req_state = state_info->pwr_domain_state[lvl];
+
 		psci_set_req_local_pwr_state(lvl, cpu_idx, req_state);
 	}
 }
