@@ -41,6 +41,8 @@ static gicv2_driver_data_t platform_gic_data = {
 
 static struct stm32mp_gic_instance stm32mp_gic;
 
+static gicv2_dist_ctx_t gicv2_dist_ctx;
+
 void stm32mp_gic_init(void)
 {
 	int node;
@@ -103,4 +105,17 @@ void stm32mp_gic_pcpu_init(void)
 {
 	gicv2_pcpu_distif_init();
 	gicv2_set_pe_target_mask(plat_my_core_pos());
+}
+
+void stm32mp_gic_save(void)
+{
+	gicv2_distif_save(&gicv2_dist_ctx);
+}
+
+void stm32mp_gic_resume(void)
+{
+	gicv2_distif_init();
+	stm32mp_gic_pcpu_init();
+
+	gicv2_distif_restore(&gicv2_dist_ctx);
 }

@@ -31,6 +31,9 @@ ENABLE_SVE_FOR_NS		:=	0
 PSCI_EXTENDED_STATE_ID		:= 	1
 PSCI_OS_INIT_MODE		:= 	1
 
+# Reduce the number of interruption in GIC context
+GICV2_INTR_NUM			:=	416
+
 # Default Device tree
 DTB_FILE_NAME			?=	stm32mp257f-ev1.dtb
 

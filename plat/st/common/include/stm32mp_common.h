@@ -55,6 +55,9 @@ void stm32mp_gic_cpuif_disable(void);
 void stm32mp_gic_pcpu_init(void);
 void stm32mp_gic_init(void);
 
+void stm32mp_gic_save(void);
+void stm32mp_gic_resume(void);
+
 /* Check MMU status to allow spinlock use */
 bool stm32mp_lock_available(void);
 
