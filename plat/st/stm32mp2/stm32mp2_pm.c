@@ -407,6 +407,7 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 		mmio_write_32(pwr_base + PWR_CPU2CR, 0U);
 
 		stm32mp_gic_cpuif_disable();
+		stm32mp_gic_save();
 		stm32mp2_pll1_disable();
 		break;
 
@@ -416,6 +417,7 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 		mmio_write_32(pwr_base + PWR_CPU2CR, PWR_CPU2CR_LPDS_D2);
 
 		stm32mp_gic_cpuif_disable();
+		stm32mp_gic_save();
 		stm32mp2_pll1_disable();
 		break;
 
@@ -426,6 +428,7 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 		mmio_write_32(pwr_base + PWR_CPU2CR, PWR_CPU2CR_LPDS_D2 | PWR_CPU2CR_LVDS_D2);
 
 		stm32mp_gic_cpuif_disable();
+		stm32mp_gic_save();
 		stm32mp2_pll1_disable();
 		break;
 
@@ -526,6 +529,7 @@ static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
 		ddr_sr_exit();
 		ddr_restore_sr_mode();
 
+		stm32mp_gic_resume();
 		stm32mp_gic_cpuif_enable();
 
 		/* Restore register in CA35SS */
