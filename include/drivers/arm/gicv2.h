@@ -196,5 +196,34 @@ void gicv2_clear_interrupt_pending(unsigned int id);
 unsigned int gicv2_set_pmr(unsigned int mask);
 void gicv2_interrupt_set_cfg(unsigned int id, unsigned int cfg);
 
+/* Use GICV2_INTR_NUM to reduce the size of the GICV2 context, for value 0 use default */
+#if GICV2_INTR_NUM == 0
+#define TOTAL_SHARED_INTR_NUM TOTAL_SPI_INTR_NUM
+#else
+#define TOTAL_SHARED_INTR_NUM (GICV2_INTR_NUM - MIN_SPI_ID)
+#endif
+
+/*
+ * This macro returns the total number of GICD registers corresponding to
+ * the register name
+ */
+#define GICD_NUM_REGS(reg_name)	\
+	DIV_ROUND_UP_2EVAL(TOTAL_SHARED_INTR_NUM, (1U << reg_name##_SHIFT))
+
+typedef struct gicv2_dist_ctx {
+	/* 32 bits registers */
+	uint32_t gicd_ctlr;
+	uint32_t gicd_igroupr[GICD_NUM_REGS(IGROUPR)];
+	uint32_t gicd_isenabler[GICD_NUM_REGS(ISENABLER)];
+	uint32_t gicd_ispendr[GICD_NUM_REGS(ISPENDR)];
+	uint32_t gicd_isactiver[GICD_NUM_REGS(ISACTIVER)];
+	uint32_t gicd_ipriorityr[GICD_NUM_REGS(IPRIORITYR)];
+	uint32_t gicd_itargetsr[GICD_NUM_REGS(ITARGETSR)];
+	uint32_t gicd_icfgr[GICD_NUM_REGS(ICFGR)];
+} gicv2_dist_ctx_t;
+
+void gicv2_distif_restore(const gicv2_dist_ctx_t * const dist_ctx);
+void gicv2_distif_save(gicv2_dist_ctx_t * const dist_ctx);
+
 #endif /* __ASSEMBLER__ */
 #endif /* GICV2_H */

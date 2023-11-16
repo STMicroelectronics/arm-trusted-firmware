@@ -554,3 +554,94 @@ void gicv2_interrupt_set_cfg(unsigned int id, unsigned int cfg)
 {
 	gicd_set_icfgr(driver_data->gicd_base, id, cfg);
 }
+
+/*******************************************************************************
+ * Helper function to get the maximum INTID
+ ******************************************************************************/
+static unsigned int get_nb_ints(uintptr_t gicd_base)
+{
+	unsigned int num_ints;
+
+	num_ints = gicd_read_typer(gicd_base);
+	num_ints &= TYPER_IT_LINES_NO_MASK;
+	num_ints = (num_ints + 1U) << 5U;
+
+	return num_ints;
+}
+
+/* Helper macros to save and restore GICD registers to and from the context */
+#define RESTORE_GICD_REGS(base, ctx, intr_num, reg, REG)		\
+	do {								\
+		for (unsigned int int_id = MIN_SPI_ID; int_id < (intr_num);\
+				int_id += (1U << REG##R_SHIFT)) {	\
+			gicd_write_##reg((base), int_id,		\
+				(ctx)->gicd_##reg[(int_id - MIN_SPI_ID) >> \
+							REG##R_SHIFT]);	\
+		}							\
+	} while (false)
+
+#define SAVE_GICD_REGS(base, ctx, intr_num, reg, REG)			\
+	do {								\
+		for (unsigned int int_id = MIN_SPI_ID; int_id < (intr_num);\
+				int_id += (1U << REG##R_SHIFT)) {	\
+			(ctx)->gicd_##reg[(int_id - MIN_SPI_ID) >>	\
+			REG##R_SHIFT] = gicd_read_##reg((base), int_id); \
+		}							\
+	} while (false)
+
+/*****************************************************************************
+ * Function to save the GIC Distributor register context. This function
+ * must be invoked after CPU interface disable.
+ *****************************************************************************/
+void gicv2_distif_save(gicv2_dist_ctx_t * const dist_ctx)
+{
+	uintptr_t gicd_base;
+	unsigned int num_ints;
+
+	assert(driver_data != NULL);
+	assert(driver_data->gicd_base != 0U);
+
+	gicd_base = driver_data->gicd_base;
+	num_ints = get_nb_ints(gicd_base);
+
+	/* Save the GICD_CTLR */
+	dist_ctx->gicd_ctlr = gicd_read_ctlr(gicd_base);
+
+	/* Save  GICD configuration for ALL SPI */
+	SAVE_GICD_REGS(gicd_base, dist_ctx, num_ints, igroupr, IGROUP);
+	SAVE_GICD_REGS(gicd_base, dist_ctx, num_ints, isenabler, ISENABLE);
+	SAVE_GICD_REGS(gicd_base, dist_ctx, num_ints, ispendr, ISPEND);
+	SAVE_GICD_REGS(gicd_base, dist_ctx, num_ints, isactiver, ISACTIVE);
+	SAVE_GICD_REGS(gicd_base, dist_ctx, num_ints, ipriorityr, IPRIORITY);
+	SAVE_GICD_REGS(gicd_base, dist_ctx, num_ints, itargetsr, ITARGETS);
+	SAVE_GICD_REGS(gicd_base, dist_ctx, num_ints, icfgr, ICFG);
+}
+
+/*****************************************************************************
+ * Function to restore the GIC Distributor register context.
+ * This function must be invoked prior to Redistributor restore and CPU
+ * interface enable.
+ *****************************************************************************/
+void gicv2_distif_restore(const gicv2_dist_ctx_t * const dist_ctx)
+{
+	uintptr_t gicd_base;
+	unsigned int num_ints;
+
+	assert(driver_data != NULL);
+	assert(driver_data->gicd_base != 0U);
+
+	gicd_base = driver_data->gicd_base;
+	num_ints = get_nb_ints(gicd_base);
+
+	/* Restore GICD configuration for ALL SPI */
+	RESTORE_GICD_REGS(gicd_base, dist_ctx, num_ints, igroupr, IGROUP);
+	RESTORE_GICD_REGS(gicd_base, dist_ctx, num_ints, isenabler, ISENABLE);
+	RESTORE_GICD_REGS(gicd_base, dist_ctx, num_ints, ispendr, ISPEND);
+	RESTORE_GICD_REGS(gicd_base, dist_ctx, num_ints, isactiver, ISACTIVE);
+	RESTORE_GICD_REGS(gicd_base, dist_ctx, num_ints, ipriorityr, IPRIORITY);
+	RESTORE_GICD_REGS(gicd_base, dist_ctx, num_ints, itargetsr, ITARGETS);
+	RESTORE_GICD_REGS(gicd_base, dist_ctx, num_ints, icfgr, ICFG);
+
+	/* Restore the GICD_CTLR */
+	gicd_write_ctlr(gicd_base, dist_ctx->gicd_ctlr);
+}
