@@ -311,6 +311,28 @@ enum ddr_type {
 #define PWR_BASE				U(0x44210000)
 
 /*******************************************************************************
+ * STM32MP2 EXTI1
+ ******************************************************************************/
+#define STM32MP_EXTI1_BASE			U(0x44220000)
+
+/* EXTI1 CPU1 wake-up with interrupt mask register */
+#define EXTI1_C1IMR1				U(0x80)
+#define EXTI1_C1IMR2				U(0x90)
+#define EXTI1_C1IMR3				U(0xA0)
+
+#define EXTI1_C1IMR1_PVD			BIT_32(16)
+#define EXTI1_C1IMR1_PVM			BIT_32(17)
+
+#define EXTI1_C1IMR2_WKUP1			BIT_32(52 - 32)
+#define EXTI1_C1IMR2_WKUP2			BIT_32(53 - 32)
+#define EXTI1_C1IMR2_WKUP3			BIT_32(54 - 32)
+#define EXTI1_C1IMR2_WKUP4			BIT_32(55 - 32)
+#define EXTI1_C1IMR2_WKUP5			BIT_32(56 - 32)
+#define EXTI1_C1IMR2_WKUP6			BIT_32(57 - 32)
+
+#define EXTI1_C1IMR2_WKUP_MASK			GENMASK_32(57 - 32, 52 - 32)
+
+/*******************************************************************************
  * STM32MP2 GPIO
  ******************************************************************************/
 #define GPIOA_BASE				U(0x44240000)

@@ -750,17 +750,37 @@ plat_local_state_t plat_get_target_pwr_state(unsigned int lvl,
 static void stm32_get_sys_suspend_power_state(psci_power_state_t *req_state)
 {
 	unsigned int state_id;
+	unsigned int pwr_state = 0U;
+	unsigned int max_pwr_state = PWRSTATE_STANDBY;
 	unsigned int i;
+	uintptr_t exti_base = STM32MP_EXTI1_BASE;
+	uint32_t c1imr1 = mmio_read_32(exti_base + EXTI1_C1IMR1);
+	uint32_t c1imr2 = mmio_read_32(exti_base + EXTI1_C1IMR2);
+	uint32_t c1imr3 = mmio_read_32(exti_base + EXTI1_C1IMR3);
 
-	/* Search the max supported modes */
+	/* Verify the max level supported according to the activated EXTI1 */
+	if ((c1imr1 & (EXTI1_C1IMR1_PVD | EXTI1_C1IMR1_PVM)) != 0U) {
+		max_pwr_state = PWRSTATE_LPLV_STOP2;
+		VERBOSE("%s: max_pwr_state = PWRSTATE_LPLV_STOP2 C1IMR1=%x\n", __func__, c1imr1);
+	}
+
+	/* Wake-up pin are connected directly to PWR */
+	if (((c1imr1 & ~(EXTI1_C1IMR1_PVD | EXTI1_C1IMR1_PVM)) != 0U) ||
+	    ((c1imr2 & ~EXTI1_C1IMR2_WKUP_MASK) != 0U) || (c1imr3 != 0U)) {
+		max_pwr_state = PWRSTATE_LP_STOP2;
+		VERBOSE("%s: max_pwr_state = PWRSTATE_LP_STOP2, C1IMR1=%x, C1IMR2=%x, C1IMR3=%x\n",
+			__func__, c1imr1, c1imr2, c1imr3);
+	}
+
+	/* Search the max supported POWERDOWN modes  <= max_pwr_state */
 	for (i = ARRAY_SIZE(stm32mp_supported_pwr_states) - 1U; i > 0U; i--) {
-		if ((stm32mp_supported_pwr_states[i] != 0U) &&
-		    (psci_get_pstate_type(stm32mp_supported_pwr_states[i]) ==
-		     PSTATE_TYPE_POWERDOWN)) {
+		pwr_state = stm32mp_supported_pwr_states[i];
+		if ((pwr_state != 0U) && (pwr_state <= max_pwr_state) &&
+		    (psci_get_pstate_type(pwr_state) == PSTATE_TYPE_POWERDOWN)) {
 			break;
 		}
 	}
-	state_id = psci_get_pstate_id(stm32mp_supported_pwr_states[i]);
+	state_id = psci_get_pstate_id(pwr_state);
 
 	/* Parse the State ID and populate the state info parameter */
 	for (i = 0U; i <= PLAT_MAX_PWR_LVL; i++) {
@@ -840,7 +860,7 @@ static int stm32_parse_domain_idle_state(void)
 
 		domain_idle_states[i++] = power_state;
 
-		/* check array size */
+		/* Check array size */
 		if (i > ARRAY_SIZE(domain_idle_states)) {
 			return -E2BIG;
 		}
@@ -853,7 +873,7 @@ static int stm32_parse_domain_idle_state(void)
 
 	/* Add each supported power state with same order than stm32mp_pm_idle_states */
 	for (j = 0U; stm32mp_pm_idle_states[j] != 0U; j++) {
-		for (i = 0U; domain_idle_states[i] != 0U && i < PM_IDLE_STATES_SIZE; i++) {
+		for (i = 0U; i < PM_IDLE_STATES_SIZE && domain_idle_states[i] != 0U ; i++) {
 			if (domain_idle_states[i] == stm32mp_pm_idle_states[j]) {
 				stm32mp_supported_pwr_states[nb_states++] = domain_idle_states[i];
 				break;
@@ -862,7 +882,7 @@ static int stm32_parse_domain_idle_state(void)
 	}
 
 	/* Add STANDBY at the end of the list if supported */
-	for (i = 0U; domain_idle_states[i] != 0U && i < PM_IDLE_STATES_SIZE; i++) {
+	for (i = 0U; i < PM_IDLE_STATES_SIZE && domain_idle_states[i] != 0U ; i++) {
 		if (domain_idle_states[i] == PWRSTATE_STANDBY) {
 			stm32mp_supported_pwr_states[nb_states++] = PWRSTATE_STANDBY;
 			break;
