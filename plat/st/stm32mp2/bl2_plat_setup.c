@@ -602,6 +602,21 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 		}
 		break;
 
+#if STM32MP_M33_TDCID
+	case BL32_EXTRA1_IMAGE_ID:
+		dsbsy();
+		isb();
+		stm32mp_unmap_ddr();
+		err = mmap_add_dynamic_region(STM32MP_BL33_BASE, STM32MP_BL33_BASE,
+					      STM32MP_DDR_MAX_SIZE - (STM32MP_BL33_BASE -
+								      STM32MP_DDR_BASE),
+					      MT_MEMORY | MT_RW | MT_NS);
+		if (err != 0) {
+			panic();
+		}
+		break;
+#endif
+
 	case BL33_IMAGE_ID:
 #if PSA_FWU_SUPPORT
 		err = stm32_fwu_set_boot_idx();
