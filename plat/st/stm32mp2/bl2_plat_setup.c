@@ -197,8 +197,10 @@ void bl2_platform_setup(void)
 		panic();
 	}
 
+#if !STM32MP_M33_TDCID
 	/* Set QOS ICN priority */
 	stm32mp_syscfg_set_icn_qos();
+#endif
 }
 
 static void reset_backup_domain(void)
