@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2022, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2017-2024, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -17,15 +17,17 @@
 #include <unistd.h>
 
 /* Magic = 'S' 'T' 'M' 0x32 */
-#define HEADER_MAGIC		__be32_to_cpu(0x53544D32)
-#define VER_MAJOR		2
-#define VER_MINOR		1
-#define VER_VARIANT		0
-#define HEADER_VERSION_V1	0x1
-#define HEADER_VERSION_V2	0x2
-#define PADDING_HEADER_MAGIC	__be32_to_cpu(0x5354FFFF)
-#define PADDING_HEADER_FLAG	(1 << 31)
-#define PADDING_HEADER_LENGTH	0x180
+#define HEADER_MAGIC			__be32_to_cpu(0x53544D32)
+#define VER_MAJOR			2
+#define VER_MINOR			1
+#define VER_VARIANT			0
+#define HEADER_VERSION_V1		0x1
+#define HEADER_VERSION_V2		0x2
+#define HEADER_SUBVERSION_VX_3		0x3
+#define PADDING_HEADER_MAGIC		__be32_to_cpu(0x5354FFFF)
+#define PADDING_HEADER_FLAG		(1 << 31)
+#define PADDING_HEADER_LENGTH		0x180
+#define PADDING_HEADER_LENGTH_V23	0x1A0
 
 struct stm32_header_v1 {
 	uint32_t magic_number;
@@ -65,16 +67,43 @@ struct stm32_header_v2 {
 	uint8_t extension_padding[376];
 };
 
-static void stm32image_default_header(void *ptr)
+struct stm32_header_v23 {
+	uint32_t magic_number;
+	uint8_t image_signature[96];
+	uint32_t image_checksum;
+	uint8_t header_version[4];
+	uint32_t image_length;
+	uint32_t image_entry_point;
+	uint32_t reserved1;
+	uint32_t load_address;
+	uint32_t reserved2;
+	uint32_t version_number;
+	uint32_t extension_flags;
+	uint32_t extension_headers_length;
+	uint32_t binary_type;
+	uint8_t padding[8];
+	uint32_t non_secure_payload_length;
+	uint32_t non_secure_payload_hash;
+	uint32_t extension_header_type;
+	uint32_t extension_header_length;
+	uint8_t extension_padding[408];
+};
+
+static void stm32image_default_header(void *ptr, uint32_t minor)
 {
 	struct stm32_header_v1 *header = (struct stm32_header_v1 *)ptr;
+	struct stm32_header_v23 *header_v23 = (struct stm32_header_v23 *)ptr;
 
 	if (!header) {
 		return;
 	}
 
 	header->magic_number = HEADER_MAGIC;
-	header->version_number = __cpu_to_le32(0);
+	if (minor == HEADER_SUBVERSION_VX_3) {
+		header_v23->version_number = __cpu_to_le32(0);
+	} else {
+		header->version_number = __cpu_to_le32(0);
+	}
 }
 
 static uint32_t stm32image_checksum(void *start, uint32_t len,
@@ -103,36 +132,55 @@ static void stm32image_print_header(const void *ptr)
 {
 	struct stm32_header_v1 *stm32hdr = (struct stm32_header_v1 *)ptr;
 	struct stm32_header_v2 *stm32hdr_v2 = (struct stm32_header_v2 *)ptr;
+	struct stm32_header_v23 *stm32hdr_v23 = (struct stm32_header_v23 *)ptr;
 
-	printf("Image Type   : ST Microelectronics STM32 V%d.%d\n",
-	       stm32hdr->header_version[VER_MAJOR],
-	       stm32hdr->header_version[VER_MINOR]);
-	printf("Image Size   : %lu bytes\n",
-	       (unsigned long)__le32_to_cpu(stm32hdr->image_length));
-	printf("Image Load   : 0x%08x\n",
-	       __le32_to_cpu(stm32hdr->load_address));
-	printf("Entry Point  : 0x%08x\n",
-	       __le32_to_cpu(stm32hdr->image_entry_point));
-	printf("Checksum     : 0x%08x\n",
-	       __le32_to_cpu(stm32hdr->image_checksum));
-
-	switch (stm32hdr->header_version[VER_MAJOR]) {
-	case HEADER_VERSION_V1:
-		printf("Option     : 0x%08x\n",
-		       __le32_to_cpu(stm32hdr->option_flags));
-		break;
-
-	case HEADER_VERSION_V2:
+	if (stm32hdr_v23->header_version[VER_MINOR] == HEADER_SUBVERSION_VX_3) {
+		printf("Image Type   : ST Microelectronics STM32 V%d.%d\n",
+		       stm32hdr_v23->header_version[VER_MAJOR],
+		       stm32hdr_v23->header_version[VER_MINOR]);
+		printf("Image Size   : %lu bytes\n",
+		       (unsigned long)__le32_to_cpu(stm32hdr_v23->image_length));
+		printf("Image Load   : 0x%08x\n",
+		       __le32_to_cpu(stm32hdr_v23->load_address));
+		printf("Entry Point  : 0x%08x\n",
+		       __le32_to_cpu(stm32hdr_v23->image_entry_point));
+		printf("Checksum     : 0x%08x\n",
+		       __le32_to_cpu(stm32hdr_v23->image_checksum));
 		printf("Extension    : 0x%08x\n",
-		       __le32_to_cpu(stm32hdr_v2->extension_flags));
-		break;
+		       __le32_to_cpu(stm32hdr_v23->extension_flags));
+		printf("Version	     : 0x%08x\n",
+		       __le32_to_cpu(stm32hdr_v23->version_number));
+	} else {
+		printf("Image Type   : ST Microelectronics STM32 V%d.%d\n",
+		       stm32hdr->header_version[VER_MAJOR],
+		       stm32hdr->header_version[VER_MINOR]);
+		printf("Image Size   : %lu bytes\n",
+		       (unsigned long)__le32_to_cpu(stm32hdr->image_length));
+		printf("Image Load   : 0x%08x\n",
+		       __le32_to_cpu(stm32hdr->load_address));
+		printf("Entry Point  : 0x%08x\n",
+		       __le32_to_cpu(stm32hdr->image_entry_point));
+		printf("Checksum     : 0x%08x\n",
+		       __le32_to_cpu(stm32hdr->image_checksum));
 
-	default:
-		printf("Incorrect header version\n");
+		switch (stm32hdr->header_version[VER_MAJOR]) {
+		case HEADER_VERSION_V1:
+			printf("Option     : 0x%08x\n",
+			       __le32_to_cpu(stm32hdr->option_flags));
+			break;
+
+		case HEADER_VERSION_V2:
+			printf("Extension    : 0x%08x\n",
+			       __le32_to_cpu(stm32hdr_v2->extension_flags));
+			break;
+
+		default:
+			printf("Incorrect header version\n");
+		}
+
+		printf("Version	     : 0x%08x\n",
+		       __le32_to_cpu(stm32hdr->version_number));
 	}
-
-	printf("Version	     : 0x%08x\n",
-	       __le32_to_cpu(stm32hdr->version_number));
 }
 
 static int stm32image_set_header(void *ptr, struct stat *sbuf, int ifd,
@@ -142,47 +190,71 @@ static int stm32image_set_header(void *ptr, struct stat *sbuf, int ifd,
 {
 	struct stm32_header_v1 *stm32hdr = (struct stm32_header_v1 *)ptr;
 	struct stm32_header_v2 *stm32hdr_v2 = (struct stm32_header_v2 *)ptr;
+	struct stm32_header_v23 *stm32hdr_v23 = (struct stm32_header_v23 *)ptr;
 	uint32_t ext_size = 0U;
 	uint32_t ext_flags = 0U;
 
-	stm32image_default_header(ptr);
+	stm32image_default_header(ptr, minor);
 
-	stm32hdr->header_version[VER_MAJOR] = major;
-	stm32hdr->header_version[VER_MINOR] = minor;
-	stm32hdr->load_address = __cpu_to_le32(loadaddr);
-	stm32hdr->image_entry_point = __cpu_to_le32(ep);
-	stm32hdr->image_length = __cpu_to_le32((uint32_t)sbuf->st_size -
-					       header_size);
-	stm32hdr->image_checksum =
-		__cpu_to_le32(stm32image_checksum(ptr, sbuf->st_size,
-						  header_size));
-
-	switch (stm32hdr->header_version[VER_MAJOR]) {
-	case HEADER_VERSION_V1:
-		/* Default option for header v1 : bit0 => no signature */
-		stm32hdr->option_flags = __cpu_to_le32(0x00000001);
-		stm32hdr->ecdsa_algorithm = __cpu_to_le32(1);
-		stm32hdr->binary_type = (uint8_t)binary_type;
-		break;
-
-	case HEADER_VERSION_V2:
-		stm32hdr_v2->binary_type = binary_type;
-		ext_size += PADDING_HEADER_LENGTH;
+	if (minor == HEADER_SUBVERSION_VX_3) {
+		stm32hdr_v23->header_version[VER_MAJOR] = major;
+		stm32hdr_v23->header_version[VER_MINOR] = minor;
+		stm32hdr_v23->load_address = __cpu_to_le32(loadaddr);
+		stm32hdr_v23->image_entry_point = __cpu_to_le32(ep);
+		stm32hdr_v23->image_length = __cpu_to_le32((uint32_t)sbuf->st_size -
+						       header_size);
+		stm32hdr_v23->image_checksum =
+			__cpu_to_le32(stm32image_checksum(ptr, sbuf->st_size,
+							  header_size));
+		stm32hdr_v23->binary_type = binary_type;
+		ext_size += PADDING_HEADER_LENGTH_V23;
 		ext_flags |= PADDING_HEADER_FLAG;
-		stm32hdr_v2->extension_flags =
+		stm32hdr_v23->extension_flags =
 			__cpu_to_le32(ext_flags);
-		stm32hdr_v2->extension_headers_length =
+		stm32hdr_v23->extension_headers_length =
 			__cpu_to_le32(ext_size);
-		stm32hdr_v2->extension_header_type = PADDING_HEADER_MAGIC;
-		stm32hdr_v2->extension_header_length =
-			__cpu_to_le32(PADDING_HEADER_LENGTH);
-		break;
+		stm32hdr_v23->extension_header_type = PADDING_HEADER_MAGIC;
+		stm32hdr_v23->extension_header_length =
+			__cpu_to_le32(PADDING_HEADER_LENGTH_V23);
+		stm32hdr_v23->version_number = __cpu_to_le32(ver);
+	} else {
+		stm32hdr->header_version[VER_MAJOR] = major;
+		stm32hdr->header_version[VER_MINOR] = minor;
+		stm32hdr->load_address = __cpu_to_le32(loadaddr);
+		stm32hdr->image_entry_point = __cpu_to_le32(ep);
+		stm32hdr->image_length = __cpu_to_le32((uint32_t)sbuf->st_size -
+						       header_size);
+		stm32hdr->image_checksum =
+			__cpu_to_le32(stm32image_checksum(ptr, sbuf->st_size,
+							  header_size));
 
-	default:
-		return -1;
+		switch (stm32hdr->header_version[VER_MAJOR]) {
+		case HEADER_VERSION_V1:
+			/* Default option for header v1 : bit0 => no signature */
+			stm32hdr->option_flags = __cpu_to_le32(0x00000001);
+			stm32hdr->ecdsa_algorithm = __cpu_to_le32(1);
+			stm32hdr->binary_type = (uint8_t)binary_type;
+			break;
+
+		case HEADER_VERSION_V2:
+			stm32hdr_v2->binary_type = binary_type;
+			ext_size += PADDING_HEADER_LENGTH;
+			ext_flags |= PADDING_HEADER_FLAG;
+			stm32hdr_v2->extension_flags =
+				__cpu_to_le32(ext_flags);
+			stm32hdr_v2->extension_headers_length =
+				__cpu_to_le32(ext_size);
+			stm32hdr_v2->extension_header_type = PADDING_HEADER_MAGIC;
+			stm32hdr_v2->extension_header_length =
+				__cpu_to_le32(PADDING_HEADER_LENGTH);
+			break;
+
+		default:
+			return -1;
+		}
+
+		stm32hdr->version_number = __cpu_to_le32(ver);
 	}
-
-	stm32hdr->version_number = __cpu_to_le32(ver);
 
 	return 0;
 }
@@ -221,19 +293,24 @@ static int stm32image_create_header_file(char *srcname, char *destname,
 		return -1;
 	}
 
-	switch (major) {
-	case HEADER_VERSION_V1:
-		stm32image_header = malloc(sizeof(struct stm32_header_v1));
-		header_size = sizeof(struct stm32_header_v1);
-		break;
+	if (minor == HEADER_SUBVERSION_VX_3) {
+		stm32image_header = malloc(sizeof(struct stm32_header_v23));
+		header_size = sizeof(struct stm32_header_v23);
+	} else {
+		switch (major) {
+		case HEADER_VERSION_V1:
+			stm32image_header = malloc(sizeof(struct stm32_header_v1));
+			header_size = sizeof(struct stm32_header_v1);
+			break;
 
-	case HEADER_VERSION_V2:
-		stm32image_header = malloc(sizeof(struct stm32_header_v2));
-		header_size = sizeof(struct stm32_header_v2);
-		break;
+		case HEADER_VERSION_V2:
+			stm32image_header = malloc(sizeof(struct stm32_header_v2));
+			header_size = sizeof(struct stm32_header_v2);
+			break;
 
-	default:
-		return -1;
+		default:
+			return -1;
+		}
 	}
 
 	memset(stm32image_header, 0, header_size);
