@@ -7,6 +7,7 @@
 #include <assert.h>
 
 #include <drivers/clk.h>
+#include <drivers/st/nvmem.h>
 #include <drivers/st/stm32_gpio.h>
 #include <drivers/st/stm32_iwdg.h>
 #include <lib/mmio.h>
@@ -15,20 +16,6 @@
 
 #include <plat/common/platform.h>
 #include <platform_def.h>
-
-#if STM32MP13
-#define TAMP_BOOT_MODE_BACKUP_REG_ID	U(30)
-#endif
-#if STM32MP15
-#define TAMP_BOOT_MODE_BACKUP_REG_ID	U(20)
-#endif
-
-/*
- * Backup register to store fwu update information.
- * It should be writeable only by secure world, but also readable by non secure
- * (so it should be in Zone 2).
- */
-#define TAMP_BOOT_FWU_INFO_REG_ID	U(10)
 
 #if defined(IMAGE_BL2)
 #define MAP_SEC_SYSRAM	MAP_REGION_FLAT(STM32MP_SYSRAM_BASE, \
@@ -678,8 +665,8 @@ bool stm32mp_is_wakeup_from_standby(void)
 #if STM32MP_SUPPORT_PM
 	uint32_t rstsr = mmio_read_32(stm32mp_rcc_base() + RCC_MP_RSTSCLRR);
 #if STM32MP15
-	uintptr_t bkpr_core1_addr = tamp_bkpr(BOOT_API_CORE1_BRANCH_ADDRESS_TAMP_BCK_REG_IDX);
 	uint32_t nsec_address;
+	struct nvmem_cell core1_branch_address = {};
 #endif
 
 	if ((rstsr & RCC_MP_RSTSCLRR_PADRSTF) != 0U) {
@@ -691,9 +678,9 @@ bool stm32mp_is_wakeup_from_standby(void)
 	}
 
 #if STM32MP15
-	clk_enable(RTCAPB);
-	nsec_address = mmio_read_32(bkpr_core1_addr);
-	clk_disable(RTCAPB);
+	stm32_get_core1_branch_address_cell(&core1_branch_address);
+	nvmem_cell_read(&core1_branch_address, (uint8_t *)&nsec_address,
+			sizeof(nsec_address), NULL);
 
 	if (nsec_address == 0U) {
 		return false;
@@ -729,18 +716,6 @@ bool stm32mp_skip_boot_device_after_standby(void)
 	return false;
 #endif /* STM32MP_SUPPORT_PM */
 }
-
-uintptr_t stm32_get_bkpr_boot_mode_addr(void)
-{
-	return tamp_bkpr(TAMP_BOOT_MODE_BACKUP_REG_ID);
-}
-
-#if PSA_FWU_SUPPORT
-uintptr_t stm32_get_bkpr_fwu_info_addr(void)
-{
-	return tamp_bkpr(TAMP_BOOT_FWU_INFO_REG_ID);
-}
-#endif /* PSA_FWU_SUPPORT */
 
 #if STM32MP13
 bool stm32mp_bkpram_get_access(void)

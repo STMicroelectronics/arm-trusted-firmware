@@ -14,10 +14,6 @@
 #include <platform_def.h>
 #include <stm32mp2_context.h>
 
-#define BKPR_STOP2_EP	11U
-#define BKPR_FWU_INFO	48U
-#define BKPR_BOOT_MODE	96U
-
 #if defined(IMAGE_BL31)
 /* BL31 only uses the first half of the SYSRAM */
 #define MAP_SYSRAM	MAP_REGION_FLAT(STM32MP_SYSRAM_BASE, \
@@ -702,23 +698,6 @@ size_t stm32_risaf_get_memory_size(int instance)
 		return 0U;
 	}
 }
-
-uintptr_t stm32_get_bkpr_boot_mode_addr(void)
-{
-	return tamp_bkpr(BKPR_BOOT_MODE);
-}
-
-uintptr_t stm32_get_bkpr_stop2_ep_addr(void)
-{
-	return tamp_bkpr(BKPR_STOP2_EP);
-}
-
-#if PSA_FWU_SUPPORT
-uintptr_t stm32_get_bkpr_fwu_info_addr(void)
-{
-	return tamp_bkpr(BKPR_FWU_INFO);
-}
-#endif /* PSA_FWU_SUPPORT */
 
 uintptr_t stm32_ddrdbg_get_base(void)
 {

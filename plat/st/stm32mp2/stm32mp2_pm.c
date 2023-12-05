@@ -967,8 +967,8 @@ int plat_setup_psci_ops(uintptr_t sec_entrypoint,
 			const plat_psci_ops_t **psci_ops)
 {
 	int ret = 0;
-	uintptr_t stop2_entrypoint = (uintptr_t)&stm32_stop2_entrypoint;
-
+	uint32_t stop2_entrypoint = (uint32_t)(uintptr_t)&stm32_stop2_entrypoint;
+	struct nvmem_cell stop2_entrypoint_cell;
 	assert(stop2_entrypoint < UINT32_MAX);
 
 	ret = stm32_parse_domain_idle_state();
@@ -989,9 +989,12 @@ int plat_setup_psci_ops(uintptr_t sec_entrypoint,
 	stm32_percpu_data[STM32MP_SECONDARY_CPU].state[STATE_RUNNING] = false;
 
 	/* Save boot entry point for STOP2 exit */
-	clk_enable(TAMP_BKP_REG_CLK);
-	mmio_write_32(stm32_get_bkpr_stop2_ep_addr(), (uint32_t)stop2_entrypoint);
-	clk_disable(TAMP_BKP_REG_CLK);
+	ret = stm32_get_stop2_entrypoint_cell(&stop2_entrypoint_cell);
+	if (ret != 0) {
+		return ret;
+	}
+	nvmem_cell_write(&stop2_entrypoint_cell, (uint8_t *)&stop2_entrypoint,
+			 sizeof(stop2_entrypoint));
 
 	stm32_pm_init();
 

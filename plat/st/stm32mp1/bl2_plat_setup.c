@@ -16,6 +16,7 @@
 #include <drivers/generic_delay_timer.h>
 #include <drivers/mmc.h>
 #include <drivers/st/bsec.h>
+#include <drivers/st/nvmem.h>
 #include <drivers/st/regulator_fixed.h>
 #include <drivers/st/regulator_gpio.h>
 #include <drivers/st/stm32_iwdg.h>
@@ -30,6 +31,7 @@
 #include <drivers/st/stm32mp_pmic.h>
 #include <lib/fconf/fconf.h>
 #include <lib/fconf/fconf_dyn_cfg_getter.h>
+#include <libfdt.h>
 #include <lib/mmio.h>
 #include <lib/optee_utils.h>
 #include <lib/xlat_tables/xlat_tables_v2.h>
@@ -171,15 +173,19 @@ void bl2_platform_setup(void)
 #if STM32MP_SUPPORT_PM
 	if (!stm32mp1_ddr_is_restored()) {
 #if STM32MP15
-		uintptr_t bkpr_core1_magic =
-			tamp_bkpr(BOOT_API_CORE1_MAGIC_NUMBER_TAMP_BCK_REG_IDX);
-		uintptr_t bkpr_core1_addr =
-			tamp_bkpr(BOOT_API_CORE1_BRANCH_ADDRESS_TAMP_BCK_REG_IDX);
+		struct nvmem_cell magic_number;
+		struct nvmem_cell branch_address;
+		uint32_t reg_val = 0;
+
+		stm32_get_magic_number_cell(&magic_number);
+		stm32_get_core1_branch_address_cell(&branch_address);
 
 		/* Clear backup register */
-		mmio_write_32(bkpr_core1_addr, 0);
+		nvmem_cell_write(&branch_address, (uint8_t *)&reg_val,
+				 sizeof(reg_val));
 		/* Clear backup register magic */
-		mmio_write_32(bkpr_core1_magic, 0);
+		nvmem_cell_write(&magic_number, (uint8_t *)&reg_val,
+				 sizeof(reg_val));
 #endif
 
 		/* Clear the context in BKPSRAM */
