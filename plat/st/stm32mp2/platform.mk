@@ -276,6 +276,8 @@ PLAT_BL_COMMON_SOURCES		+=	drivers/st/clk/clk-stm32-core.c				\
 					drivers/st/clk/clk-stm32mp2.c				\
 					drivers/st/crypto/stm32_rng.c
 
+PLAT_BL_COMMON_SOURCES  	+=	drivers/st/nvmem/stm32mp_tamp_nvram_mp2.c
+
 ifeq ($(STM32MP_SUPPORT_PM),1)
 PLAT_BL_COMMON_SOURCES  	+=	plat/st/stm32mp2/stm32mp2_context.c
 endif

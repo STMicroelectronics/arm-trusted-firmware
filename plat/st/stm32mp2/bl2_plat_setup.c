@@ -320,6 +320,10 @@ void bl2_el3_plat_arch_setup(void)
 #endif /* !STM32MP_M33_TDCID */
 #endif /* STM32MP_DDR_FIP_IO_STORAGE || TRUSTED_BOARD_BOOT */
 
+	if (stm32_tamp_nvram_init() < 0) {
+		panic();
+	}
+
 	if (stm32_iwdg_init() < 0) {
 		panic();
 	}

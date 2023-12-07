@@ -317,6 +317,10 @@ void bl2_el3_plat_arch_setup(void)
 		panic();
 	}
 
+	if (stm32_tamp_nvram_init() < 0) {
+		panic();
+	}
+
 	stm32_save_boot_info(boot_context);
 
 #if STM32MP_USB_PROGRAMMER && STM32MP15

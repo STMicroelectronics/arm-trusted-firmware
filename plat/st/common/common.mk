@@ -180,6 +180,8 @@ PLAT_BL_COMMON_SOURCES		+=	drivers/clk/clk.c				\
 					drivers/st/clk/stm32mp_clkfunc.c		\
 					drivers/st/ddr/stm32mp_ddr.c			\
 					drivers/st/gpio/stm32_gpio.c			\
+					drivers/st/nvmem/nvmem.c			\
+					drivers/st/nvmem/stm32mp_tamp_nvram_core.c	\
 					drivers/st/regulator/regulator_core.c		\
 					drivers/st/regulator/regulator_fixed.c		\
 					drivers/st/regulator/regulator_gpio.c			\
