@@ -76,6 +76,11 @@
 #define SYSCFG_DLYBOS_TAPSEL_NB		33U
 #define SYSCFG_DLYBOS_CMD_NB		24U
 
+/* SYSCFG potential tamper reset control register */
+#define SYSCFG_POTTAMPRSTCR		U(0x1804)
+
+#define SYSCFG_POTTAMPRSTCR_RSTMASK	BIT(0)
+
 /* ICN registers */
 #define SYSCFG_ICNQPCR1			U(0x2000)
 #define SYSCFG_ICNQPCR2			U(0x2004)
@@ -473,6 +478,22 @@ int stm32mp_syscfg_dlyb_init(uint8_t bank, bool bypass_mode,
 	return 0;
 }
 #endif
+
+void stm32mp_syscfg_mask_potential_tamper_enable(void)
+{
+#if !STM32MP_M33_TDCID
+	mmio_setbits_32(SYSCFG_BASE + SYSCFG_POTTAMPRSTCR,
+			SYSCFG_POTTAMPRSTCR_RSTMASK);
+#endif
+}
+
+void stm32mp_syscfg_mask_potential_tamper_disable(void)
+{
+#if !STM32MP_M33_TDCID
+	mmio_clrbits_32(SYSCFG_BASE + SYSCFG_POTTAMPRSTCR,
+			SYSCFG_POTTAMPRSTCR_RSTMASK);
+#endif
+}
 
 /*
  * @brief  Set ICN QOS priority per master.

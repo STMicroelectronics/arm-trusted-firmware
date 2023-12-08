@@ -328,6 +328,9 @@ void bl2_el3_plat_arch_setup(void)
 
 	stm32_save_boot_info(boot_context);
 
+	/* Masking potential tamper during BL2 */
+	stm32mp_syscfg_mask_potential_tamper_enable();
+
 	if (stm32mp_uart_console_setup() != 0) {
 		goto skip_console_init;
 	}
@@ -613,4 +616,7 @@ void bl2_el3_plat_prepare_exit(void)
 	flush_dcache_range(DATA_START, DATA_END - DATA_START);
 
 	stm32mp_io_exit();
+
+	/* Unmask potential tamper before exit */
+	stm32mp_syscfg_mask_potential_tamper_disable();
 }
