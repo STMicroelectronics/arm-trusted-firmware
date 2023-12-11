@@ -45,7 +45,6 @@
 		/delete-node/ rtc@5c004000;
 		/delete-node/ etzpc@5c007000;
 		/delete-node/ stgen@5c008000;
-		/delete-node/ tamp@5c00a000;
 	};
 
 	/*
