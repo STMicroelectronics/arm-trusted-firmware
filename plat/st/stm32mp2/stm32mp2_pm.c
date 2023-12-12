@@ -324,6 +324,31 @@ static bool stm32_freeze_other_core(unsigned int core_id)
 	return result;
 }
 
+static int stm32_pwr_domain_validate_suspend(const psci_power_state_t *target_state)
+{
+	uintptr_t pwr_base = stm32mp_pwr_base();
+	uint32_t stateid = stm32_get_stateid(target_state->pwr_domain_state);
+	u_register_t mpidr = read_mpidr();
+	unsigned int core_id = MPIDR_AFFLVL0_VAL(mpidr);
+
+	/* If retention only at D1 level return as nothing is to be done */
+	if (stateid == PWRSTATE_RUN) {
+		return PSCI_E_SUCCESS;
+	}
+
+	/* If CPU2 is not in reset: low power mode is not supported by CPU1 */
+	if ((mmio_read_32(pwr_base + PWR_CPU2D2SR) & PWR_CPU2D2SR_CSTATE_MASK) != 0U) {
+		WARN("PSCI power domain supend request with Cortex M33 running.\n");
+		return PSCI_E_INVALID_PARAMS;
+	}
+
+	if (!stm32_freeze_other_core(core_id)) {
+		return PSCI_E_DENIED;
+	}
+
+	return PSCI_E_SUCCESS;
+}
+
 /* Display Stop2 or Standby1 modes, when console is available */
 static void print_mode_info(const char *mode)
 {
@@ -342,21 +367,9 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 	uintptr_t rcc_base = stm32mp_rcc_base();
 	bool standby = false;
 	uint32_t stateid = stm32_get_stateid(target_state->pwr_domain_state);
-	u_register_t mpidr = read_mpidr();
-	unsigned int core_id = MPIDR_AFFLVL0_VAL(mpidr);
 
 	/* If retention only at D1 level return as nothing is to be done */
 	if (stateid == PWRSTATE_RUN) {
-		return;
-	}
-
-	/* If CPU2 is not in reset: low power mode is not supported by CPU1 */
-	if ((mmio_read_32(pwr_base + PWR_CPU2D2SR) & PWR_CPU2D2SR_CSTATE_MASK) != 0U) {
-		WARN("PSCI power domain supend request with Cortex M33 running.\n");
-		return;
-	}
-
-	if (!stm32_freeze_other_core(core_id)) {
 		return;
 	}
 
@@ -803,6 +816,7 @@ static const plat_psci_ops_t stm32_psci_ops = {
 	.cpu_standby = stm32_cpu_standby,
 	.pwr_domain_on = stm32_pwr_domain_on,
 	.pwr_domain_off = stm32_pwr_domain_off,
+	.pwr_domain_validate_suspend = stm32_pwr_domain_validate_suspend,
 	.pwr_domain_suspend = stm32_pwr_domain_suspend,
 	.pwr_domain_on_finish = stm32_pwr_domain_on_finish,
 	.pwr_domain_suspend_finish = stm32_pwr_domain_suspend_finish,
