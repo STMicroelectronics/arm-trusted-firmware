@@ -183,11 +183,11 @@ void bl2_platform_setup(void)
 		ERROR("DDR probe: error %d\n", ret);
 		panic();
 	}
-#endif
 
 	if (stm32mp2_risaf_init() < 0) {
 		panic();
 	}
+#endif
 
 	/* Map DDR for binary load, now with cacheable attribute */
 	ret = mmap_add_dynamic_region(STM32MP_DDR_BASE, STM32MP_DDR_BASE,
