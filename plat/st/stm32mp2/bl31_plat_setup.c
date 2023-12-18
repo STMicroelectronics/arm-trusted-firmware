@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2023-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -10,6 +10,7 @@
 #include <common/bl_common.h>
 #include <drivers/generic_delay_timer.h>
 #include <drivers/st/stm32_console.h>
+#include <drivers/st/stm32mp_reset.h>
 #include <lib/xlat_tables/xlat_tables_v2.h>
 #include <plat/common/platform.h>
 
@@ -157,3 +158,30 @@ entry_point_info_t *bl31_plat_get_next_image_ep_info(unsigned int type)
 
 	return next_image_info;
 }
+
+/* Only support system reset for serial boot and no low power feature to reduce BL31 size */
+#if !STM32MP_SUPPORT_PM
+static void __dead2 stm32_system_reset(void)
+{
+	stm32mp_system_reset();
+}
+
+static const plat_psci_ops_t stm32_psci_ops = {
+	.system_reset = stm32_system_reset,
+};
+
+/* Stub PSCI platform functions */
+plat_local_state_t plat_get_target_pwr_state(unsigned int lvl,
+					     const plat_local_state_t *states,
+					     unsigned int ncpu)
+{
+	return 0U;
+}
+
+int plat_setup_psci_ops(uintptr_t sec_entrypoint,
+			const plat_psci_ops_t **psci_ops)
+{
+	*psci_ops = &stm32_psci_ops;
+	return 0;
+}
+#endif /* STM32MP_SUPPORT_PM */

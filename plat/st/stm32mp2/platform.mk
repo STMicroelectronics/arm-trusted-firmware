@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023-2025, STMicroelectronics - All Rights Reserved
+# Copyright (c) 2023-2026, STMicroelectronics - All Rights Reserved
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -259,8 +259,12 @@ BL2_SOURCES			+=	drivers/st/ddr/phy/phyinit/src/ddrphy_phyinit_d_loadimem.c				\
 BL31_SOURCES			+=	${FDT_WRAPPERS_SOURCES}
 
 BL31_SOURCES			+=	plat/st/stm32mp2/bl31_plat_setup.c			\
-					plat/st/stm32mp2/stm32mp2_pm.c				\
 					plat/st/stm32mp2/stm32mp2_topology.c
+
+ifeq ($(STM32MP_SUPPORT_PM),1)
+BL31_SOURCES			+=	plat/st/stm32mp2/stm32mp2_pm.c
+endif
+
 # Generic GIC v2
 include drivers/arm/gic/v2/gicv2.mk
 
@@ -268,8 +272,10 @@ BL31_SOURCES			+=	${GICV2_SOURCES}					\
 					plat/common/plat_gicv2.c				\
 					plat/st/common/stm32mp_gic.c
 
+ifeq ($(STM32MP_SUPPORT_PM),1)
 # Generic PSCI
 BL31_SOURCES			+=	plat/common/plat_psci_common.c
+endif
 
 BL31_SOURCES			+=	plat/st/common/stm32mp_svc_setup.c			\
 					plat/st/stm32mp2/services/stgen_svc.c			\

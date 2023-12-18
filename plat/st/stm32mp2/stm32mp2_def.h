@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2023-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -140,8 +140,13 @@ enum ddr_type {
 						 (STM32MP_PARAM_LOAD_SIZE +	\
 						  STM32MP_HEADER_SIZE))
 
+#if STM32MP_UART_PROGRAMMER || STM32MP_USB_PROGRAMMER
+#define STM32MP_BL2_RO_SIZE			U(0x0001F000) /* 124 KB */
+#define STM32MP_BL2_SIZE			U(0x00028000) /* 160 KB for BL2 */
+#else /* STM32MP_UART_PROGRAMMER || STM32MP_USB_PROGRAMMER */
 #define STM32MP_BL2_RO_SIZE			U(0x00020000) /* 128 KB */
 #define STM32MP_BL2_SIZE			U(0x00029000) /* 164 KB for BL2 */
+#endif /* STM32MP_UART_PROGRAMMER || STM32MP_USB_PROGRAMMER */
 
 /* Allocate remaining sysram to BL31 Binary only */
 #define STM32MP_BL31_SIZE			(STM32MP_SYSRAM_SIZE - \
