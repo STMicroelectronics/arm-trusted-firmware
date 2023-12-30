@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2021-2024, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -35,6 +35,7 @@
 #define OTG_GINTSTS				0x014U
 #define OTG_GINTMSK				0x018U
 #define OTG_GRXSTSP				0x020U
+#define OTG_GGPIO				0x038U
 #define OTG_GLPMCFG				0x054U
 #define OTG_DCFG				0x800U
 #define OTG_DCTL				0x804U
@@ -123,6 +124,9 @@
 #define STS_XFER_COMP				3U
 #define STS_SETUP_COMP				4U
 #define STS_SETUP_UPDT				6U
+
+/* Bit definitions for OTG_GGPIO register */
+#define OTG_GGPIO_IDPULLUP_DIS			BIT(28)
 
 /* Bit definitions for OTG_GLPMCFG register */
 #define OTG_GLPMCFG_BESL			GENMASK(5, 2)
@@ -700,6 +704,10 @@ static enum usb_status usb_dwc2_stop_device(void *handle)
 	/* Disconnect the USB device by disabling the pull-up/pull-down */
 	mmio_setbits_32((uintptr_t)handle + OTG_DCTL, OTG_DCTL_SDIS);
 
+#if STM32MP21
+	mmio_clrbits_32(usb_base_addr + OTG_GGPIO, OTG_GGPIO_IDPULLUP_DIS);
+#endif
+
 	return USBD_OK;
 }
 
@@ -1055,7 +1063,9 @@ static enum usb_status usb_dwc2_start_device(void *handle)
 
 	mmio_clrbits_32(usb_base_addr + OTG_DCTL, OTG_DCTL_SDIS);
 	mmio_setbits_32(usb_base_addr + OTG_GAHBCFG, OTG_GAHBCFG_GINT);
-
+#if STM32MP21
+	mmio_setbits_32(usb_base_addr + OTG_GGPIO, OTG_GGPIO_IDPULLUP_DIS);
+#endif
 	return USBD_OK;
 }
 
