@@ -75,11 +75,14 @@
 
 /* RISAF encryption modes */
 #define RIF_ENC_DIS		0x0
-#define RIF_ENC_EN		0x1
+#if STM32MP21
+#define RIF_ENC_MCE_EN		0x1 /* Side-channel attack protection */
+#endif
+#define RIF_ENC_EN		0x2
 
 #define RISAFPROT(risaf_region, cid_read_list, cid_write_list, cid_priv_list, sec, enc, enabled) \
 	(((cid_write_list) << 24) | ((cid_read_list) << 16) | ((cid_priv_list) << 8) | \
-	 ((enc) << 7) | ((sec) << 6) | ((enabled) << 5) | (risaf_region))
+	 ((enc) << 6) | ((sec) << 5) | ((enabled) << 4) | (risaf_region))
 
 /* RISAB page IDs */
 #define RISAB_PAGE_ID(idx)	(idx)
