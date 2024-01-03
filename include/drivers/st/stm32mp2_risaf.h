@@ -53,8 +53,13 @@
 #define _RISAF_REG_CFGR_BREN		BIT_32(_RISAF_REG_CFGR_BREN_SHIFT)
 #define _RISAF_REG_CFGR_SEC_SHIFT	8
 #define _RISAF_REG_CFGR_SEC		BIT_32(_RISAF_REG_CFGR_SEC_SHIFT)
+#if STM32MP21
+#define _RISAF_REG_CFGR_ENC_SHIFT	14
+#define _RISAF_REG_CFGR_ENC		GENMASK_32(15, _RISAF_REG_CFGR_ENC_SHIFT)
+#else /* STM32MP21 */
 #define _RISAF_REG_CFGR_ENC_SHIFT	15
 #define _RISAF_REG_CFGR_ENC		BIT_32(_RISAF_REG_CFGR_ENC_SHIFT)
+#endif /* STM32MP21 */
 #define _RISAF_REG_CFGR_PRIVC_SHIFT	16
 #define _RISAF_REG_CFGR_PRIVC_MASK	GENMASK_32(23, 16)
 #define _RISAF_REG_CFGR_ALL_MASK	(_RISAF_REG_CFGR_BREN | _RISAF_REG_CFGR_SEC | \
@@ -67,28 +72,50 @@
 #define _RISAF_REG_CIDCFGR_ALL_MASK		(_RISAF_REG_CIDCFGR_RDENC_MASK | \
 						 _RISAF_REG_CIDCFGR_WRENC_MASK)
 
+#if STM32MP21
+/* RISAF MCE extension registers */
+#define _RISAF_XCR			U(0x1C00)
+#define _RISAF_XSR			U(0x1C04)
+#define _RISAF_MKEYR			U(0x1E00)
+
+/* RISAF MCE extension register field description */
+/* _RISAF_XCR register fields */
+#define _RISAF_XCR_XLOCK		BIT(0)
+#define _RISAF_XCR_MKLOCK		BIT(0)
+#define _RISAF_XCR_CIPHERSEL_SHIFT	4
+#define _RISAF_XCR_CIPHERSEL_MASK	GENMASK_32(5, _RISAF_XCR_CIPHERSEL_SHIFT)
+#define _RISAF_XCR_CIPHERSEL_AES128	1
+#define _RISAF_XCR_CIPHERSEL_AES256	3
+/* _RISAF_XSR register fields */
+#define _RISAF_XSR_MKVALID		BIT(0)
+#endif /* STM32MP21 */
+
 /* Device Tree related definitions */
 #define DT_RISAF_COMPAT			"st,stm32-risaf"
 #define DT_RISAF_REG_ID_MASK		U(0xF)
-#define DT_RISAF_EN_SHIFT		5
+#define DT_RISAF_EN_SHIFT		4
 #define DT_RISAF_EN_MASK		BIT_32(DT_RISAF_EN_SHIFT)
-#define DT_RISAF_SEC_SHIFT		6
+#define DT_RISAF_SEC_SHIFT		5
 #define DT_RISAF_SEC_MASK		BIT_32(DT_RISAF_SEC_SHIFT)
-#define DT_RISAF_ENC_SHIFT		7
-#define DT_RISAF_ENC_MASK		BIT_32(DT_RISAF_ENC_SHIFT)
+#define DT_RISAF_ENC_SHIFT		6
+#define DT_RISAF_ENC_MASK		GENMASK_32(7, DT_RISAF_ENC_SHIFT)
 #define DT_RISAF_PRIV_SHIFT		8
-#define DT_RISAF_PRIV_MASK		GENMASK_32(15, 8)
+#define DT_RISAF_PRIV_MASK		GENMASK_32(15, DT_RISAF_PRIV_SHIFT)
 #define DT_RISAF_READ_SHIFT		16
-#define DT_RISAF_READ_MASK		GENMASK_32(23, 16)
+#define DT_RISAF_READ_MASK		GENMASK_32(23, DT_RISAF_READ_SHIFT)
 #define DT_RISAF_WRITE_SHIFT		24
-#define DT_RISAF_WRITE_MASK		GENMASK_32(31, 24)
+#define DT_RISAF_WRITE_MASK		GENMASK_32(31, DT_RISAF_WRITE_SHIFT)
 
 /* RISAF max properties */
 #define RISAF_REGION_REG_SIZE		(4 * sizeof(uint32_t))
 #define RISAF_REGION_PROTREG_SIZE	(1 * sizeof(uint32_t))
 #define RISAF_TIMEOUT_1MS_IN_US		U(1000)
 
-/* RISAF encryption key size in bytes */
+/* RISAF key sizes in bytes */
+#if STM32MP21
+#define RISAF_MCE_KEY_128BITS_SIZE_IN_BYTES	U(16)
+#define RISAF_MCE_KEY_256BITS_SIZE_IN_BYTES	U(32)
+#endif /* STM32MP21 */
 #define RISAF_ENCRYPTION_KEY_SIZE_IN_BYTES	U(16)
 
 struct stm32mp2_risaf_region {
@@ -107,6 +134,9 @@ struct stm32mp2_risaf_platdata {
 };
 
 int stm32mp2_risaf_write_encryption_key(int instance, uint8_t *key);
+#if STM32MP21
+int stm32mp2_risaf_write_mce_key(int instance, uint8_t *key);
+#endif /* STM32MP21 */
 int stm32mp2_risaf_lock(int instance);
 int stm32mp2_risaf_is_locked(int instance, bool *state);
 int stm32mp2_risaf_init(void);

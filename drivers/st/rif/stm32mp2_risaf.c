@@ -143,7 +143,7 @@ static int risaf_configure_region(int instance, uint32_t region_id, uint32_t cfg
 	mmio_clrsetbits_32(base + _RISAF_REG_CFGR(region_id),
 			   _RISAF_REG_CFGR_ALL_MASK, cfg & _RISAF_REG_CFGR_ALL_MASK);
 
-	if ((cfg & _RISAF_REG_CFGR_ENC) == _RISAF_REG_CFGR_ENC) {
+	if ((cfg & _RISAF_REG_CFGR_ENC) != 0U) {
 		if (!risaf_is_hw_encryption_functional(instance)) {
 			ERROR("RISAF%d: encryption disabled\n", instance + 1);
 			return -EIO;
@@ -195,8 +195,13 @@ static void risaf_conf_protreg(void)
 			       _RISAF_REG_CFGR_BREN_SHIFT) |
 			      (((value & DT_RISAF_SEC_MASK) >> DT_RISAF_SEC_SHIFT) <<
 			       _RISAF_REG_CFGR_SEC_SHIFT) |
+#if STM32MP21
 			      (((value & DT_RISAF_ENC_MASK) >> DT_RISAF_ENC_SHIFT) <<
 			       _RISAF_REG_CFGR_ENC_SHIFT) |
+#else /* !STM32MP21 */
+			      (((value & DT_RISAF_ENC_MASK) >> (DT_RISAF_ENC_SHIFT + 1)) <<
+			       _RISAF_REG_CFGR_ENC_SHIFT) |
+#endif /* STM32MP21 */
 			      (((value & DT_RISAF_PRIV_MASK) >> DT_RISAF_PRIV_SHIFT) <<
 			       _RISAF_REG_CFGR_PRIVC_SHIFT);
 
@@ -426,11 +431,9 @@ int stm32mp2_risaf_write_encryption_key(int instance, uint8_t *key)
 	uint32_t i;
 	uintptr_t base = stm32mp2_risaf.base[instance];
 
-	if (base == 0U) {
-		return -EINVAL;
-	}
+	assert(key != NULL);
 
-	if (key == NULL) {
+	if (base == 0U) {
 		return -EINVAL;
 	}
 
@@ -453,6 +456,95 @@ int stm32mp2_risaf_write_encryption_key(int instance, uint8_t *key)
 
 	return 0;
 }
+
+#if STM32MP21
+static int risaf_get_mce_key_size(int instance, uint32_t *size)
+{
+	struct dt_node_info risaf_info;
+	int node = -1;
+	void *fdt;
+
+	if (fdt_get_address(&fdt) == 0) {
+		return -ENOENT;
+	}
+
+	for (node = risaf_get_dt_node(&risaf_info, node); node >= 0;
+	     node = risaf_get_dt_node(&risaf_info, node)) {
+		int idx;
+		const fdt32_t *cuint = NULL;
+
+		idx = stm32_risaf_get_instance(risaf_info.base);
+		if (idx != instance) {
+			continue;
+		}
+
+		cuint = fdt_getprop(fdt, node, "st,mce-keysize-bits", NULL);
+		if (cuint == NULL) {
+			/* Property not set, affect default value */
+			*size = RISAF_MCE_KEY_128BITS_SIZE_IN_BYTES;
+		} else {
+			*size = (uint32_t)fdt32_to_cpu(*cuint) / 8;
+		}
+
+		return 0;
+	}
+
+	return -ENODEV;
+}
+
+/*
+ * @brief  Write the MCE key for a given instance.
+ * @param  instance: RISAF instance ID.
+ *         key: Pointer to the MCE key buffer.
+ *         size: MCE key size in bytes.
+ * @retval 0 if OK, negative value else.
+ */
+int stm32mp2_risaf_write_mce_key(int instance, uint8_t *key)
+{
+	uint64_t timeout_ref;
+	uint32_t i;
+	uint32_t size;
+	uintptr_t base = stm32mp2_risaf.base[instance];
+
+	assert(key != NULL);
+
+	if (base == 0U) {
+		return -EINVAL;
+	}
+
+	if (risaf_get_mce_key_size(instance, &size) != 0) {
+		return -EINVAL;
+	}
+
+	if (size == RISAF_MCE_KEY_128BITS_SIZE_IN_BYTES) {
+		mmio_write_32(base + _RISAF_XCR,
+			      _RISAF_XCR_CIPHERSEL_AES128 << _RISAF_XCR_CIPHERSEL_SHIFT);
+	} else if (size == RISAF_MCE_KEY_256BITS_SIZE_IN_BYTES) {
+		mmio_write_32(base + _RISAF_XCR,
+			      _RISAF_XCR_CIPHERSEL_AES256 << _RISAF_XCR_CIPHERSEL_SHIFT);
+	} else {
+		return -EINVAL;
+	}
+
+	for (i = 0U; i < size; i += sizeof(uint32_t)) {
+		uint32_t key_val = 0U;
+
+		memcpy(&key_val, key + i, sizeof(uint32_t));
+
+		mmio_write_32(base + _RISAF_MKEYR + i, key_val);
+	}
+
+	timeout_ref = timeout_init_us(RISAF_TIMEOUT_1MS_IN_US);
+
+	while (((mmio_read_32(base + _RISAF_XSR) & _RISAF_XSR_MKVALID) != _RISAF_XSR_MKVALID)) {
+		if (timeout_elapsed(timeout_ref)) {
+			return -EIO;
+		}
+	}
+
+	return 0;
+}
+#endif /* STM32MP21 */
 
 /*
  * @brief  Lock the RISAF IP registers for a given instance.
