@@ -369,7 +369,7 @@ int stm32mp_uart_console_setup(void)
 
 	console_clk = dt_uart_info.clock;
 
-#if STM32MP_UART_PROGRAMMER || !defined(IMAGE_BL2)
+#if (STM32MP_UART_PROGRAMMER || !defined(IMAGE_BL2)) && !STM32MP_SSP
 	if ((stm32_get_boot_interface(&boot_itf, &boot_instance) != 0) ||
 	    ((boot_itf == BOOT_API_CTX_BOOT_INTERFACE_SEL_SERIAL_UART) &&
 	    (get_uart_address(boot_instance) == dt_uart_info.base))) {
@@ -448,6 +448,7 @@ void stm32_display_board_info(uint32_t board_id)
 	       BOARD_ID2BOM(board_id));
 }
 
+#if !STM32MP_SSP
 int stm32_save_boot_info(boot_api_context_t *boot_context)
 {
 	uint32_t auth_status;
@@ -741,3 +742,4 @@ int stm32_clear_fwu_trial_boot_cnt(void)
 	return stm32_nvmem_cell_clrset(&fwu_info_cell, FWU_INFO_CNT_MSK, 0U);
 }
 #endif /* PSA_FWU_SUPPORT */
+#endif /* !STM32MP_SSP */
