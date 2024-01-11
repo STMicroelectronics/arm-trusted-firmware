@@ -22,6 +22,7 @@
 #include <drivers/st/stm32mp2_ram.h>
 #include <drivers/st/stm32mp2_risaf.h>
 #include <drivers/st/stm32mp_pmic2.h>
+#include <drivers/st/stm32mp_reset.h>
 #include <drivers/st/stm32mp_risab_regs.h>
 #include <lib/fconf/fconf.h>
 #include <lib/fconf/fconf_dyn_cfg_getter.h>
@@ -203,6 +204,53 @@ void bl2_platform_setup(void)
 #endif
 }
 
+static void handle_potential_tamper(uint32_t bit_off)
+{
+	/* Fixme: Add implementation specific logic here */
+	ERROR("Handling Potential tamper\n");
+	mmio_setbits_32(TAMP_BASE + TAMP_SCR, BIT_32(bit_off));
+}
+
+static void handle_confirmed_tamper(uint32_t bit_off __unused)
+{
+	/* Fixme: Add implementation specific logic here */
+	ERROR("Handling Confirmed tamper\n");
+	panic();
+}
+
+static bool tamper_is_accesssible(void)
+{
+	uint32_t r0cidcfgr = mmio_read_32(TAMP_BASE + TAMP_R0CIDCFGR);
+
+	return !(((r0cidcfgr & TAMP_R0CIDCFGR_CFEN) == TAMP_R0CIDCFGR_CFEN) &&
+		 ((r0cidcfgr & TAMP_R0CIDCFGR_CID) != TAMP_R0CIDCFGR_CID1));
+}
+
+static bool lse_tamper_detection(void)
+{
+	/*
+	 * In case the backup domain hasn't been reset on warm boot cases, the
+	 * TAMP RIF configuration is maintained.
+	 * Therefore, TAMP_SR may not be accessible. In this case skip tamper
+	 * detection.
+	 */
+	if (!tamper_is_accesssible()) {
+		return false;
+	}
+
+	if ((mmio_read_32(TAMP_BASE + TAMP_SR) & TAMP_SR_LSE_MONITORING) != 0U) {
+		mmio_clrbits_32(RCC_BASE + RCC_BDCR, RCC_BDCR_LSECSSON);
+		mmio_clrbits_32(RCC_BASE + RCC_BDCR, RCC_BDCR_LSEON);
+		if (mmio_read_32(RCC_BASE + RCC_C1CIFCLRR) & RCC_C1CIFCLRR_LSECSSF) {
+			mmio_clrbits_32(RCC_BASE + RCC_C1CIFCLRR, RCC_C1CIFCLRR_LSECSSF);
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
 static void reset_backup_domain(void)
 {
 #if !STM32MP_M33_TDCID
@@ -228,7 +276,7 @@ static void reset_backup_domain(void)
 	}
 #endif /* STM32MP21 */
 
-	/* Reset backup domain on cold boot cases */
+	/* Reset backup domain on cold boot cases or when LSE tamper occurred */
 	if ((mmio_read_32(rcc_base + RCC_BDCR) & RCC_BDCR_RTCCKEN) == 0U) {
 		mmio_setbits_32(rcc_base + RCC_BDCR, RCC_BDCR_VSWRST);
 
@@ -239,6 +287,62 @@ static void reset_backup_domain(void)
 		mmio_clrbits_32(rcc_base + RCC_BDCR, RCC_BDCR_VSWRST);
 	}
 #endif /* !STM32MP_M33_TDCID */
+}
+
+static void check_tamper_event(bool lse_tamper_occured)
+{
+	uint32_t sr;
+
+	/*
+	 * In case the backup domain hasn't been reset on warm boot cases, the
+	 * TAMP RIF configuration is maintained.
+	 * Therefore, TAMP_SR may not be accessible. In this case skip tamper
+	 * detection.
+	 */
+	if (!tamper_is_accesssible()) {
+		INFO("TAMP IP not accessible, skip tamper verification\n");
+		return;
+	}
+
+	sr = mmio_read_32(TAMP_BASE + TAMP_SR);
+	if (sr == 0U) {
+		return;
+	}
+
+	ERROR("\n");
+	if (lse_tamper_occured) {
+		ERROR("** INTRUSION ALERT: LSE MONITORING TAMPER DETECTED **\n");
+		ERROR("\n");
+
+		/*
+		 * Fixme: Add logic to handle the LSE tamper here (e.g change RTC clock source
+		 * instead). This part is implementation specific.
+		 */
+		mmio_clrbits_32(RCC_BASE + RCC_BDCR, RCC_BDCR_RTCCKEN);
+		ERROR("** Rebooting... **\n");
+		stm32mp_system_reset();
+	} else {
+		while (sr != 0U) {
+			unsigned int bit_off = __builtin_ctz(sr);
+			bool is_internal = bit_off >= TAMP_SR_INT_SHIFT;
+			uint32_t cr2 = mmio_read_32(TAMP_BASE + TAMP_CR2);
+			uint32_t cr3 = mmio_read_32(TAMP_BASE + TAMP_CR3);
+
+			ERROR("** INTRUSION ALERT: %s TAMPER %u DETECTED **\n",
+			      is_internal ? "INTERNAL" : "EXTERNAL",
+			      is_internal ? (bit_off - TAMP_SR_INT_SHIFT + 1U) : (bit_off + 1U));
+
+			if ((is_internal && ((cr3 & BIT_32(bit_off - TAMP_SR_INT_SHIFT)) != 0U)) ||
+			    (!is_internal && ((cr2 & BIT_32(bit_off)) != 0U))) {
+				handle_potential_tamper(bit_off);
+			} else {
+				handle_confirmed_tamper(bit_off);
+			}
+
+			sr &= ~BIT_32(bit_off);
+		}
+		ERROR("\n");
+	}
 }
 
 static void authentication_check(boot_api_context_t *boot_context)
@@ -279,6 +383,7 @@ void bl2_el3_plat_arch_setup(void)
 	const char *board_model;
 	boot_api_context_t *boot_context =
 		(boot_api_context_t *)stm32mp_get_boot_ctx_address();
+	bool lse_tamper_occured = false;
 
 	if (stm32_otp_probe() != 0U) {
 		EARLY_ERROR("OTP probe failed\n");
@@ -294,6 +399,8 @@ void bl2_el3_plat_arch_setup(void)
 	if (dt_open_and_check(STM32MP_DTB_BASE) < 0) {
 		panic();
 	}
+
+	lse_tamper_occured = lse_tamper_detection();
 
 	reset_backup_domain();
 
@@ -361,6 +468,8 @@ void bl2_el3_plat_arch_setup(void)
 	}
 
 skip_console_init:
+	check_tamper_event(lse_tamper_occured);
+
 #if !TRUSTED_BOARD_BOOT
 	if (stm32mp_check_closed_device() == STM32MP_CHIP_SEC_CLOSED) {
 		/* Closed chip mandates authentication */

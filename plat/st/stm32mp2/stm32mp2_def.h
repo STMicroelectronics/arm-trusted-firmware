@@ -518,10 +518,24 @@ enum ddr_type {
 #define PLAT_MAX_TAMP_INT			U(5)
 #define PLAT_MAX_TAMP_EXT			U(3)
 #define TAMP_BASE				U(0x46010000)
-#define TAMP_SMCR				(TAMP_BASE + U(0x20))
+#define TAMP_CR2				U(0x4)
+#define TAMP_CR2_MASK_POM			GENMASK_32(7, 0)
+#define TAMP_CR3				U(0x8)
+#define TAMP_CR3_MASK_POM			GENMASK_32(14, 0)
+#define TAMP_SMCR				U(0x20)
+#define TAMP_SR					U(0x30)
+#define TAMP_SR_INT_SHIFT			U(16)
 #define TAMP_BKP_REG_CLK			CK_BUS_RTC
 #define TAMP_BKP_SEC_NUMBER			U(10)
+#define TAMP_SCR				U(0x3C)
 #define TAMP_COUNTR				U(0x40)
+#define TAMP_R0CIDCFGR				U(0x80)
+#define TAMP_R0CIDCFGR_CFEN			BIT_32(0)
+#define TAMP_R0CIDCFGR_CID			GENMASK_32(6, 4)
+#define TAMP_R0CIDCFGR_CID_SHIFT		U(4)
+#define TAMP_R0CIDCFGR_CID1			(RIF_CID1 << TAMP_R0CIDCFGR_CID_SHIFT)
+
+#define TAMP_SR_LSE_MONITORING			BIT_32(18)
 
 /*******************************************************************************
  * STM32MP2 USB
