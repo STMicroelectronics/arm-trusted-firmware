@@ -555,6 +555,9 @@ enum ddr_type {
 #define TAMP_COUNTR			U(0x40)
 #define TAMP_ERCFGR			U(0x54)
 
+#define TAMP_SR_LSE_MONITORING		BIT(18)
+#define TAMP_SR_INT_SHIFT		U(16)
+
 /*******************************************************************************
  * STM32MP1 USB
  ******************************************************************************/
