@@ -623,21 +623,99 @@ static void stm32_system_off(void)
 {
 	uintptr_t pwr_base = stm32mp_pwr_base();
 	uintptr_t rcc_base = stm32mp_rcc_base();
+	u_register_t mpidr = read_mpidr();
+	unsigned int core_id = MPIDR_AFFLVL0_VAL(mpidr);
+	uintptr_t exti2_base = STM32MP_EXTI2_BASE;
+	uint32_t otp_idx = 0U;
+	uint32_t otp_value = 0U;
+
+	if (core_id != STM32MP_PRIMARY_CPU) {
+		ERROR("PSCI system off request on core %u\n", core_id);
+		panic();
+	}
+
+	if (!stm32_freeze_other_core(core_id)) {
+		WARN("PSCI system off with other core running.\n");
+
+		/* Core is no more running */
+		stm32mp_state_set(STM32MP_SECONDARY_CPU, STATE_RUNNING, false);
+
+		/* Program secondary CPU entry points */
+		stm32mp_ca35_set_vbar(stm32_sec_entrypoint);
+
+		/* After reset, the core is stopped, waiting in WFI loop */
+		stm32mp_state_set(STM32MP_SECONDARY_CPU, STATE_START, false);
+
+		/* Reset the secondary core */
+		mmio_write_32(RCC_BASE + RCC_C1P1RSTCSETR, RCC_C1P1RSTCSETR_C1P1PORRST);
+
+		/* Forbid access to DDR */
+		stm32mp_state_set(STM32MP_PRIMARY_CPU, STATE_DDR, false);
+	}
+
+	/* If CPU2 is not in reset */
+	if ((mmio_read_32(pwr_base + PWR_CPU2D2SR) & PWR_CPU2D2SR_CSTATE_MASK) != 0U) {
+		WARN("PSCI system off with Cortex M33 running.\n");
+		/* Force Hold Boot and reset of CPU2 = Cortex M33 */
+		mmio_clrbits_32(rcc_base + RCC_CPUBOOTCR, RCC_CPUBOOTCR_BOOT_CPU2);
+		mmio_setbits_32(rcc_base + RCC_C2RSTCSETR, RCC_C2RSTCSETR_C2RST);
+	}
+
+	/* If CPU3 is not in reset */
+	if ((mmio_read_32(pwr_base + PWR_CPU3D3SR) & PWR_CPU3D3SR_CSTATE_MASK) != 0U) {
+		WARN("PSCI system off with Cortex M0 running.\n");
+		/* Force reset of CPU3 = Cortex M0+ */
+		mmio_setbits_32(rcc_base + RCC_C3CFGR, RCC_C3CFGR_C3RST);
+	}
+
+	/* Freeze all watchdog with shadow value of HCONF1 */
+	if (stm32_get_otp_index(HCONF1_OTP, &otp_idx, NULL) == 0U) {
+		if (stm32_get_otp_value_from_idx(otp_idx, &otp_value) == 0U) {
+			otp_value |= HCONF1_OTP_IWDG_FZ_STANDBY_MASK(0);
+			otp_value |= HCONF1_OTP_IWDG_FZ_STANDBY_MASK(1);
+			otp_value |= HCONF1_OTP_IWDG_FZ_STANDBY_MASK(2);
+			otp_value |= HCONF1_OTP_IWDG_FZ_STANDBY_MASK(3);
+			stm32_otp_write(otp_value, otp_idx);
+		}
+	}
+
+	/* Force DDR off */
+	ddr_sub_system_clk_off();
 
 	/* Prevent interrupts from spuriously waking up this cpu */
 	stm32mp_gic_cpuif_disable();
 
-	/* Program the power controller to enable wakeup interrupts. */
-	// stm32_pwr_set_wakeup(mpidr);
-	// TODO ? RCC_C1CIESETR.
+	/* Request STOP for both cores */
+	mmio_write_32(rcc_base + RCC_C1SREQSETR, RCC_C1SREQSETR_STPREQ_MASK);
 
-	/* Force Hold Boot and reset of CPU2 = Cortex M33 */
-	mmio_clrbits_32(rcc_base + RCC_CPUBOOTCR, RCC_CPUBOOTCR_BOOT_CPU2);
-	mmio_setbits_32(rcc_base + RCC_C2RSTCSETR, RCC_C2RSTCSETR_C2RST);
+	/* Request standby2 */
+	mmio_write_32(pwr_base + PWR_CPU1CR, PWR_CPU1CR_PDDS_D1 | PWR_CPU1CR_PDDS_D2);
+	mmio_write_32(pwr_base + PWR_CPU2CR, PWR_CPU2CR_PDDS_D2);
+	mmio_write_32(pwr_base + PWR_D3CR, PWR_D3CR_PDDS_D3);
+	stm32mp2_pll1_disable();
 
-	/* Request standby, normally with DDR off */
-	mmio_setbits_32(pwr_base + PWR_CPU1CR, PWR_CPU1CR_PDDS_D1);
-	mmio_setbits_32(pwr_base + PWR_CPU1CR, PWR_CPU1CR_PDDS_D2);
+	/* Do not maintain RETRAM memory content in Standby or Vbat */
+	mmio_write_32(pwr_base + PWR_CR10, PWR_CR10_RETRBSEN_DISABLE);
+
+	/* Clear PM context in BKPSRAM: cold boot at next wake-up */
+	stm32_pm_context_clear();
+
+	/* Deactivate all WakeUp except WKUP pins */
+	mmio_write_32(exti2_base + EXTI2_C1IMR1, 0U);
+	mmio_write_32(exti2_base + EXTI2_C1IMR2, 0U);
+	mmio_write_32(exti2_base + EXTI2_C1IMR3, 0U);
+	mmio_write_32(exti2_base + EXTI2_C2IMR1, 0U);
+	mmio_write_32(exti2_base + EXTI2_C2IMR2, 0U);
+	mmio_write_32(exti2_base + EXTI2_C2IMR3, 0U);
+	mmio_write_32(exti2_base + EXTI2_C3IMR1, 0U);
+	mmio_write_32(exti2_base + EXTI2_C3IMR2, 0U);
+	mmio_write_32(exti2_base + EXTI2_C3IMR3, 0U);
+
+	/* Disable STATE_RUNNING state for this core */
+	stm32mp_state_set(core_id, STATE_RUNNING, false);
+
+	VERBOSE("BL31: power off\n");
+
 	dsb();
 	isb();
 }

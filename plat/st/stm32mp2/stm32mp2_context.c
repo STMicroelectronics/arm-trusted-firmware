@@ -157,3 +157,16 @@ void stm32_pm_context_restore(void)
 
 	clk_disable(BACKUP_CTX_CLK);
 }
+
+void stm32_pm_context_clear(void)
+{
+	struct backup_data_s *backup_data;
+
+	backup_data = (struct backup_data_s *)BACKUP_CTX_ADDR;
+
+	clk_enable(BACKUP_CTX_CLK);
+
+	backup_data->magic = 0U;
+
+	clk_disable(BACKUP_CTX_CLK);
+}

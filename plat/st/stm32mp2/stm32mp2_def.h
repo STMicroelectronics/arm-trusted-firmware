@@ -333,6 +333,21 @@ enum ddr_type {
 #define EXTI1_C1IMR2_WKUP_MASK			GENMASK_32(57 - 32, 52 - 32)
 
 /*******************************************************************************
+ * STM32MP2 EXTI2
+ ******************************************************************************/
+#define STM32MP_EXTI2_BASE			U(0x46230000)
+
+#define EXTI2_C1IMR1				U(0x80)
+#define EXTI2_C1IMR2				U(0x90)
+#define EXTI2_C1IMR3				U(0xA0)
+#define EXTI2_C2IMR1				U(0xC0)
+#define EXTI2_C2IMR2				U(0xD0)
+#define EXTI2_C2IMR3				U(0xE0)
+#define EXTI2_C3IMR1				U(0x100)
+#define EXTI2_C3IMR2				U(0x110)
+#define EXTI2_C3IMR3				U(0x120)
+
+/*******************************************************************************
  * STM32MP2 GPIO
  ******************************************************************************/
 #define GPIOA_BASE				U(0x44240000)
