@@ -42,8 +42,8 @@
 					 BOARD_ID_BOARD_NB_SHIFT)
 #define BOARD_ID2VARCPN(_id)		(((_id) & BOARD_ID_VARCPN_MASK) >> \
 					 BOARD_ID_VARCPN_SHIFT)
-#define BOARD_ID2REV(_id)		(((_id) & BOARD_ID_REVISION_MASK) >> \
-					 BOARD_ID_REVISION_SHIFT)
+#define BOARD_ID2REV(_id)		(char)(((_id) & BOARD_ID_REVISION_MASK) >> \
+					       BOARD_ID_REVISION_SHIFT)
 #define BOARD_ID2VARFG(_id)		(((_id) & BOARD_ID_VARFG_MASK) >> \
 					 BOARD_ID_VARFG_SHIFT)
 #define BOARD_ID2BOM(_id)		((_id) & BOARD_ID_BOM_MASK)
@@ -424,15 +424,11 @@ int32_t plat_get_soc_revision(void)
 
 void stm32_display_board_info(uint32_t board_id)
 {
-	char rev[2];
-
-	rev[0] = BOARD_ID2REV(board_id) - 1 + 'A';
-	rev[1] = '\0';
-	NOTICE("Board: MB%04x Var%u.%u Rev.%s-%02u\n",
+	NOTICE("Board: MB%04x Var%u.%u Rev.%c-%02u\n",
 	       BOARD_ID2NB(board_id),
 	       BOARD_ID2VARCPN(board_id),
 	       BOARD_ID2VARFG(board_id),
-	       rev,
+	       BOARD_ID2REV(board_id) - 1 + 'A',
 	       BOARD_ID2BOM(board_id));
 }
 
