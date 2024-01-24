@@ -382,6 +382,11 @@ int stm32_saes_driver_init(void)
 {
 	int err;
 
+	if(saes_pdata.base != 0U) {
+		/* Driver is already initialized */
+		return 0;
+	}
+
 	err = stm32_saes_parse_fdt(&saes_pdata);
 	if (err != 0) {
 		return err;
