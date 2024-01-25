@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2017-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -364,6 +364,24 @@ static const struct regul_description pmic_regs[NB_REG] = {
 	[STPMIC1_SW_OUT] = DEFINE_REGU("pwr_sw2"),
 };
 
+static int handle_pmic_property(void *fdt, int subnode,
+				const struct regul_description *desc,
+				const char *property, uint16_t flag)
+{
+	if (fdt_getprop(fdt, subnode, property, NULL)  != NULL) {
+		int ret;
+
+		VERBOSE("%s: %s\n", desc->node_name, property);
+		ret = pmic_set_flag(desc, flag);
+		if (ret != 0) {
+			ERROR("set %s failed\n", property);
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
 static int register_pmic(void)
 {
 	void *fdt;
@@ -403,6 +421,27 @@ static int register_pmic(void)
 		if (ret != 0) {
 			WARN("%s:%d failed to register %s\n", __func__,
 			     __LINE__, reg_name);
+			return ret;
+		}
+
+		ret = handle_pmic_property(fdt, subnode, desc,
+					   "st,mask-reset",
+					   REGUL_MASK_RESET);
+		if (ret != 0) {
+			return ret;
+		}
+
+		ret = handle_pmic_property(fdt, subnode, desc,
+					   "st,regulator-sink-source",
+					   REGUL_SINK_SOURCE);
+		if (ret != 0) {
+			return ret;
+		}
+
+		ret = handle_pmic_property(fdt, subnode, desc,
+					   "st,regulator-bypass",
+					   REGUL_ENABLE_BYPASS);
+		if (ret != 0) {
 			return ret;
 		}
 	}
