@@ -252,6 +252,12 @@ static void prepare_encryption(void)
 	if (stm32mp2_risaf_write_encryption_key(RISAF4_INST, mkey) != 0) {
 		panic();
 	}
+
+#if STM32MP21
+	if (stm32mp2_risaf_write_mce_key(RISAF4_INST, mkey) != 0) {
+		panic();
+	}
+#endif /* STM32MP21 */
 }
 
 /*******************************************************************************
