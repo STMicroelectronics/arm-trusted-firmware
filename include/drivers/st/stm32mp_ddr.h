@@ -80,5 +80,6 @@ void stm32mp_ddr_set_qd3_update_conditions(struct stm32mp_ddrctl *ctl);
 void stm32mp_ddr_unset_qd3_update_conditions(struct stm32mp_ddrctl *ctl);
 void stm32mp_ddr_wait_refresh_update_done_ack(struct stm32mp_ddrctl *ctl);
 int stm32mp_board_ddr_power_init(enum ddr_type ddr_type);
+int stm32mp_board_ddr_power_off(void);
 
 #endif /* STM32MP_DDR_H */

@@ -12,7 +12,10 @@
 
 #include <drivers/delay_timer.h>
 #include <drivers/st/regulator.h>
+#include <drivers/st/regulator_fixed.h>
+#include <drivers/st/stm32mp2_ddr_helpers.h>
 #include <drivers/st/stm32mp_ddr.h>
+#include <drivers/st/stm32mp_pmic.h>
 
 #include <libfdt.h>
 
@@ -32,6 +35,7 @@ static void ddr3_supply_read(void *fdt, int node, struct ddr3_supply *supply)
 	supply->vtt = regulator_get_by_supply_name(fdt, node, "vtt");
 }
 
+#if defined(IMAGE_BL2)
 static int ddr_power_init(void *fdt, int node)
 {
 	int status;
@@ -63,6 +67,27 @@ static int ddr_power_init(void *fdt, int node)
 
 	return regulator_enable(supply.vdd);
 }
+#endif /* IMAGE_BL2 */
+
+#if defined(IMAGE_BL31)
+static void ddr_power_off(void *fdt, int node)
+{
+	struct ddr3_supply supply;
+
+	ddr3_supply_read(fdt, node, &supply);
+
+	if (supply.vtt != NULL) {
+		regulator_disable(supply.vtt);
+	}
+	if (supply.vref != NULL) {
+		regulator_disable(supply.vref);
+	}
+	if (supply.vdd != NULL) {
+		udelay(1000);
+		regulator_disable(supply.vdd);
+	}
+}
+#endif /* IMAGE_BL31 */
 #endif /* STM32MP_DDR3_TYPE */
 
 #if STM32MP_DDR4_TYPE
@@ -81,6 +106,7 @@ static void ddr4_supply_read(void *fdt, int node, struct ddr4_supply *supply)
 	supply->vtt = regulator_get_by_supply_name(fdt, node, "vtt");
 }
 
+#if defined(IMAGE_BL2)
 static int ddr_power_init(void *fdt, int node)
 {
 	int status;
@@ -123,6 +149,30 @@ static int ddr_power_init(void *fdt, int node)
 
 	return regulator_enable(supply.vdd);
 }
+#endif /* IMAGE_BL2 */
+
+#if defined(IMAGE_BL31)
+static void ddr_power_off(void *fdt, int node)
+{
+	struct ddr4_supply supply;
+
+	ddr4_supply_read(fdt, node, &supply);
+
+	if (supply.vtt != NULL) {
+		regulator_disable(supply.vtt);
+	}
+	if (supply.vref != NULL) {
+		regulator_disable(supply.vref);
+	}
+	if (supply.vdd != NULL) {
+		regulator_disable(supply.vdd);
+	}
+	if (supply.vpp != NULL) {
+		udelay(1000);
+		regulator_disable(supply.vpp);
+	}
+}
+#endif /* IMAGE_BL31 */
 #endif /* STM32MP_DDR4_TYPE */
 
 #if STM32MP_LPDDR4_TYPE
@@ -139,6 +189,7 @@ static void lpddr4_supply_read(void *fdt, int node, struct lpddr4_supply *supply
 	supply->vddq = regulator_get_by_supply_name(fdt, node, "vddq");
 }
 
+#if defined(IMAGE_BL2)
 static int ddr_power_init(void *fdt, int node)
 {
 	int status;
@@ -182,8 +233,30 @@ static int ddr_power_init(void *fdt, int node)
 
 	return regulator_enable(supply.vddq);
 }
+#endif /* IMAGE_BL2 */
+
+#if defined(IMAGE_BL31)
+static void ddr_power_off(void *fdt, int node)
+{
+	struct lpddr4_supply supply;
+
+	lpddr4_supply_read(fdt, node, &supply);
+
+	if (supply.vddq != NULL) {
+		regulator_disable(supply.vddq);
+	}
+	if (supply.vdd2 != NULL) {
+		regulator_disable(supply.vdd2);
+	}
+	if (supply.vdd1 != NULL) {
+		udelay(1000);
+		regulator_disable(supply.vdd1);
+	}
+}
+#endif /* IMAGE_BL31 */
 #endif /* STM32MP_LPDDR4_TYPE */
 
+#if defined(IMAGE_BL2)
 int stm32mp_board_ddr_power_init(enum ddr_type ddr_type)
 {
 	void *fdt = NULL;
@@ -214,3 +287,36 @@ int stm32mp_board_ddr_power_init(enum ddr_type ddr_type)
 
 	return ddr_power_init(fdt, node);
 }
+#endif /* IMAGE_BL2 */
+
+#if defined(IMAGE_BL31)
+int stm32mp_board_ddr_power_off(void)
+{
+	void *fdt = NULL;
+	int node;
+
+	if (fdt_get_address(&fdt) == 0) {
+		ddr_sub_system_clk_off();
+		return -FDT_ERR_NOTFOUND;
+	}
+
+	node = fdt_node_offset_by_compatible(fdt, -1, DT_DDR_COMPAT);
+	if (node < 0) {
+		ddr_sub_system_clk_off();
+		ERROR("%s: Cannot read DDR node in DT\n", __func__);
+		return -EINVAL;
+	}
+
+	/*
+	 * Initialize DDR supply (regulator or STPMIC) in BL31 only when
+	 * required to avoid concurrent access with normal world or OP-TEE
+	 */
+	fixed_regulator_register();
+	initialize_pmic();
+	/* DDR and device tree is no more accessible when clk is deactivated */
+	ddr_sub_system_clk_off();
+	ddr_power_off(fdt, node);
+
+	return 0;
+}
+#endif /* IMAGE_BL31 */
