@@ -91,9 +91,14 @@ STM32MP_DDR_DUAL_AXI_PORT	:=	1
 STM32MP_DDR_FIP_IO_STORAGE	:=	1
 
 # Device tree
+ifeq ($(STM32MP23),1)
+BL2_DTSI			:=	stm32mp23-bl2.dtsi
+BL31_DTSI			:=	stm32mp23-bl31.dtsi
+else ifeq ($(STM32MP25),1)
 BL2_DTSI			:=	stm32mp25-bl2.dtsi
-FDT_SOURCES			:=	$(addprefix ${BUILD_PLAT}/fdts/, $(patsubst %.dtb,%-bl2.dts,$(DTB_FILE_NAME)))
 BL31_DTSI			:=	stm32mp25-bl31.dtsi
+endif
+FDT_SOURCES			:=	$(addprefix ${BUILD_PLAT}/fdts/, $(patsubst %.dtb,%-bl2.dts,$(DTB_FILE_NAME)))
 FDT_SOURCES			+=	$(addprefix ${BUILD_PLAT}/fdts/, $(patsubst %.dtb,%-bl31.dts,$(DTB_FILE_NAME)))
 
 # Macros and rules to build TF binary
