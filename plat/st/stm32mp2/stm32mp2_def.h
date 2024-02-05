@@ -51,6 +51,24 @@
 /*******************************************************************************
  * CHIP ID
  ******************************************************************************/
+#if STM32MP23
+#define STM32MP2_CHIP_ID			U(0x505)
+
+#define STM32MP231A_PART_NB			U(0x400B3FEF)
+#define STM32MP231C_PART_NB			U(0x000B31EF)
+#define STM32MP231D_PART_NB			U(0xC00B3FEF)
+#define STM32MP231F_PART_NB			U(0x800B31EF)
+#define STM32MP233A_PART_NB			U(0x400B3F8E)
+#define STM32MP233C_PART_NB			U(0x000B318E)
+#define STM32MP233D_PART_NB			U(0xC00B3F8E)
+#define STM32MP233F_PART_NB			U(0x800B318E)
+#define STM32MP235A_PART_NB			U(0x40082F82)
+#define STM32MP235C_PART_NB			U(0x00082182)
+#define STM32MP235D_PART_NB			U(0xC0082F82)
+#define STM32MP235F_PART_NB			U(0x80082182)
+#endif /* STM32MP23 */
+
+#if STM32MP25
 #define STM32MP2_CHIP_ID			U(0x505)
 
 #define STM32MP251A_PART_NB			U(0x400B3E6D)
@@ -69,6 +87,7 @@
 #define STM32MP257C_PART_NB			U(0x00002000)
 #define STM32MP257D_PART_NB			U(0xC0002E00)
 #define STM32MP257F_PART_NB			U(0x80002000)
+#endif /* STM32MP25 */
 
 #define STM32MP2_REV_A				U(0x08)
 #define STM32MP2_REV_B				U(0x10)
