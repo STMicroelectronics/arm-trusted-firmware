@@ -159,8 +159,13 @@ enum ddr_type {
 
 /* Section used inside TF binaries */
 #define STM32MP_PARAM_LOAD_SIZE			U(0x00002400) /* 9 KB for param */
+#if STM32MP21
+/* 576 Bytes reserved for header */
+#define STM32MP_HEADER_SIZE			U(0x00000240)
+#else /* STM32MP21 */
 /* 512 Bytes reserved for header */
 #define STM32MP_HEADER_SIZE			U(0x00000200)
+#endif /* STM32MP21 */
 #define STM32MP_HEADER_BASE			(STM32MP_SYSRAM_BASE +	\
 						 STM32MP_PARAM_LOAD_SIZE)
 
