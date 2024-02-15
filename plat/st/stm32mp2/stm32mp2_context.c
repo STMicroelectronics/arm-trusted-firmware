@@ -36,6 +36,7 @@ struct backup_data_s {
 	uintptr_t optee_vector;
 	optee_context_t opteed_sp_context[OPTEED_CORE_COUNT];
 #endif
+	uintptr_t fdt_bl31;
 };
 
 void stm32mp_pm_save_enc_mkey_in_context(uint8_t *data)
@@ -83,6 +84,7 @@ void stm32_pm_context_save(const psci_power_state_t *state)
 {
 	void *cpu_context;
 	struct backup_data_s *backup_data;
+	void *fdt = NULL;
 
 	clk_enable(BACKUP_CTX_CLK);
 	backup_data = (struct backup_data_s *)BACKUP_CTX_ADDR;
@@ -114,6 +116,9 @@ void stm32_pm_context_save(const psci_power_state_t *state)
 	memcpy(&backup_data->standby_pwr_state, state, sizeof(psci_power_state_t));
 	backup_data->psci_suspend_mode = psci_suspend_mode;
 
+	fdt_get_address(&fdt);
+	backup_data->fdt_bl31 = (uintptr_t)fdt;
+
 	clk_disable(BACKUP_CTX_CLK);
 }
 
@@ -121,6 +126,7 @@ void stm32_pm_context_restore(void)
 {
 	void *cpu_context;
 	struct backup_data_s *backup_data;
+	int ret;
 
 	clk_enable(BACKUP_CTX_CLK);
 	backup_data = (struct backup_data_s *)BACKUP_CTX_ADDR;
@@ -154,6 +160,12 @@ void stm32_pm_context_restore(void)
 
 	opteed_restore();
 #endif
+
+	ret = dt_open_and_check(backup_data->fdt_bl31);
+	if (ret < 0) {
+		ERROR("%s: failed to open DT (%d)\n", __func__, ret);
+		panic();
+	}
 
 	clk_disable(BACKUP_CTX_CLK);
 }
