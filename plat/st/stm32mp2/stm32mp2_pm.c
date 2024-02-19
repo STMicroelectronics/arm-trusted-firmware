@@ -550,12 +550,14 @@ static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
 		/* Restore register in CA35SS */
 		stm32mp_ca35_set_vbar(stm32_sec_entrypoint);
 
+#if !STM32MP21
 		/* Start the secondary core if it was running before STOP */
 		if ((core_id == STM32MP_PRIMARY_CPU) &&
 		    stm32mp_state_check(STM32MP_SECONDARY_CPU, STATE_START)) {
 			/* Reset the secondary core to execute warm boot */
 			mmio_write_32(RCC_BASE + RCC_C1P1RSTCSETR, RCC_C1P1RSTCSETR_C1P1PORRST);
 		}
+#endif /* !STM32MP21 */
 		break;
 	case PWRSTATE_STOP1:
 	case PWRSTATE_LP_STOP1:
@@ -648,8 +650,10 @@ static void stm32_system_off(void)
 		/* After reset, the core is stopped, waiting in WFI loop */
 		stm32mp_state_set(STM32MP_SECONDARY_CPU, STATE_START, false);
 
+#if !STM32MP21
 		/* Reset the secondary core */
 		mmio_write_32(RCC_BASE + RCC_C1P1RSTCSETR, RCC_C1P1RSTCSETR_C1P1PORRST);
+#endif /* !STM32MP21 */
 
 		/* Forbid access to DDR */
 		stm32mp_state_set(STM32MP_PRIMARY_CPU, STATE_DDR, false);
