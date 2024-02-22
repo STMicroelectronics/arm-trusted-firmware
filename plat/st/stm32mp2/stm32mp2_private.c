@@ -173,14 +173,14 @@ uintptr_t get_uart_address(uint32_t instance_nb)
 
 void stm32_save_header(void)
 {
-#if STM32MP_USB_PROGRAMMER && TRUSTED_BOARD_BOOT
+#if (STM32MP_UART_PROGRAMMER || STM32MP_USB_PROGRAMMER) && TRUSTED_BOARD_BOOT
 	memcpy(&saved_header, (uint8_t *)STM32MP_HEADER_BASE, STM32MP_HEADER_SIZE);
 #endif /* STM32MP_USB_PROGRAMMER && TRUSTED_BOARD_BOOT */
 }
 
 uintptr_t stm32_get_header_address(void)
 {
-#if STM32MP_USB_PROGRAMMER && TRUSTED_BOARD_BOOT
+#if (STM32MP_UART_PROGRAMMER || STM32MP_USB_PROGRAMMER) && TRUSTED_BOARD_BOOT
 	return (uintptr_t)&saved_header;
 #else
 	return STM32MP_HEADER_BASE;
