@@ -699,7 +699,9 @@ static void stm32_system_off(void)
 	/* Request standby2 */
 	mmio_write_32(pwr_base + PWR_CPU1CR, PWR_CPU1CR_PDDS_D1 | PWR_CPU1CR_PDDS_D2);
 	mmio_write_32(pwr_base + PWR_CPU2CR, PWR_CPU2CR_PDDS_D2);
+#if !STM32MP21
 	mmio_write_32(pwr_base + PWR_D3CR, PWR_D3CR_PDDS_D3);
+#endif /* !STM32MP21 */
 	stm32mp2_pll1_disable();
 
 	/* Do not maintain RETRAM memory content in Standby or Vbat */
