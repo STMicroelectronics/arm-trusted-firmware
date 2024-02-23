@@ -667,12 +667,14 @@ static void stm32_system_off(void)
 		mmio_setbits_32(rcc_base + RCC_C2RSTCSETR, RCC_C2RSTCSETR_C2RST);
 	}
 
+#if !STM32MP21
 	/* If CPU3 is not in reset */
 	if ((mmio_read_32(pwr_base + PWR_CPU3D3SR) & PWR_CPU3D3SR_CSTATE_MASK) != 0U) {
 		WARN("PSCI system off with Cortex M0 running.\n");
 		/* Force reset of CPU3 = Cortex M0+ */
 		mmio_setbits_32(rcc_base + RCC_C3CFGR, RCC_C3CFGR_C3RST);
 	}
+#endif /* !STM32MP21 */
 
 	/* Freeze all watchdog with shadow value of HCONF1 */
 	if (stm32_get_otp_index(HCONF1_OTP, &otp_idx, NULL) == 0U) {
