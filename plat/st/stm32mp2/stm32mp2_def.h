@@ -25,20 +25,22 @@
 #include <dt-bindings/clock/st,stm32mp21-rcc.h>
 #include <dt-bindings/clock/stm32mp21-clksrc.h>
 #include <dt-bindings/reset/st,stm32mp21-rcc.h>
+#include <dt-bindings/soc/stm32mp21-rif.h>
 #endif /* STM32MP21 */
 #if STM32MP23
 #include <dt-bindings/clock/stm32mp25-clks.h>
 #include <dt-bindings/clock/stm32mp25-clksrc.h>
 #include <dt-bindings/reset/stm32mp25-resets.h>
+#include <dt-bindings/soc/stm32mp23-rif.h>
 #endif /* STM32MP23 */
 #if STM32MP25
 #include <dt-bindings/clock/stm32mp25-clks.h>
 #include <dt-bindings/clock/stm32mp25-clksrc.h>
 #include <dt-bindings/reset/stm32mp25-resets.h>
+#include <dt-bindings/soc/stm32mp25-rif.h>
 #endif /* STM32MP25 */
 #include <dt-bindings/gpio/stm32-gpio.h>
 #include <dt-bindings/soc/rif.h>
-#include <dt-bindings/soc/stm32mp25-rif.h>
 
 #ifndef __ASSEMBLER__
 #include <boot_api.h>
