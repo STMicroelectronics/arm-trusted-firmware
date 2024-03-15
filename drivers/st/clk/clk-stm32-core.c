@@ -163,6 +163,8 @@ static int clk_gate_enable(struct stm32_clk_priv *priv, int id)
 
 	mmio_setbits_32(priv->base + cfg->offset, BIT(cfg->bit_idx));
 
+	dsb(); /* Make sure the clock is enabled.  */
+
 	return 0;
 }
 
@@ -171,7 +173,11 @@ static void clk_gate_disable(struct stm32_clk_priv *priv, int id)
 	const struct clk_stm32 *clk = _clk_get(priv, id);
 	struct clk_gate_cfg *cfg = clk->clock_cfg;
 
+	dsb(); /* Ensure prebious transaction are performed before stop.  */
+
 	mmio_clrbits_32(priv->base + cfg->offset, BIT(cfg->bit_idx));
+
+	dsb(); /* Make sure the clock is disabled.  */
 }
 
 static bool clk_gate_is_enabled(struct stm32_clk_priv *priv, int id)

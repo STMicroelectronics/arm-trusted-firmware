@@ -1312,6 +1312,7 @@ static void __clk_enable(struct stm32mp1_clk_gate const *gate)
 	} else {
 		mmio_setbits_32(rcc_base + gate->offset, BIT(gate->bit));
 	}
+	dsb(); /* Make sure the write operation are done before continue. */
 }
 
 static void __clk_disable(struct stm32mp1_clk_gate const *gate)
@@ -1320,12 +1321,15 @@ static void __clk_disable(struct stm32mp1_clk_gate const *gate)
 
 	VERBOSE("Disable clock %u\n", gate->index);
 
+	dsb(); /* Waiting pending operation before disabling clock  */
+
 	if (gate->set_clr != 0U) {
 		mmio_write_32(rcc_base + gate->offset + RCC_MP_ENCLRR_OFFSET,
 			      BIT(gate->bit));
 	} else {
 		mmio_clrbits_32(rcc_base + gate->offset, BIT(gate->bit));
 	}
+	dsb(); /* Make sure the write operation are done before continue. */
 }
 
 static bool __clk_is_enabled(struct stm32mp1_clk_gate const *gate)
