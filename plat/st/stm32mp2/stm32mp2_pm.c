@@ -17,7 +17,6 @@
 #include <drivers/generic_delay_timer.h>
 #include <drivers/st/bsec3_reg.h>
 #include <drivers/st/stm32mp_clkfunc.h>
-#include <drivers/st/stm32mp_pmic2.h>
 #include <drivers/st/stm32mp_reset.h>
 #include <drivers/st/stm32mp2_ddr_helpers.h>
 #include <lib/mmio.h>
@@ -29,6 +28,14 @@
 #include <stm32mp2_context.h>
 #include <stm32mp2_private.h>
 
+/* Default value for STM32MP25 with STPMIC25, defined in AN5727 */
+#define DEFAULT_POPL_D1		3U
+#define DEFAULT_PODH_D2		1U
+#define DEFAULT_POPL_D2		2U
+#define DEFAULT_LPCFG_D2	1U		/* PWR_ON=0 for Standby1/2 = PMIC_PWRCTRL1 */
+#define DEFAULT_LPLVDLY_D2	0U		/* 6xLSI cycle = 187 us */
+#define DEFAULT_LPSTOP1DLY	100U		/* LP-Stop1 PWRLP_DLY to wait VTT */
+
 #define RAMCFG_RETRAMCR		0x180U
 #define SRAMHWERDIS		BIT(12)
 
@@ -36,7 +43,7 @@
 #define RCC_WAKEUP_IRQn		254
 
 /* Value with 64 MHz HSI period */
-#define PWRLPDLYCR_VAL(delay, lsmcu)	((64000000U / (delay)) * (1U + (lsmcu)))
+#define PWRLPDLYCR_VAL(delay_us, lsmcu)	((64U * (delay_us)) / (1U + (lsmcu)))
 
 #define STATE_START	U(0)
 #define STATE_RUNNING	U(1)
@@ -61,7 +68,10 @@ static spinlock_t stm32mp_state_lock;
 
 uintptr_t stm32_sec_entrypoint;
 
-u_register_t saved_scr_el3;
+static u_register_t saved_scr_el3;
+
+static uint32_t lpstop1_pwrlpdly;
+static uint32_t stop2_pwrlpdly;
 
 /* Support PSCI v1.0 Extended State-ID with the recommended encoding */
 #define LVL_CORE		U(0)
@@ -376,6 +386,13 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 	/* Request STOP for both cores */
 	mmio_write_32(rcc_base + RCC_C1SREQSETR, RCC_C1SREQSETR_STPREQ_MASK);
 
+	/*
+	 * No PWR_LP delay by default, because VTT_DRR is not stopped (for Stop1)
+	 * or VTT ramp-up delay is masked by VDD CPU delay (for other modes except LP-Stop1).
+	 * It is required only for LP-Stop1 mode for design with STPMIC25.
+	 */
+	mmio_write_32(rcc_base + RCC_PWRLPDLYCR, 0U);
+
 	/* Switch to Software Self-Refresh mode */
 	if (stateid == PWRSTATE_STANDBY) {
 		standby = true;
@@ -404,6 +421,8 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 		print_mode_verbose("LP_Stop1");
 		mmio_write_32(pwr_base + PWR_CPU1CR, PWR_CPU1CR_LPDS_D1);
 		mmio_write_32(pwr_base + PWR_CPU2CR, PWR_CPU2CR_LPDS_D2);
+		/* Wait VTT ramp-up delay for LP-Stop1 */
+		mmio_write_32(rcc_base + RCC_PWRLPDLYCR, lpstop1_pwrlpdly);
 		stm32mp2_enable_rcc_wakeup_irq(rcc_base);
 		break;
 
@@ -418,7 +437,7 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 		print_mode_info("Stop2");
 		mmio_write_32(pwr_base + PWR_CPU1CR, PWR_CPU1CR_PDDS_D1);
 		mmio_write_32(pwr_base + PWR_CPU2CR, 0U);
-
+		mmio_write_32(rcc_base + RCC_PWRLPDLYCR, stop2_pwrlpdly);
 		stm32mp_gic_cpuif_disable();
 		stm32mp_gic_save();
 		stm32mp2_pll1_disable();
@@ -428,7 +447,7 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 		print_mode_info("LP_Stop2");
 		mmio_write_32(pwr_base + PWR_CPU1CR, PWR_CPU1CR_PDDS_D1);
 		mmio_write_32(pwr_base + PWR_CPU2CR, PWR_CPU2CR_LPDS_D2);
-
+		mmio_write_32(rcc_base + RCC_PWRLPDLYCR, stop2_pwrlpdly);
 		stm32mp_gic_cpuif_disable();
 		stm32mp_gic_save();
 		stm32mp2_pll1_disable();
@@ -438,7 +457,7 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 		print_mode_info("LPLV_Stop2");
 		mmio_write_32(pwr_base + PWR_CPU1CR, PWR_CPU1CR_PDDS_D1);
 		mmio_write_32(pwr_base + PWR_CPU2CR, PWR_CPU2CR_LPDS_D2 | PWR_CPU2CR_LVDS_D2);
-
+		mmio_write_32(rcc_base + RCC_PWRLPDLYCR, stop2_pwrlpdly);
 		stm32mp_gic_cpuif_disable();
 		stm32mp_gic_save();
 		stm32mp2_pll1_disable();
@@ -919,10 +938,9 @@ static const plat_psci_ops_t stm32_psci_ops = {
  * This function retrieve the generic information from DT.
  * Returns node on success and a negative FDT error code on failure.
  ******************************************************************************/
-static int stm32_parse_domain_idle_state(void)
+static int stm32_parse_domain_idle_state(void *fdt)
 {
 	unsigned int domain_idle_states[PM_IDLE_STATES_SIZE];
-	void *fdt = NULL;
 	int node = 0;
 	int subnode = 0;
 	uint32_t power_state;
@@ -930,10 +948,6 @@ static int stm32_parse_domain_idle_state(void)
 	unsigned int j = 0U;
 	unsigned int nb_states = 0U;
 	int ret;
-
-	if (fdt_get_address(&fdt) == 0) {
-		return -ENODEV;
-	}
 
 	/* Search supported domain-idle-state in device tree */
 	node = fdt_path_offset(fdt, "/cpus/domain-idle-states");
@@ -1001,12 +1015,39 @@ static int stm32_parse_domain_idle_state(void)
 /*******************************************************************************
  * Initialize STM32MP2 for PM support: RCC, PWR
  ******************************************************************************/
-static void stm32_pm_init(void)
+struct pm_param {
+	uint8_t popl_d1;
+	uint8_t podh_d2;
+	uint8_t popl_d2;
+	uint8_t lplvdly_d2;
+	uint8_t lpcfg_d2;
+	uint32_t lpstop1dly;
+};
+
+static void stm32_read_dt_pm_param(void *fdt, struct pm_param *param)
+{
+	int node;
+
+	node = fdt_node_offset_by_compatible(fdt, -1, DT_PWR_COMPAT);
+	if (node <= 0) {
+		panic();
+	}
+
+	param->popl_d1 = fdt_read_uint32_default(fdt, node, "st,popl-d1-ms", DEFAULT_POPL_D1);
+	param->podh_d2 = fdt_read_uint32_default(fdt, node, "st,podh-d2-ms", DEFAULT_PODH_D2);
+	param->popl_d2 = fdt_read_uint32_default(fdt, node, "st,popl-d2-ms", DEFAULT_POPL_D2);
+	param->lpcfg_d2 = fdt_read_uint32_default(fdt, node, "st,lpcfg-d2", DEFAULT_LPCFG_D2);
+	param->lplvdly_d2 = fdt_read_uint32_default(fdt, node, "st,lplvdly-d2", DEFAULT_LPLVDLY_D2);
+	param->lpstop1dly = fdt_read_uint32_default(fdt, node, "st,lpstop1dly-us",
+						    DEFAULT_LPSTOP1DLY);
+}
+
+static void stm32_pm_init(void *fdt)
 {
 	uintptr_t pwr_base = stm32mp_pwr_base();
 	uintptr_t rcc_base = stm32mp_rcc_base();
 	uint32_t lsmcu;
-	uint32_t lpcfg_d2 = 0U;
+	struct pm_param param;
 
 	stm32mp2_setup_rcc_wakeup_irq(rcc_base);
 
@@ -1025,42 +1066,28 @@ static void stm32_pm_init(void)
 	/* Prevent RETRAM erase */
 	mmio_write_32(RAMCFG_BASE + RAMCFG_RETRAMCR, SRAMHWERDIS);
 
-	/*
-	 * If PWR_D1CR_LPCFG_D1 is set to 0,
-	 *      PWR_CPU_ON signal is low when CPU1 is in standby or stop2/stop3
-	 * else only standby
-	 *  should be set for PMIC
-	 *
-	 * and set PWR_D1CR_POPL_D1 = 3ms
-	 */
-	mmio_write_32(pwr_base + PWR_D1CR, (3 << PWR_D1CR_POPL_D1_SHIFT));
-
-	/*
-	 * Set PWR_D2CR_LPCFG_D2 for PMIC board
-	 * And PWR_ON signals all modes on pmic
-	 * - PWR_D2CR_POPL_D2 = 2ms
-	 * - PWR_D2CR_PODH_D2 = 1ms
-	 * - PWR_D2CR_LPLVDLY_D2 = 375us
-	 */
-	if (dt_pmic_status() > 0) {
-		/* On PMIC board, control LPCFG */
-		lpcfg_d2 = PWR_D2CR_LPCFG_D2;
-	}
-	mmio_write_32(pwr_base + PWR_D2CR, lpcfg_d2 |
-					   (2 << PWR_D2CR_POPL_D2_SHIFT) |
-					   (1 << PWR_D2CR_LPLVDLY_D2_SHIFT) |
-					   (1 << PWR_D2CR_PODH_D2_SHIFT));
-
 #if !STM32MP21
 	/* System standby not set (D3) */
 	mmio_write_32(pwr_base + PWR_D3CR, 0U);
 #endif /* !STM32MP21 */
 
-	/* To confirmed: delay can be customizable or keep hardcoded at 1ms / 2ms */
+	/* Configure delay in PWR */
+	stm32_read_dt_pm_param(fdt, &param);
 
-	/* Set DLY to 1ms */
+	mmio_write_32(pwr_base + PWR_D1CR,
+		      (param.popl_d1 << PWR_D1CR_POPL_D1_SHIFT) & PWR_D1CR_POPL_D1_MASK);
+
+	mmio_write_32(pwr_base + PWR_D2CR,
+		      (param.lpcfg_d2 & PWR_D2CR_LPCFG_D2) |
+		      ((param.popl_d2  << PWR_D2CR_POPL_D2_SHIFT) & PWR_D2CR_POPL_D2_MASK) |
+		      ((param.lplvdly_d2 << PWR_D2CR_LPLVDLY_D2_SHIFT) & PWR_D2CR_LPLVDLY_D2_MASK) |
+		      ((param.podh_d2 << PWR_D2CR_PODH_D2_SHIFT) & PWR_D2CR_PODH_D2_MASK));
+
+	/* Compute RCC PWR LP DLY according to parent clock */
 	lsmcu = mmio_read_32(rcc_base + RCC_LSMCUDIVR) & RCC_LSMCUDIVR_LSMCUDIV;
-	mmio_write_32(rcc_base + RCC_PWRLPDLYCR, PWRLPDLYCR_VAL(1000U, lsmcu));
+	lpstop1_pwrlpdly = PWRLPDLYCR_VAL(param.lpstop1dly, lsmcu);
+	/* Wait 2ms for Stop2 */
+	stop2_pwrlpdly = PWRLPDLYCR_VAL(2000, lsmcu);
 }
 
 /*******************************************************************************
@@ -1070,11 +1097,16 @@ int plat_setup_psci_ops(uintptr_t sec_entrypoint,
 			const plat_psci_ops_t **psci_ops)
 {
 	int ret = 0;
+	void *fdt = NULL;
 	uint32_t stop2_entrypoint = (uint32_t)(uintptr_t)&stm32_stop2_entrypoint;
 	struct nvmem_cell stop2_entrypoint_cell;
 	assert(stop2_entrypoint < UINT32_MAX);
 
-	ret = stm32_parse_domain_idle_state();
+	if (fdt_get_address(&fdt) == 0) {
+		panic();
+	}
+
+	ret = stm32_parse_domain_idle_state(fdt);
 	if (ret != 0) {
 		ERROR("invalid domain-idle-states in device tree %d\n", ret);
 		panic();
@@ -1099,7 +1131,7 @@ int plat_setup_psci_ops(uintptr_t sec_entrypoint,
 	nvmem_cell_write(&stop2_entrypoint_cell, (uint8_t *)&stop2_entrypoint,
 			 sizeof(stop2_entrypoint));
 
-	stm32_pm_init();
+	stm32_pm_init(fdt);
 
 	*psci_ops = &stm32_psci_ops;
 
