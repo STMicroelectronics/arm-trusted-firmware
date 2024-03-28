@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2024-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -8,13 +8,11 @@
 
 #include <arch_helpers.h>
 #include <common/debug.h>
-
 #include <drivers/delay_timer.h>
 #include <drivers/st/stm32mp2_ddr.h>
 #include <drivers/st/stm32mp2_ddr_helpers.h>
 #include <drivers/st/stm32mp2_ddr_regs.h>
 #include <drivers/st/stm32mp_ddr.h>
-
 #include <lib/mmio.h>
 
 #include <platform_def.h>
@@ -229,6 +227,22 @@ int ddr_sr_exit_loop(void)
 	return sr_loop(false);
 }
 
+bool is_ddr_cid_filtering_enabled(void)
+{
+	return (mmio_read_32(stm32mp_rcc_base() + RCC_R104CIDCFGR) & RCC_R104CIDCFGR_CFEN) ==
+	       RCC_R104CIDCFGR_CFEN;
+}
+
+void ddr_enable_cid_filtering(void)
+{
+	mmio_setbits_32(stm32mp_rcc_base() + RCC_R104CIDCFGR, RCC_R104CIDCFGR_CFEN);
+}
+
+void ddr_disable_cid_filtering(void)
+{
+	mmio_clrbits_32(stm32mp_rcc_base() + RCC_R104CIDCFGR, RCC_R104CIDCFGR_CFEN);
+}
+
 static int sr_ssr_set(void)
 {
 	uintptr_t ddrctrl_base = stm32mp_ddrctrl_base();
@@ -282,7 +296,15 @@ static int sr_ssr_entry(bool standby)
 	ddr_wait_lp3_mode(true);
 
 	if (standby) {
+		bool cid_filtering = is_ddr_cid_filtering_enabled();
+
+		if (cid_filtering) {
+			ddr_disable_cid_filtering();
+		}
 		mmio_clrbits_32(stm32mp_pwr_base() + PWR_CR11, PWR_CR11_DDRRETDIS);
+		if (cid_filtering) {
+			ddr_enable_cid_filtering();
+		}
 	}
 
 	mmio_clrsetbits_32(rcc_base + RCC_DDRCPCFGR, RCC_DDRCPCFGR_DDRCPLPEN,
@@ -502,9 +524,16 @@ void ddr_sub_system_clk_init(void)
 void ddr_sub_system_clk_off(void)
 {
 	uintptr_t rcc_base = stm32mp_rcc_base();
+	bool cid_filtering = is_ddr_cid_filtering_enabled();
 
 	/* Clear DDR IO retention */
+	if (cid_filtering) {
+		ddr_disable_cid_filtering();
+	}
 	mmio_clrbits_32(stm32mp_pwr_base() + PWR_CR11, PWR_CR11_DDRRETDIS);
+	if (cid_filtering) {
+		ddr_enable_cid_filtering();
+	}
 
 	/* Reset DDR sub system */
 	mmio_write_32(rcc_base + RCC_DDRCPCFGR, RCC_DDRCPCFGR_DDRCPRST);
