@@ -81,11 +81,6 @@ uint32_t stm32_iwdg_get_instance(uintptr_t base);
 /* Return bitflag mask for expected IWDG configuration from OTP content */
 uint32_t stm32_iwdg_get_otp_config(uint32_t iwdg_inst);
 
-#if defined(IMAGE_BL2)
-/* Update OTP shadow registers with IWDG configuration from device tree */
-uint32_t stm32_iwdg_shadow_update(uint32_t iwdg_inst, uint32_t flags);
-#endif
-
 #if STM32MP_UART_PROGRAMMER || !defined(IMAGE_BL2)
 /* Get the UART address from its instance number */
 uintptr_t get_uart_address(uint32_t instance_nb);

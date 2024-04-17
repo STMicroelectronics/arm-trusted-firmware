@@ -158,12 +158,6 @@ int stm32_iwdg_init(void)
 			stm32mp_register_secure_periph_iomem(iwdg->base);
 		}
 
-#if defined(IMAGE_BL2)
-		if (stm32_iwdg_shadow_update(idx, iwdg->flags) != BSEC_OK) {
-			return -1;
-		}
-#endif
-
 		if ((hw_init & IWDG_HW_ENABLED) == 0) {
 			/* Use default timeout, ignore DT's "timeout-sec" */
 			stm32_iwdg_start(iwdg);

@@ -605,54 +605,9 @@ uint32_t stm32_iwdg_get_otp_config(uint32_t iwdg_inst)
 		iwdg_cfg |= IWDG_HW_ENABLED;
 	}
 
-	if ((otp_value & BIT(iwdg_inst + HW2_OTP_IWDG_FZ_STOP_POS)) != 0U) {
-		iwdg_cfg |= IWDG_DISABLE_ON_STOP;
-	}
-
-	if ((otp_value & BIT(iwdg_inst + HW2_OTP_IWDG_FZ_STANDBY_POS)) != 0U) {
-		iwdg_cfg |= IWDG_DISABLE_ON_STANDBY;
-	}
-
 	return iwdg_cfg;
 }
 
-#if defined(IMAGE_BL2)
-uint32_t stm32_iwdg_shadow_update(uint32_t iwdg_inst, uint32_t flags)
-{
-	uint32_t otp_value;
-	uint32_t otp;
-	uint32_t result;
-
-	if (stm32_get_otp_index(HW2_OTP, &otp, NULL) != 0) {
-		panic();
-	}
-
-	if (stm32_get_otp_value(HW2_OTP, &otp_value) != 0) {
-		panic();
-	}
-
-	if ((flags & IWDG_DISABLE_ON_STOP) != 0) {
-		otp_value |= BIT(iwdg_inst + HW2_OTP_IWDG_FZ_STOP_POS);
-	}
-
-	if ((flags & IWDG_DISABLE_ON_STANDBY) != 0) {
-		otp_value |= BIT(iwdg_inst + HW2_OTP_IWDG_FZ_STANDBY_POS);
-	}
-
-	result = bsec_write_otp(otp_value, otp);
-	if (result != BSEC_OK) {
-		return result;
-	}
-
-	/* Sticky lock OTP_IWDG (read and write) */
-	if ((bsec_set_sr_lock(otp) != BSEC_OK) ||
-	    (bsec_set_sw_lock(otp) != BSEC_OK)) {
-		return BSEC_LOCK_FAIL;
-	}
-
-	return BSEC_OK;
-}
-#endif
 
 bool stm32mp1_addr_inside_backupsram(uintptr_t addr)
 {
