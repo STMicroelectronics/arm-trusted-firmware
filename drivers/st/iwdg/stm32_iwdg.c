@@ -33,7 +33,6 @@
 struct stm32_iwdg_instance {
 	uintptr_t base;
 	unsigned long clock;
-	uint8_t flags;
 };
 
 static struct stm32_iwdg_instance stm32_iwdg[IWDG_MAX_INSTANCE];
@@ -111,18 +110,7 @@ int stm32_iwdg_init(void)
 		iwdg->base = dt_info.base;
 		iwdg->clock = (unsigned long)dt_info.clock;
 
-		/* DT can specify low power cases */
-		if (fdt_getprop(fdt, node, "stm32,enable-on-stop", NULL) ==
-		    NULL) {
-			iwdg->flags |= IWDG_DISABLE_ON_STOP;
-		}
-
-		if (fdt_getprop(fdt, node, "stm32,enable-on-standby", NULL) ==
-		    NULL) {
-			iwdg->flags |= IWDG_DISABLE_ON_STANDBY;
-		}
-
-		/* Explicit list of supported bit flags */
+		/* Read OTP to know if IWDG is started by hardware or not */
 		hw_init = stm32_iwdg_get_otp_config(idx);
 
 		if ((hw_init & IWDG_HW_ENABLED) != 0) {
@@ -131,21 +119,12 @@ int stm32_iwdg_init(void)
 				      idx + 1U);
 				panic();
 			}
-			iwdg->flags |= IWDG_HW_ENABLED;
 		}
 
 		if (dt_info.status == DT_DISABLED) {
 			zeromem((void *)iwdg,
 				sizeof(struct stm32_iwdg_instance));
 			continue;
-		}
-
-		if ((hw_init & IWDG_DISABLE_ON_STOP) != 0) {
-			iwdg->flags |= IWDG_DISABLE_ON_STOP;
-		}
-
-		if ((hw_init & IWDG_DISABLE_ON_STANDBY) != 0) {
-			iwdg->flags |= IWDG_DISABLE_ON_STANDBY;
 		}
 
 		VERBOSE("IWDG%u found, %ssecure\n", idx + 1U,
@@ -161,8 +140,6 @@ int stm32_iwdg_init(void)
 		if ((hw_init & IWDG_HW_ENABLED) == 0) {
 			/* Use default timeout, ignore DT's "timeout-sec" */
 			stm32_iwdg_start(iwdg);
-
-			iwdg->flags |= IWDG_HW_ENABLED;
 		}
 	}
 
