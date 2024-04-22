@@ -591,23 +591,8 @@ uint32_t stm32_iwdg_get_otp_config(uint32_t iwdg_inst)
 		iwdg_cfg |= IWDG_HW_ENABLED;
 	}
 
-	if ((otp_value & HCONF1_OTP_IWDG_FZ_STOP_MASK(iwdg_inst)) != 0U) {
-		iwdg_cfg |= IWDG_DISABLE_ON_STOP;
-	}
-
-	if ((otp_value & HCONF1_OTP_IWDG_FZ_STANDBY_MASK(iwdg_inst)) != 0U) {
-		iwdg_cfg |= IWDG_DISABLE_ON_STANDBY;
-	}
-
 	return iwdg_cfg;
 }
-
-#if defined(IMAGE_BL2)
-uint32_t stm32_iwdg_shadow_update(uint32_t iwdg_inst, uint32_t flags)
-{
-	return BSEC_OK;
-}
-#endif
 
 bool stm32mp_is_wakeup_from_standby(void)
 {
