@@ -88,6 +88,14 @@ else
 STM32_RNG_VER_MINOR		:=	3
 endif
 
+ifeq ($(STM32MP21),1)
+STM32_SAES_VER			:=	16 # 0x10
+STM32_SAES_CRYP2		:=	1
+else
+STM32_SAES_VER			:=	50 # 0x32
+STM32_SAES_CRYP2		:=	0
+endif
+
 # Set load address for serial boot devices
 DWL_BUFFER_BASE 		?=	0x87000000
 
@@ -192,6 +200,7 @@ $(eval $(call assert_booleans,\
 		PKA_USE_BRAINPOOL_P256T1 \
 		PKA_USE_NIST_P256 \
 		STM32MP_CRYPTO_ROM_LIB \
+		STM32_SAES_CRYP2 \
 		STM32MP_DDR_DUAL_AXI_PORT \
 		STM32MP_DDR_FIP_IO_STORAGE \
 		STM32MP_DDR3_TYPE \
@@ -228,6 +237,7 @@ $(eval $(call add_defines,\
 		STM32_RNG_VER \
 		STM32_RNG_VER_MINOR \
 		STM32_SAES_VER \
+		STM32_SAES_CRYP2 \
 		STM32_TF_A_COPIES \
 		STM32MP_CRYPTO_ROM_LIB \
 		STM32MP_DDR_DUAL_AXI_PORT \
