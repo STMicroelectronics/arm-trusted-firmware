@@ -1188,83 +1188,108 @@ int stm32_ospi_init(void)
 
 	iom_node = fdt_node_offset_by_compatible(fdt, -1, _DT_IOM_COMPAT);
 	if (iom_node < 0) {
-		return iom_node;
-	}
+		struct dt_node_info info;
 
-	if (fdt_get_status(iom_node) == DT_DISABLED) {
-		return -FDT_ERR_NOTFOUND;
-	}
+		ospi_node = dt_get_node(&info, -1, _DT_OSPI_COMPAT);
+		if (ospi_node < 0) {
+			return ospi_node;
+		}
 
-	ret = fdt_get_reg_props_by_name(fdt, iom_node, "omm_mm",
-					&mm_base, &mm_size);
-	if (ret != 0) {
-		return ret;
-	}
+		if (info.status == DT_DISABLED) {
+			return -FDT_ERR_NOTFOUND;
+		}
 
-	cuint = fdt_getprop(fdt, iom_node, "ranges", NULL);
-	if (cuint == NULL) {
-		return -FDT_ERR_BADVALUE;
-	}
+		stm32_ospi.reg_base = info.base;
+		stm32_ospi.mm_size = SZ_256M;
+		stm32_ospi.mm_base = STM32MP_OSPI_MM_BASE;
+		stm32_ospi.bank = 0U;
 
-	for (i = 0U; i < _OMM_MAX_OSPI; i++) {
-		bank = fdt32_to_cpu(*cuint);
-		if ((bank >= _OMM_MAX_OSPI) ||
-		    ((bank_assigned & BIT(bank)) != 0U)) {
+		if (info.clock < 0) {
 			return -FDT_ERR_BADVALUE;
 		}
 
-		bank_assigned |= BIT(bank);
-		bank_address[bank] = fdt32_to_cpu(*(cuint + 2U));
-		cuint += 4U;
+		stm32_ospi.clock_id = (unsigned long)info.clock;
+
+		if (dt_set_pinctrl_config(ospi_node) != 0) {
+			return -FDT_ERR_BADVALUE;
+		}
+	} else {
+		if (fdt_get_status(iom_node) == DT_DISABLED) {
+			return -FDT_ERR_NOTFOUND;
+		}
+
+		ret = fdt_get_reg_props_by_name(fdt, iom_node, "omm_mm",
+						&mm_base, &mm_size);
+		if (ret != 0) {
+			return ret;
+		}
+
+		cuint = fdt_getprop(fdt, iom_node, "ranges", NULL);
+		if (cuint == NULL) {
+			return -FDT_ERR_BADVALUE;
+		}
+
+		for (i = 0U; i < _OMM_MAX_OSPI; i++) {
+			bank = fdt32_to_cpu(*cuint);
+			if ((bank >= _OMM_MAX_OSPI) ||
+			    ((bank_assigned & BIT(bank)) != 0U)) {
+				return -FDT_ERR_BADVALUE;
+			}
+
+			bank_assigned |= BIT(bank);
+			bank_address[bank] = fdt32_to_cpu(*(cuint + 2U));
+			cuint += 4U;
+		}
+
+		if (dt_set_pinctrl_config(iom_node) != 0) {
+			return -FDT_ERR_BADVALUE;
+		}
+
+		fdt_for_each_subnode(ospi_node, fdt, iom_node) {
+			nb_ospi_nodes++;
+		}
+
+		if (nb_ospi_nodes != 1U) {
+			WARN("Only one OSPI node supported\n");
+			return -FDT_ERR_BADVALUE;
+		}
+
+		/* Parse OSPI controller node */
+		ospi_node = fdt_node_offset_by_compatible(fdt, iom_node,
+							  _DT_OSPI_COMPAT);
+		if (ospi_node < 0) {
+			return ospi_node;
+		}
+
+		if (fdt_get_status(ospi_node) == DT_DISABLED) {
+			return -FDT_ERR_NOTFOUND;
+		}
+
+		cuint = fdt_getprop(fdt, ospi_node, "reg", NULL);
+		if (cuint == NULL) {
+			return -FDT_ERR_BADVALUE;
+		}
+
+		bank = fdt32_to_cpu(*cuint);
+		if (bank >= _OMM_MAX_OSPI) {
+			return -FDT_ERR_BADVALUE;
+		}
+
+		stm32_ospi.reg_base = fdt32_to_cpu(*(cuint + 1U)) + bank_address[bank];
+		stm32_ospi.mm_size = stm32mp_syscfg_get_mm_size(bank);
+		stm32_ospi.mm_base = bank == 0U ?
+				     mm_base : mm_base + mm_size - stm32_ospi.mm_size;
+		stm32_ospi.bank = bank;
+
+		cuint = fdt_getprop(fdt, ospi_node, "clocks", NULL);
+		if (cuint == NULL) {
+			return -FDT_ERR_BADVALUE;
+		}
+
+		cuint++;
+		stm32_ospi.clock_id = (unsigned long)fdt32_to_cpu(*cuint);
 	}
 
-	if (dt_set_pinctrl_config(iom_node) != 0) {
-		return -FDT_ERR_BADVALUE;
-	}
-
-	fdt_for_each_subnode(ospi_node, fdt, iom_node) {
-		nb_ospi_nodes++;
-	}
-
-	if (nb_ospi_nodes != 1U) {
-		WARN("Only one OSPI node supported\n");
-		return -FDT_ERR_BADVALUE;
-	}
-
-	/* Parse OSPI controller node */
-	ospi_node = fdt_node_offset_by_compatible(fdt, iom_node,
-						  _DT_OSPI_COMPAT);
-	if (ospi_node < 0) {
-		return ospi_node;
-	}
-
-	if (fdt_get_status(ospi_node) == DT_DISABLED) {
-		return -FDT_ERR_NOTFOUND;
-	}
-
-	cuint = fdt_getprop(fdt, ospi_node, "reg", NULL);
-	if (cuint == NULL) {
-		return -FDT_ERR_BADVALUE;
-	}
-
-	bank = fdt32_to_cpu(*cuint);
-	if (bank >= _OMM_MAX_OSPI) {
-		return -FDT_ERR_BADVALUE;
-	}
-
-	stm32_ospi.reg_base = fdt32_to_cpu(*(cuint + 1U)) + bank_address[bank];
-	stm32_ospi.mm_size = stm32mp_syscfg_get_mm_size(bank);
-	stm32_ospi.mm_base = bank == 0U ?
-			     mm_base : mm_base + mm_size - stm32_ospi.mm_size;
-	stm32_ospi.bank = bank;
-
-	cuint = fdt_getprop(fdt, ospi_node, "clocks", NULL);
-	if (cuint == NULL) {
-		return -FDT_ERR_BADVALUE;
-	}
-
-	cuint++;
-	stm32_ospi.clock_id = (unsigned long)fdt32_to_cpu(*cuint);
 	clk_enable(stm32_ospi.clock_id);
 
 	cuint = fdt_getprop(fdt, ospi_node, "resets", &len);
