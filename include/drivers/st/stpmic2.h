@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024, STMicroelectronics - All Rights Reserved
+ * Copyright (C) 2024-2025, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -12,6 +12,7 @@
 
 enum {
 	STPMIC2_BUCK1 = 0,
+	STPMIC2_BUCK1H,
 	STPMIC2_BUCK2,
 	STPMIC2_BUCK3,
 	STPMIC2_BUCK4,
@@ -27,6 +28,11 @@ enum {
 	STPMIC2_LDO6,
 	STPMIC2_LDO7,
 	STPMIC2_LDO8,
+	STPMIC2_GPO1,
+	STPMIC2_GPO2,
+	STPMIC2_GPO3,
+	STPMIC2_GPO4,
+	STPMIC2_GPO5,
 	STPMIC2_NB_REG
 };
 
@@ -58,6 +64,7 @@ enum {
 #define BUCKS_PD_CR2		0x1A
 #define LDOS_PD_CR1		0x1B
 #define LDOS_PD_CR2		0x1C
+#define GPO_MRST_CR		0x1C
 #define BUCKS_MRST_CR		0x1D
 #define LDOS_MRST_CR		0x1E
 /* Buck CR */
@@ -96,6 +103,13 @@ enum {
 #define BUCK7_ALT_CR1		0x40
 #define BUCK7_ALT_CR2		0x41
 #define BUCK7_PWRCTRL_CR	0x42
+/* GPO CR used only on PMIC1L and PMIC2L */
+#define GPO1_MAIN_CR		0x43
+#define GPO1_ALT_CR		0x44
+#define GPO1_PWRCTRL_CR		0x45
+#define GPO2_MAIN_CR		0x46
+#define GPO2_ALT_CR		0x47
+#define GPO2_PWRCTRL_CR		0x48
 /* LDO CR */
 #define LDO1_MAIN_CR		0x4C
 #define LDO1_ALT_CR		0x4D
@@ -124,6 +138,16 @@ enum {
 #define REFDDR_MAIN_CR		0x64
 #define REFDDR_ALT_CR		0x65
 #define REFDDR_PWRCTRL_CR	0x66
+/* GPO CR used only on PMIC1L and PMIC2L */
+#define GPO3_MAIN_CR		0x67
+#define GPO3_ALT_CR		0x68
+#define GPO3_PWRCTRL_CR		0x69
+#define GPO4_MAIN_CR		0x6A
+#define GPO4_ALT_CR		0x6B
+#define GPO4_PWRCTRL_CR		0x6C
+#define GPO5_MAIN_CR		0x6D
+#define GPO5_ALT_CR		0x6E
+#define GPO5_PWRCTRL_CR		0x6F
 /* INTERRUPT CR */
 #define INT_PENDING_R1		0x70
 #define INT_PENDING_R2		0x71
@@ -191,6 +215,14 @@ enum {
 #define NVM_USER_SHR1		0xB6
 #define NVM_USER_SHR2		0xB7
 
+/* PRODUCT_ID bits definition */
+#define PMIC_NVM_ID_MASK	GENMASK_32(3, 0)
+#define PMIC_REF_ID_MASK	GENMASK_32(7, 4)
+#define PMIC_REF_ID_SHIFT	4
+#define PMIC_REF_ID_STPMIC1L	U(1)
+#define PMIC_REF_ID_STPMIC25	U(2)
+#define PMIC_REF_ID_STPMIC2L	U(3)
+
 /* BUCKS_MRST_CR bits definition */
 #define BUCK1_MRST		BIT(0)
 #define BUCK2_MRST		BIT(1)
@@ -210,6 +242,13 @@ enum {
 #define LDO6_MRST		BIT(5)
 #define LDO7_MRST		BIT(6)
 #define LDO8_MRST		BIT(7)
+
+/* GPO_MRST_CR bits definition */
+#define GPO1_MRST		BIT(1)
+#define GPO2_MRST		BIT(2)
+#define GPO3_MRST		BIT(3)
+#define GPO4_MRST		BIT(4)
+#define GPO5_MRST		BIT(5)
 
 /* LDOx_MAIN_CR */
 #define LDO_VOLT_SHIFT		1
@@ -292,6 +331,9 @@ enum {
 #define NVM_BUSY		BIT(0)
 #define NVM_WRITE_FAIL		BIT(1)
 
+/* NVM_BUCK1_VOUT_SHR */
+#define BUCK1_VRAN_GE_CFG	BIT(7)
+
 /* IRQ definitions */
 #define IT_PONKEY_F	0
 #define IT_PONKEY_R	1
@@ -324,6 +366,7 @@ struct pmic_handle_s {
 	struct i2c_handle_s *i2c_handle;
 	uint32_t i2c_addr;
 	unsigned int pmic_status;
+	uint8_t ref_id;
 };
 
 int stpmic2_register_read(struct pmic_handle_s *pmic,
@@ -357,4 +400,5 @@ int stpmic2_regulator_get_prop(struct pmic_handle_s *pmic, uint8_t id,
 int stpmic2_regulator_set_prop(struct pmic_handle_s *pmic, uint8_t id,
 			       enum stpmic2_prop_id prop, uint32_t arg);
 
+int stpmic2_is_buck1_high_voltage(struct pmic_handle_s *pmic, bool *high);
 #endif /*STPMIC2_H*/

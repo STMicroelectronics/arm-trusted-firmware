@@ -39,6 +39,14 @@ static int dt_get_pmic_node(void *fdt)
 
 	if (node == -FDT_ERR_BADOFFSET) {
 		node = fdt_node_offset_by_compatible(fdt, -1, "st,stpmic2");
+		if (node < 0) {
+			node = fdt_node_offset_by_compatible(fdt, -1,
+							     "st,stpmic2l");
+		}
+		if (node < 0) {
+			node = fdt_node_offset_by_compatible(fdt, -1,
+							     "st,stpmic1l");
+		}
 	}
 
 	return node;
@@ -327,12 +335,18 @@ int stpmic2_set_prop(const struct regul_description *desc, uint16_t prop, uint32
 	return 0;
 }
 
-static struct regul_ops pmic2_ops = {
+static const struct regul_ops pmic2_ops = {
 	.set_state = pmic2_set_state,
 	.get_state = pmic2_get_state,
 	.set_voltage = pmic2_set_voltage,
 	.get_voltage = pmic2_get_voltage,
 	.list_voltages = pmic2_list_voltages,
+	.set_flag = pmic2_set_flag,
+};
+
+static const struct regul_ops pmic2_gpo_ops = {
+	.set_state = pmic2_set_state,
+	.get_state = pmic2_get_state,
 	.set_flag = pmic2_set_flag,
 };
 
@@ -343,6 +357,7 @@ static struct regul_ops pmic2_ops = {
 
 static struct regul_handle_s pmic2_regul_handles[STPMIC2_NB_REG] = {
 	DEFINE_PMIC_REGUL_HANDLE(STPMIC2_BUCK1),
+	DEFINE_PMIC_REGUL_HANDLE(STPMIC2_BUCK1H),
 	DEFINE_PMIC_REGUL_HANDLE(STPMIC2_BUCK2),
 	DEFINE_PMIC_REGUL_HANDLE(STPMIC2_BUCK3),
 	DEFINE_PMIC_REGUL_HANDLE(STPMIC2_BUCK4),
@@ -360,6 +375,12 @@ static struct regul_handle_s pmic2_regul_handles[STPMIC2_NB_REG] = {
 	DEFINE_PMIC_REGUL_HANDLE(STPMIC2_LDO8),
 
 	DEFINE_PMIC_REGUL_HANDLE(STPMIC2_REFDDR),
+
+	DEFINE_PMIC_REGUL_HANDLE(STPMIC2_GPO1),
+	DEFINE_PMIC_REGUL_HANDLE(STPMIC2_GPO2),
+	DEFINE_PMIC_REGUL_HANDLE(STPMIC2_GPO3),
+	DEFINE_PMIC_REGUL_HANDLE(STPMIC2_GPO4),
+	DEFINE_PMIC_REGUL_HANDLE(STPMIC2_GPO5),
 };
 
 #define DEFINE_REGUL(rid, name) \
@@ -369,8 +390,16 @@ static struct regul_handle_s pmic2_regul_handles[STPMIC2_NB_REG] = {
 	.driver_data = &pmic2_regul_handles[rid], \
 }
 
+#define DEFINE_GPO(rid, name) \
+[rid] = { \
+	.node_name = name, \
+	.ops = &pmic2_gpo_ops, \
+	.driver_data = &pmic2_regul_handles[rid], \
+}
+
 static const struct regul_description pmic2_descs[STPMIC2_NB_REG] = {
 	DEFINE_REGUL(STPMIC2_BUCK1, "buck1"),
+	DEFINE_REGUL(STPMIC2_BUCK1H, "buck1h"),
 	DEFINE_REGUL(STPMIC2_BUCK2, "buck2"),
 	DEFINE_REGUL(STPMIC2_BUCK3, "buck3"),
 	DEFINE_REGUL(STPMIC2_BUCK4, "buck4"),
@@ -388,6 +417,12 @@ static const struct regul_description pmic2_descs[STPMIC2_NB_REG] = {
 	DEFINE_REGUL(STPMIC2_LDO8, "ldo8"),
 
 	DEFINE_REGUL(STPMIC2_REFDDR, "refddr"),
+
+	DEFINE_GPO(STPMIC2_GPO1, "gpo1"),
+	DEFINE_GPO(STPMIC2_GPO2, "gpo2"),
+	DEFINE_GPO(STPMIC2_GPO3, "gpo3"),
+	DEFINE_GPO(STPMIC2_GPO4, "gpo4"),
+	DEFINE_GPO(STPMIC2_GPO5, "gpo5"),
 };
 
 static int register_pmic2(void)
@@ -417,6 +452,15 @@ static int register_pmic2(void)
 		unsigned int i;
 		int ret;
 		const fdt32_t *cuint;
+
+		if (strcmp(reg_name, "buck1") == 0) {
+			bool high;
+
+			ret = stpmic2_is_buck1_high_voltage(pmic2, &high);
+			if (high) {
+				reg_name = "buck1h";
+			}
+		}
 
 		for (i = 0; i < STPMIC2_NB_REG; i++) {
 			desc = &pmic2_descs[i];
@@ -486,6 +530,8 @@ void initialize_pmic(void)
 		panic();
 	}
 	INFO("PMIC2 product ID = 0x%02x\n", val);
+
+	pmic2->ref_id = ((val & PMIC_REF_ID_MASK) >> PMIC_REF_ID_SHIFT);
 
 	ret = register_pmic2();
 	if (ret < 0) {

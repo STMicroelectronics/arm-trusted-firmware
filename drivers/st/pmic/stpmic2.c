@@ -37,7 +37,7 @@ struct regul_struct {
 };
 
 /* Voltage tables in mV */
-static const uint16_t buck1236_volt_table[] = {
+static const uint16_t buck_low_volt_table[] = {
 	500U, 510U, 520U, 530U, 540U, 550U, 560U, 570U, 580U, 590U,
 	600U, 610U, 620U, 630U, 640U, 650U, 660U, 670U, 680U, 690U,
 	700U, 710U, 720U, 730U, 740U, 750U, 760U, 770U, 780U, 790U,
@@ -53,7 +53,7 @@ static const uint16_t buck1236_volt_table[] = {
 	1500U, 1500U, 1500U, 1500U, 1500U, 1500U, 1500U, 1500U
 };
 
-static const uint16_t buck457_volt_table[] = {
+static const uint16_t buck_high_volt_table[] = {
 	1500U, 1500U, 1500U, 1500U, 1500U, 1500U, 1500U, 1500U, 1500U, 1500U,
 	1500U, 1500U, 1500U, 1500U, 1500U, 1500U, 1500U, 1500U, 1500U, 1500U,
 	1500U, 1500U, 1500U, 1500U, 1500U, 1500U, 1500U, 1500U, 1500U, 1500U,
@@ -119,6 +119,14 @@ static const uint16_t refddr_volt_table[] = {
 	.ocp_mask		= FS_OCP_ ## ID, \
 }
 
+#define DEFINE_GPOx(regu_name, ID) { \
+	.name			= regu_name, \
+	.en_cr			= ID ## _MAIN_CR, \
+	.alt_en_cr		= ID ## _ALT_CR, \
+	.msrt_reg		= GPO_MRST_CR, \
+	.msrt_mask		= ID ## _MRST, \
+}
+
 #define DEFINE_REFDDR(regu_name, ID, table) { \
 	.name			= regu_name, \
 	.volt_table		= table, \
@@ -137,19 +145,21 @@ static const uint16_t refddr_volt_table[] = {
 /* Table of Regulators in PMIC SoC */
 static const struct regul_struct regul_table[STPMIC2_NB_REG] = {
 	[STPMIC2_BUCK1] = DEFINE_BUCK("buck1", BUCK1, BUCKS_PD_CR1,
-				      buck1236_volt_table),
+				      buck_low_volt_table),
+	[STPMIC2_BUCK1H] = DEFINE_BUCK("buck1h", BUCK1, BUCKS_PD_CR1,
+				      buck_high_volt_table),
 	[STPMIC2_BUCK2] = DEFINE_BUCK("buck2", BUCK2, BUCKS_PD_CR1,
-				      buck1236_volt_table),
+				      buck_low_volt_table),
 	[STPMIC2_BUCK3] = DEFINE_BUCK("buck3", BUCK3, BUCKS_PD_CR1,
-				      buck1236_volt_table),
+				      buck_low_volt_table),
 	[STPMIC2_BUCK4] = DEFINE_BUCK("buck4", BUCK4, BUCKS_PD_CR1,
-				      buck457_volt_table),
+				      buck_high_volt_table),
 	[STPMIC2_BUCK5] = DEFINE_BUCK("buck5", BUCK5, BUCKS_PD_CR2,
-				      buck457_volt_table),
+				      buck_high_volt_table),
 	[STPMIC2_BUCK6] = DEFINE_BUCK("buck6", BUCK6, BUCKS_PD_CR2,
-				      buck1236_volt_table),
+				      buck_low_volt_table),
 	[STPMIC2_BUCK7] = DEFINE_BUCK("buck7", BUCK7, BUCKS_PD_CR2,
-				      buck457_volt_table),
+				      buck_high_volt_table),
 
 	[STPMIC2_REFDDR] = DEFINE_REFDDR("refddr", REFDDR, refddr_volt_table),
 
@@ -161,6 +171,12 @@ static const struct regul_struct regul_table[STPMIC2_NB_REG] = {
 	[STPMIC2_LDO6] = DEFINE_LDOx("ldo6", LDO6, ldo235678_volt_table),
 	[STPMIC2_LDO7] = DEFINE_LDOx("ldo7", LDO7, ldo235678_volt_table),
 	[STPMIC2_LDO8] = DEFINE_LDOx("ldo8", LDO8, ldo235678_volt_table),
+
+	[STPMIC2_GPO1] = DEFINE_GPOx("gpo1", GPO1),
+	[STPMIC2_GPO2] = DEFINE_GPOx("gpo2", GPO2),
+	[STPMIC2_GPO3] = DEFINE_GPOx("gpo3", GPO3),
+	[STPMIC2_GPO4] = DEFINE_GPOx("gpo4", GPO4),
+	[STPMIC2_GPO5] = DEFINE_GPOx("gpo5", GPO5),
 
 };
 
@@ -352,7 +368,8 @@ int stpmic2_regulator_get_prop(struct pmic_handle_s *pmic, uint8_t id,
 	switch (prop) {
 	case STPMIC2_BYPASS:
 		if ((id <= STPMIC2_BUCK7) || (id == STPMIC2_LDO1) ||
-		    (id == STPMIC2_LDO4) || (id == STPMIC2_REFDDR)) {
+		    (id == STPMIC2_LDO4) || (id == STPMIC2_REFDDR) ||
+		    (pmic->ref_id != PMIC_REF_ID_STPMIC25)) {
 			return 0;
 		}
 
@@ -395,7 +412,8 @@ int stpmic2_regulator_set_prop(struct pmic_handle_s *pmic, uint8_t id,
 					       regul->msrt_mask);
 	case STPMIC2_BYPASS:
 		if ((id <= STPMIC2_BUCK7) || (id == STPMIC2_LDO1) ||
-		    (id == STPMIC2_LDO4) || (id == STPMIC2_REFDDR)) {
+		    (id == STPMIC2_LDO4) || (id == STPMIC2_REFDDR) ||
+		    (pmic->ref_id != PMIC_REF_ID_STPMIC25)) {
 			return RET_ERROR_NOT_SUPPORTED;
 		}
 
@@ -467,4 +485,21 @@ int stpmic2_get_version(struct pmic_handle_s *pmic, uint8_t *val)
 int stpmic2_get_product_id(struct pmic_handle_s *pmic, uint8_t *val)
 {
 	return stpmic2_register_read(pmic, PRODUCT_ID, val);
+}
+
+int stpmic2_is_buck1_high_voltage(struct pmic_handle_s *pmic, bool *high)
+{
+	int ret;
+	uint8_t val = 0;
+
+	if (pmic->ref_id == PMIC_REF_ID_STPMIC25) {
+		*high = false;
+		return 0;
+	}
+
+	ret = stpmic2_register_read(pmic, NVM_BUCK1_VOUT_SHR, &val);
+
+	*high = val & BUCK1_VRAN_GE_CFG;
+
+	return ret;
 }
