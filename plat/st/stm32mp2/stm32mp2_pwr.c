@@ -28,7 +28,9 @@ enum pwr_regulator_id {
 	IOD_VDDIO1,
 	IOD_VDDIO2,
 	IOD_VDDIO3,
+#if !STM32MP21
 	IOD_VDDIO4,
+#endif /* !STM32MP21 */
 	IOD_VDDIO,
 	PWR_REGU_COUNT
 };
@@ -58,6 +60,7 @@ static const struct pwr_regu pwr_regulators[] = {
 		.comp_idx = SYSFG_VDDIO3_ID,
 		.supply_name = "vddio3",
 	 },
+#if !STM32MP21
 	 [IOD_VDDIO4] = {
 		.node_name = "vddio4",
 		.enable_reg = PWR_CR1,
@@ -66,6 +69,7 @@ static const struct pwr_regu pwr_regulators[] = {
 		.comp_idx = SYSFG_VDDIO4_ID,
 		.supply_name = "vddio4",
 	 },
+#endif /* !STM32MP21 */
 	 [IOD_VDDIO] = {
 		.node_name = "vddio",
 		.enable_reg = PWR_CR1,

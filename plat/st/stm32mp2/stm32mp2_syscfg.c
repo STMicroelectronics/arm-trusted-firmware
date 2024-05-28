@@ -34,7 +34,9 @@
  * SYSCFG IO Compensation Registers
  */
 #define SYSCFG_VDDIO3CCCR		0x4000U
+#if !STM32MP21
 #define SYSCFG_VDDIO4CCCR		0x4008U
+#endif /* !STM32MP21 */
 #define SYSCFG_VDDCCCR			0x4010U
 #define SYSCFG_VDDIO2CCCR		0x4018U
 #define SYSCFG_VDDIO1CCCR		0x4020U
@@ -55,8 +57,10 @@
 /* DLYBOS registers */
 #define SYSCFG_DLYBOS1_CR		0x1000U
 #define SYSCFG_DLYBOS1_SR		0x1004U
+#if !STM32MP21
 #define SYSCFG_DLYBOS2_CR		0x1400U
 #define SYSCFG_DLYBOS2_SR		0x1404U
+#endif /* !STM32MP21 */
 
 #define SYSCFG_DLYBOS_CR_EN		BIT(0)
 #define SYSCFG_DLYBOS_CR_RXTAPSEL_SHIFT	1U
@@ -71,7 +75,11 @@
 #define SYSCFG_DLYBOS_SR_RXTAPSEL_ACK	BIT(1)
 #define SYSCFG_DLYBOS_SR_TXTAPSEL_ACK	BIT(2)
 
+#if STM32MP21
+#define SYSCFG_MAX_DLYBOS		1U
+#else /* STM32MP21 */
 #define SYSCFG_MAX_DLYBOS		2U
+#endif /* STM32MP21 */
 #define SYSCFG_DLYBOS_TIMEOUT_US	10000U
 #define SYSCFG_DLYBOS_TAPSEL_NB		33U
 #define SYSCFG_DLYBOS_CMD_NB		24U
@@ -85,12 +93,18 @@
 #define SYSCFG_ICNQPCR1			U(0x2000)
 #define SYSCFG_ICNQPCR2			U(0x2004)
 #define SYSCFG_ICNEWRCR			U(0x2008)
+#if !STM32MP21
 #define SYSCFG_ICNCGCR			U(0x200C)
 #define SYSCFG_ICNGPUBWLCR		U(0x2010)
+#endif /* !STM32MP21 */
 #define SYSCFG_ICNE2EBWRCR		U(0x2014)
+#if !STM32MP21
 #define SYSCFG_ICNPCIBWLCR		U(0x201C)
+#endif /* !STM32MP21 */
 #define SYSCFG_ICNETHBWLCR		U(0x2020)
+#if !STM32MP21
 #define SYSCFG_ICNUSB3BWLCR		U(0x2024)
+#endif /* !STM32MP21 */
 #define SYSCFG_ICNCPU1BWLCR		U(0x2028)
 #define SYSCFG_ICNLTDCBWLCR		U(0x202C)
 #define SYSCFG_ICNDCMIPPBWLCR		U(0x2030)
@@ -108,7 +122,9 @@ static uint32_t syscfg_cccr_offset[SYSFG_NB_IO_ID] = {
 	[SYSFG_VDDIO1_ID] = SYSCFG_VDDIO1CCCR,
 	[SYSFG_VDDIO2_ID] = SYSCFG_VDDIO2CCCR,
 	[SYSFG_VDDIO3_ID] = SYSCFG_VDDIO3CCCR,
+#if !STM32MP21
 	[SYSFG_VDDIO4_ID] = SYSCFG_VDDIO4CCCR,
+#endif /* !STM32MP21 */
 	[SYSFG_VDD_IO_ID] = SYSCFG_VDDCCCR,
 };
 
@@ -176,12 +192,16 @@ void stm32mp_syscfg_enable_io_compensation(enum syscfg_io_ids id)
  */
 static const uint32_t syscfg_dlybos_cr_offset[SYSCFG_MAX_DLYBOS] = {
 	SYSCFG_DLYBOS1_CR,
+#if !STM32MP21
 	SYSCFG_DLYBOS2_CR
+#endif /* !STM32MP21 */
 };
 
 static const uint32_t syscfg_dlybos_sr_offset[SYSCFG_MAX_DLYBOS] = {
 	SYSCFG_DLYBOS1_SR,
+#if !STM32MP21
 	SYSCFG_DLYBOS2_SR
+#endif /* !STM32MP21 */
 };
 
 static int stm32_syscfg_dlyb_set_tap(uint8_t bank, uint8_t tap, bool rx_tap)
