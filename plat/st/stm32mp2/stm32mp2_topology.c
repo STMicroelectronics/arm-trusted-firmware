@@ -9,10 +9,12 @@
 
 #include <platform_def.h>
 
-/* 1 cluster, all cores into */
-static const unsigned char stm32mp2_power_domain_tree_desc[] = {
-	PLATFORM_CLUSTER_COUNT,
-	PLATFORM_CORE_COUNT,
+static const unsigned char stm32mp2_power_domain_tree_desc[PLAT_MAX_PWR_LVL + 1U] = {
+	1U, /* SoC,  D2 LPLV */
+	1U, /* D2 */
+	1U, /* D1 LPLV */
+	PLATFORM_CLUSTER_COUNT, /* D1 */
+	PLATFORM_CORE_COUNT, /* Number of children for the cluster node */
 };
 
 /* This function returns the platform topology */
