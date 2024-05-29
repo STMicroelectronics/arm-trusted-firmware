@@ -213,6 +213,7 @@ PLAT_BL_COMMON_SOURCES		+=	drivers/st/i2c/stm32_i2c.c
 PLAT_BL_COMMON_SOURCES		+=	plat/st/stm32mp2/stm32mp2_private.c
 
 PLAT_BL_COMMON_SOURCES		+=	drivers/st/bsec/bsec3.c					\
+					drivers/st/iwdg/stm32_iwdg.c				\
 					drivers/st/reset/stm32mp2_reset.c			\
 					plat/st/stm32mp2/stm32mp2_pwr.c				\
 					plat/st/stm32mp2/stm32mp2_syscfg.c

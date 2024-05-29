@@ -505,6 +505,16 @@ static inline uintptr_t tamp_bkpr(uint32_t idx)
 #define DDRPHYC_BASE				U(0x48C00000)
 
 /*******************************************************************************
+ * STM32MP2 IWDG
+ ******************************************************************************/
+#define IWDG_MAX_INSTANCE			U(2)
+#define IWDG1_INST				U(0)
+#define IWDG2_INST				U(1)
+
+#define IWDG1_BASE				U(0x44010000)
+#define IWDG2_BASE				U(0x44020000)
+
+/*******************************************************************************
  * Miscellaneous STM32MP2 peripherals base address
  ******************************************************************************/
 #define BSEC_BASE				U(0x44000000)
@@ -611,6 +621,7 @@ static inline uintptr_t tamp_bkpr(uint32_t idx)
  ******************************************************************************/
 #define DT_BSEC_COMPAT				"st,stm32mp25-bsec"
 #define DT_DDR_COMPAT				"st,stm32mp2-ddr"
+#define DT_IWDG_COMPAT				"st,stm32mp1-iwdg"
 #if STM32MP21
 #define DT_PWR_COMPAT				"st,stm32mp21-pwr"
 #define DT_RCC_CLK_COMPAT			"st,stm32mp21-rcc"
