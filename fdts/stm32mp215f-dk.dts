@@ -54,6 +54,10 @@
 	vddq-supply = <&vdd2_ddr>;
 };
 
+&hash1 {
+	status = "okay";
+};
+
 &i2c3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c3_pins_a>;
@@ -139,6 +143,10 @@
 	status = "okay";
 };
 
+&pka {
+	status = "okay";
+};
+
 &pwr {
 	vddio1 {
 		vddio1-supply = <&vddio_pmic>;
@@ -155,6 +163,18 @@
 	vddio {
 		vdd-supply = <&vddio_pmic>;
 	};
+};
+
+&rng1 {
+	status = "okay";
+};
+
+&rng2 {
+	status = "okay";
+};
+
+&saes {
+	status = "okay";
 };
 
 &sdmmc1 {
