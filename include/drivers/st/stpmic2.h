@@ -223,6 +223,9 @@ enum {
 #define PMIC_REF_ID_STPMIC25	U(2)
 #define PMIC_REF_ID_STPMIC2L	U(3)
 
+/* MAIN_CR bits definition */
+#define SWOFF			BIT(0)
+
 /* BUCKS_MRST_CR bits definition */
 #define BUCK1_MRST		BIT(0)
 #define BUCK2_MRST		BIT(1)
@@ -401,4 +404,5 @@ int stpmic2_regulator_set_prop(struct pmic_handle_s *pmic, uint8_t id,
 			       enum stpmic2_prop_id prop, uint32_t arg);
 
 int stpmic2_is_buck1_high_voltage(struct pmic_handle_s *pmic, bool *high);
+int stpmic2_switch_off(struct pmic_handle_s *pmic);
 #endif /*STPMIC2_H*/

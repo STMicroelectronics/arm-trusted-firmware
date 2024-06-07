@@ -38,6 +38,8 @@ STM32MP13		:=	0
 STM32MP15		:=	1
 endif
 
+STM32MP_STPMIC1L	?=	0
+
 ifeq ($(STM32MP13),1)
 # Will use SRAM2 as mbedtls heap
 STM32MP_USE_EXTERNAL_HEAP :=	1
@@ -150,6 +152,7 @@ $(eval $(call assert_booleans,\
 		STM32MP_CRYPTO_ROM_LIB \
 		STM32MP_DDR_32BIT_INTERFACE \
 		STM32MP_DDR_DUAL_AXI_PORT \
+		STM32MP_STPMIC1L \
 		STM32MP_USE_EXTERNAL_HEAP \
 		STM32MP13 \
 		STM32MP15 \
@@ -180,6 +183,7 @@ $(eval $(call add_defines,\
 		STM32MP_CRYPTO_ROM_LIB \
 		STM32MP_DDR_32BIT_INTERFACE \
 		STM32MP_DDR_DUAL_AXI_PORT \
+		STM32MP_STPMIC1L \
 		STM32MP_USE_EXTERNAL_HEAP \
 		STM32MP13 \
 		STM32MP15 \
@@ -203,12 +207,18 @@ PLAT_BL_COMMON_SOURCES	+=	drivers/arm/tzc/tzc400.c				\
 				drivers/st/ddr/stm32mp1_ddr_helpers.c			\
 				drivers/st/i2c/stm32_i2c.c				\
 				drivers/st/iwdg/stm32_iwdg.c				\
-				drivers/st/pmic/stm32mp_pmic.c				\
-				drivers/st/pmic/stpmic1.c				\
 				drivers/st/reset/stm32mp1_reset.c			\
 				plat/st/stm32mp1/stm32mp1_dbgmcu.c			\
 				plat/st/stm32mp1/stm32mp1_helper.S			\
 				plat/st/stm32mp1/stm32mp1_syscfg.c
+
+ifeq ($(STM32MP_STPMIC1L),1)
+PLAT_BL_COMMON_SOURCES	+=	drivers/st/pmic/stm32mp_pmic2.c				\
+				drivers/st/pmic/stpmic2.c
+else
+PLAT_BL_COMMON_SOURCES	+=	drivers/st/pmic/stm32mp_pmic.c				\
+				drivers/st/pmic/stpmic1.c
+endif
 
 ifeq ($(STM32MP13),1)
 PLAT_BL_COMMON_SOURCES	+=	drivers/st/clk/clk-stm32-core.c				\

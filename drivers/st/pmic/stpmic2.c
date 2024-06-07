@@ -452,6 +452,11 @@ int stpmic2_regulator_set_prop(struct pmic_handle_s *pmic, uint8_t id,
 	return -EPERM;
 }
 
+int stpmic2_switch_off(struct pmic_handle_s *pmic)
+{
+	return stpmic2_register_update(pmic, MAIN_CR, SWOFF, SWOFF);
+}
+
 void stpmic2_dump_regulators(struct pmic_handle_s *pmic)
 {
 #if LOG_LEVEL >= LOG_LEVEL_VERBOSE

@@ -100,6 +100,8 @@ Dedicated STM32MP1 flags:
   | Default: 0
 - | ``STM32MP15``: to select STM32MP15 variant configuration.
   | Default: 1
+- | ``STM32MP_STPMIC1L``: to select STPMIC1L variant configuration.
+  | Default: 0
 
 
 Boot with FIP

@@ -181,6 +181,27 @@ bool initialize_pmic_i2c(void)
 	return true;
 }
 
+void pmic_switch_off(void)
+{
+	if (stpmic2_switch_off(pmic2) == 0) {
+		udelay(100);
+	}
+
+	/* Shouldn't be reached */
+	panic();
+}
+
+#if DEBUG
+void print_pmic_info_and_debug(void)
+{
+}
+#endif
+
+int pmic_voltages_init(void)
+{
+	return 0;
+}
+
 static int pmic2_set_state(const struct regul_description *desc, bool enable)
 {
 	struct regul_handle_s *regul = (struct regul_handle_s *)desc->driver_data;
