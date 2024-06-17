@@ -4,7 +4,7 @@
  * Author: Manivannan Sadhasivam <manivannan.sadhasivam@linaro.org>
  * Copyright (C) 2020 Marek Vasut <marex@denx.de>
  * Copyright (C) 2022 DH electronics GmbH
- * Copyright (C) 2023-2024, STMicroelectronics - All Rights Reserved
+ * Copyright (C) 2023-2026, STMicroelectronics - All Rights Reserved
  */
 
 #include "stm32mp15-pinctrl.dtsi"
@@ -25,6 +25,12 @@
 
 &cpu1 {
 	cpu-supply = <&vddcore>;
+};
+
+&ddr {
+	vdd-supply = <&vdd_ddr>;
+	vtt-supply = <&vtt_ddr>;
+	vref-supply = <&vref_ddr>;
 };
 
 &hash1 {

@@ -5,6 +5,8 @@
  *
  * Copyright (C) Linaro Ltd 2019 - All Rights Reserved
  * Author: Manivannan Sadhasivam <manivannan.sadhasivam@linaro.org>
+ *
+ * Copyright (c) 2026, STMicroelectronics - All Rights Reserved
  */
 
 /dts-v1/;
@@ -33,6 +35,11 @@
 		device_type = "memory";
 		reg = <0xc0000000 0x40000000>;
 	};
+};
+
+&ddr {
+	vdd-supply = <&vdd_ddr>;
+	vref-supply = <&vref_ddr>;
 };
 
 &i2c4 {

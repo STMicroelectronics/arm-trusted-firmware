@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2024, STMicroelectronics. All Rights Reserved.
+ * Copyright (C) 2019-2026, STMicroelectronics. All Rights Reserved.
  * Copyright (C) 2021, Grzegorz Szymaszek.
  *
  * SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-3-Clause)
@@ -48,6 +48,12 @@
 
 &cryp1 {
 	status = "okay";
+};
+
+&ddr {
+	vdd-supply = <&vdd_ddr>;
+	vtt-supply = <&vtt_ddr>;
+	vref-supply = <&vref_ddr>;
 };
 
 &hash1 {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause)
 /*
- * Copyright (c) 2019-2025, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2019-2026, STMicroelectronics - All Rights Reserved
  * Author: Alexandre Torgue <alexandre.torgue@st.com> for STMicroelectronics.
  */
 
@@ -45,6 +45,12 @@
 
 &cpu1 {
 	cpu-supply = <&vddcore>;
+};
+
+&ddr {
+	vdd-supply = <&vdd_ddr>;
+	vtt-supply = <&vtt_ddr>;
+	vref-supply = <&vref_ddr>;
 };
 
 &hash1 {

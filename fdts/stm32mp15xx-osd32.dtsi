@@ -1,10 +1,16 @@
 /* SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-3-Clause) */
 /*
- * Copyright (C) 2020-2024 STMicroelectronics - All Rights Reserved
+ * Copyright (C) 2020-2026 STMicroelectronics - All Rights Reserved
  * Copyright (C) 2020 Ahmad Fatoum, Pengutronix
  */
 
 #include "stm32mp15-pinctrl.dtsi"
+
+&ddr {
+	vdd-supply = <&vdd_ddr>;
+	vtt-supply = <&vtt_ddr>;
+	vref-supply = <&vref_ddr>;
+};
 
 &i2c4 {
 	pinctrl-names = "default";
