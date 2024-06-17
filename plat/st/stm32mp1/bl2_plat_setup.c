@@ -334,7 +334,7 @@ static void check_tamper_event(bool lse_tamper_occured)
 			cr2 = mmio_read_32(TAMP_BASE + TAMP_CR2);
 			cr3 = mmio_read_32(TAMP_BASE + TAMP_CR3);
 
-			if ((is_internal && ((cr3 & BIT_32(bit_off >> TAMP_SR_INT_SHIFT)) != 0U)) ||
+			if ((is_internal && ((cr3 & BIT_32(bit_off - TAMP_SR_INT_SHIFT)) != 0U)) ||
 			    (!is_internal && ((cr2 & BIT_32(bit_off)) != 0U))) {
 				handle_potential_tamper(bit_off);
 			} else {
