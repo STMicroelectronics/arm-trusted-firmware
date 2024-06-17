@@ -315,7 +315,7 @@ static void check_tamper_event(bool lse_tamper_occured)
 			      is_internal ? "INTERNAL" : "EXTERNAL",
 			      is_internal ? (bit_off - TAMP_SR_INT_SHIFT + 1U) : (bit_off + 1U));
 
-			if ((is_internal && ((cr3 & BIT_32(bit_off >> TAMP_SR_INT_SHIFT)) != 0U)) ||
+			if ((is_internal && ((cr3 & BIT_32(bit_off - TAMP_SR_INT_SHIFT)) != 0U)) ||
 			    (!is_internal && ((cr2 & BIT_32(bit_off)) != 0U))) {
 				handle_potential_tamper(bit_off);
 			} else {
