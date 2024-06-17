@@ -629,13 +629,9 @@ static void __dead2 stm32_pwr_domain_pwr_down_wfi(const psci_power_state_t
 		stm32_pm_context_save(target_state);
 	}
 
-	/*
-	 * Synchronize on memory accesses and instruction flow before
-	 * auto-reset from the WFI instruction.
-	 */
-	dsb();
+	/* Synchronize instruction flow before auto-reset from WFI */
 	isb();
-	wfi();
+	psci_power_down_wfi();
 
 	/* This shouldn't be reached */
 	panic();
