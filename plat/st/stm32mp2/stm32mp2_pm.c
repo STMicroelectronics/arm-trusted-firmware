@@ -1059,8 +1059,13 @@ static void stm32_pm_init(void *fdt)
 
 	mmio_write_32(rcc_base + RCC_C1SREQCLRR, RCC_C1SREQSETR_STPREQ_MASK);
 
+#if STM32MP21
 	/* Maintain BKPSRAM & RETRAM content in Standby */
 	mmio_write_32(pwr_base + PWR_CR9, PWR_CR9_BKPRBSEN);
+#else
+	/* Maintain BKPSRAM & LPSRAM1 & RETRAM content in Standby */
+	mmio_write_32(pwr_base + PWR_CR9, PWR_CR9_BKPRBSEN | PWR_CR9_LPR1BSEN);
+#endif
 	mmio_write_32(pwr_base + PWR_CR10, PWR_CR10_RETRBSEN_STANDBY);
 
 	/* Prevent RETRAM erase */
