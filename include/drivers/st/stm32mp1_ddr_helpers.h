@@ -16,7 +16,7 @@ enum stm32mp1_ddr_sr_mode {
 	DDR_ASR_MODE,
 };
 
-void ddr_enable_clock(void);
+void ddr_enable_clock(bool ddrphycen);
 int ddr_sw_self_refresh_exit(void);
 uint32_t ddr_get_io_calibration_val(void);
 int ddr_standby_sr_entry(void);

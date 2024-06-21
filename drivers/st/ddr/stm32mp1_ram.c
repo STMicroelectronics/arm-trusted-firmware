@@ -28,7 +28,8 @@ int stm32mp1_ddr_clk_enable(struct stm32mp_ddr_priv *priv, uint32_t mem_speed)
 {
 	unsigned long ddrphy_clk, ddr_clk, mem_speed_hz;
 
-	ddr_enable_clock();
+	/* Enable all clocks, including DDRPHY */
+	ddr_enable_clock(true);
 
 	ddrphy_clk = clk_get_rate(DDRPHYC);
 

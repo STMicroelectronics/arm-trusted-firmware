@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2022, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2017-2024, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -16,19 +16,21 @@
 
 #include <platform_def.h>
 
-void ddr_enable_clock(void)
+void ddr_enable_clock(bool ddrphycen)
 {
-	stm32mp1_clk_rcc_regs_lock();
+	uint32_t rcc_ddritfcr = RCC_DDRITFCR_DDRC1EN | RCC_DDRITFCR_DDRPHYCAPBEN |
+				RCC_DDRITFCR_DDRCAPBEN;
 
-	mmio_setbits_32(stm32mp_rcc_base() + RCC_DDRITFCR,
-			RCC_DDRITFCR_DDRC1EN |
 #if STM32MP_DDR_DUAL_AXI_PORT
-			RCC_DDRITFCR_DDRC2EN |
+	rcc_ddritfcr |= RCC_DDRITFCR_DDRC2EN;
 #endif
-			RCC_DDRITFCR_DDRPHYCEN |
-			RCC_DDRITFCR_DDRPHYCAPBEN |
-			RCC_DDRITFCR_DDRCAPBEN);
 
+	if (ddrphycen) {
+		rcc_ddritfcr |= RCC_DDRITFCR_DDRPHYCEN;
+	}
+
+	stm32mp1_clk_rcc_regs_lock();
+	mmio_setbits_32(stm32mp_rcc_base() + RCC_DDRITFCR, rcc_ddritfcr);
 	stm32mp1_clk_rcc_regs_unlock();
 }
 
@@ -103,9 +105,14 @@ static int ddr_sw_self_refresh_in(void)
 	mmio_setbits_32(pwr_base + PWR_CR3, PWR_CR3_DDRRETEN);
 	stm32mp_pwr_regs_unlock();
 
-	/* Switch controller clocks (uMCTL2/PUBL) to DLL ref clock */
 	stm32mp1_clk_rcc_regs_lock();
+
+	/* Switch controller clocks (uMCTL2/PUBL) to DLL ref clock */
 	mmio_setbits_32(rcc_base + RCC_DDRITFCR, RCC_DDRITFCR_GSKPCTRL);
+
+	/* Deactivate DDRPHY clock */
+	mmio_clrbits_32(rcc_base + RCC_DDRITFCR, RCC_DDRITFCR_DDRPHYCEN);
+
 	stm32mp1_clk_rcc_regs_unlock();
 
 	/* Disable all DLLs: GLITCH window */
@@ -128,10 +135,7 @@ static int ddr_sw_self_refresh_in(void)
 
 	stm32mp1_clk_rcc_regs_lock();
 
-	/* Switch controller clocks (uMCTL2/PUBL) to DLL output clock */
-	mmio_clrbits_32(rcc_base + RCC_DDRITFCR, RCC_DDRITFCR_GSKPCTRL);
-
-	/* Deactivate all DDR clocks */
+	/* Deactivate all other DDR clocks */
 	mmio_clrbits_32(rcc_base + RCC_DDRITFCR,
 			RCC_DDRITFCR_DDRC1EN |
 #if STM32MP_DDR_DUAL_AXI_PORT
@@ -162,8 +166,8 @@ int ddr_sw_self_refresh_exit(void)
 	uintptr_t ddrctrl_base = stm32mp_ddrctrl_base();
 	uintptr_t ddrphyc_base = stm32mp_ddrphyc_base();
 
-	/* Enable all clocks */
-	ddr_enable_clock();
+	/* Enable clocks except DDRPHY */
+	ddr_enable_clock(false);
 
 	/*
 	 * Manage quasi-dynamic registers modification
@@ -176,11 +180,6 @@ int ddr_sw_self_refresh_exit(void)
 			DDRCTRL_DFIMISC_DFI_INIT_COMPLETE_EN);
 
 	stm32mp_ddr_unset_qd3_update_conditions((struct stm32mp_ddrctl *)ddrctrl_base);
-
-	/* Switch controller clocks (uMCTL2/PUBL) to DLL ref clock */
-	stm32mp1_clk_rcc_regs_lock();
-	mmio_setbits_32(rcc_base + RCC_DDRITFCR, RCC_DDRITFCR_GSKPCTRL);
-	stm32mp1_clk_rcc_regs_unlock();
 
 	/* Enable all DLLs: GLITCH window */
 	mmio_clrbits_32(ddrphyc_base + DDRPHYC_ACDLLCR,
@@ -213,6 +212,12 @@ int ddr_sw_self_refresh_exit(void)
 
 	udelay(DDR_DELAY_10US);
 
+	/* Enable DDRPHY clock */
+	stm32mp1_clk_rcc_regs_lock();
+	mmio_setbits_32(stm32mp_rcc_base() + RCC_DDRITFCR, RCC_DDRITFCR_DDRPHYCEN);
+	stm32mp1_clk_rcc_regs_unlock();
+
+	/* Release reset */
 	mmio_setbits_32(ddrphyc_base + DDRPHYC_ACDLLCR,
 			DDRPHYC_ACDLLCR_DLLSRST);
 
