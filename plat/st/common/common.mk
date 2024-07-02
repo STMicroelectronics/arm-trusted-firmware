@@ -32,6 +32,27 @@ ifeq ($(findstring clang,$(notdir $(CC))),)
 TF_CFLAGS			+=	-Wformat-signedness
 endif
 
+# Boot devices
+STM32MP_EMMC			?=	0
+STM32MP_SDMMC			?=	0
+STM32MP_RAW_NAND		?=	0
+STM32MP_SPI_NAND		?=	0
+STM32MP_SPI_NOR			?=	0
+
+# Put both BL2 and FIP in eMMC boot partition
+STM32MP_EMMC_BOOT		?=	0
+
+# Serial boot devices
+STM32MP_UART_PROGRAMMER		?=	0
+STM32MP_USB_PROGRAMMER		?=	0
+
+ifneq ($(filter 1,${STM32MP_UART_PROGRAMMER} ${STM32MP_USB_PROGRAMMER}),)
+ifeq (${PSA_FWU_SUPPORT},1)
+$(info Disable PSA_FWU_SUPPORT flag for serial device)
+override PSA_FWU_SUPPORT	:=	0
+endif
+endif
+
 # Number of TF-A copies in the device
 STM32_TF_A_COPIES		:=	2
 
@@ -49,20 +70,6 @@ $(error "Required partition number is $(FWU_MAX_PART) where PLAT_PARTITION_MAX_E
 $(PLAT_PARTITION_MAX_ENTRIES)")
 endif
 endif
-
-# Boot devices
-STM32MP_EMMC			?=	0
-STM32MP_SDMMC			?=	0
-STM32MP_RAW_NAND		?=	0
-STM32MP_SPI_NAND		?=	0
-STM32MP_SPI_NOR			?=	0
-
-# Put both BL2 and FIP in eMMC boot partition
-STM32MP_EMMC_BOOT		?=	0
-
-# Serial boot devices
-STM32MP_UART_PROGRAMMER		?=	0
-STM32MP_USB_PROGRAMMER		?=	0
 
 $(eval DTC_V = $(shell $($(ARCH)-dtc) -v | awk '{print $$NF}'))
 $(eval DTC_VERSION = $(shell printf "%d" $(shell echo ${DTC_V} | cut -d- -f1 | sed "s/\./0/g" | grep -o "[0-9]*")))
