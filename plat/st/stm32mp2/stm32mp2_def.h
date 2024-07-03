@@ -98,11 +98,19 @@
 /*******************************************************************************
  * PACKAGE ID
  ******************************************************************************/
+#if STM32MP23
+#define STM32MP23_PKG_CUSTOM			U(0)
+#define STM32MP23_PKG_AL_VFBGA361		U(1)
+#define STM32MP23_PKG_AK_VFBGA424		U(3)
+#define STM32MP23_PKG_AJ_TFBGA361		U(7)
+#endif /* STM32MP23 */
+#if STM32MP25
 #define STM32MP25_PKG_CUSTOM			U(0)
 #define STM32MP25_PKG_AL_VFBGA361		U(1)
 #define STM32MP25_PKG_AK_VFBGA424		U(3)
 #define STM32MP25_PKG_AI_TFBGA436		U(5)
 #define STM32MP25_PKG_UNKNOWN			U(7)
+#endif /* STM32MP25 */
 
 /*******************************************************************************
  * STM32MP2 memory map related constants
