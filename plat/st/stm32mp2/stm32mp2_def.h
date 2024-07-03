@@ -58,9 +58,9 @@
  * PACKAGE ID
  ******************************************************************************/
 #define STM32MP25_PKG_CUSTOM		U(0)
-#define STM32MP25_PKG_AL_TBGA361	U(3)
-#define STM32MP25_PKG_AK_TBGA424	U(4)
-#define STM32MP25_PKG_AI_TBGA436	U(5)
+#define STM32MP25_PKG_AL_VFBGA361	U(1)
+#define STM32MP25_PKG_AK_VFBGA424	U(3)
+#define STM32MP25_PKG_AI_TFBGA436	U(5)
 #define STM32MP25_PKG_UNKNOWN		U(7)
 
 /*******************************************************************************
