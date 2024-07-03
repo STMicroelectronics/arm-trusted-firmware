@@ -117,6 +117,13 @@
 /*******************************************************************************
  * PACKAGE ID
  ******************************************************************************/
+#if STM32MP21
+#define STM32MP21_PKG_CUSTOM			U(0)
+#define STM32MP21_PKG_AL_VFBGA361		U(1)
+#define STM32MP21_PKG_AN_VFBGA273		U(3)
+#define STM32MP21_PKG_AO_VFBGA225		U(4)
+#define STM32MP21_PKG_AM_TFBGA289		U(5)
+#endif /* STM32MP21 */
 #if STM32MP23
 #define STM32MP23_PKG_CUSTOM			U(0)
 #define STM32MP23_PKG_AL_VFBGA361		U(1)

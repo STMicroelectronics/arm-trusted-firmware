@@ -374,6 +374,23 @@ void stm32mp_get_soc_name(char name[STM32_SOC_NAME_SIZE])
 
 	/* Package */
 	switch (get_cpu_package()) {
+#if STM32MP21
+	case STM32MP21_PKG_CUSTOM:
+		pkg = "XX";
+		break;
+	case STM32MP21_PKG_AL_VFBGA361:
+		pkg = "AL";
+		break;
+	case STM32MP21_PKG_AN_VFBGA273:
+		pkg = "AN";
+		break;
+	case STM32MP21_PKG_AO_VFBGA225:
+		pkg = "AO";
+		break;
+	case STM32MP21_PKG_AM_TFBGA289:
+		pkg = "AM";
+		break;
+#endif /* STM32MP21 */
 #if STM32MP23
 	case STM32MP23_PKG_CUSTOM:
 		pkg = "XX";
