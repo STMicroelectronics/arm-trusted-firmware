@@ -583,6 +583,8 @@ static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
 	case PWRSTATE_LP_STOP2:
 	case PWRSTATE_LPLV_STOP2:
 		VERBOSE("STOP2 exit\n");
+		/* restore PLL1 configuration for CA35 */
+		stm32mp2_pll1_enable();
 		/* Restore STGEN and generic timer with current clock */
 		stm32mp_stgen_config(clk_get_rate(CK_KER_STGEN));
 
