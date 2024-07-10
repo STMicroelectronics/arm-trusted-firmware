@@ -26,7 +26,7 @@
 #ifdef IMAGE_BL31
 static uint32_t saved_pll_freq1_reg;
 static uint32_t saved_pll_freq2_reg;
-uint32_t saved_xbar63cfgr;
+static uint32_t saved_xbar63cfgr;
 #endif
 
 struct stm32_osci_dt_cfg {
@@ -1501,7 +1501,8 @@ enum clksrc_id {
 	CLKSRC_NB
 };
 
-static void stm32mp2_a35_ss_on_hsi(void)
+/* switch CA35 clock on bypass clock aka ck_cpu1_ext2f = flexgen63 */
+static void stm32mp2_a35_ss_on_bypass(void)
 {
 	uintptr_t a35_ss_address = A35SSC_BASE;
 	uintptr_t chgclkreq_reg = a35_ss_address + A35_SS_CHGCLKREQ;
@@ -1759,7 +1760,7 @@ static int _clk_stm32_pll1_init(struct stm32_clk_priv *priv, int pll_idx,
 	unsigned long refclk;
 	int ret = 0;
 
-	stm32mp2_a35_ss_on_hsi();
+	stm32mp2_a35_ss_on_bypass();
 
 	ret = stm32_clk_configure_mux(priv, pll_conf->src);
 	if (ret != 0) {
@@ -1938,6 +1939,7 @@ static int wait_findivsr(uint16_t channel)
 
 	return 0;
 }
+#endif /* IMAGE_BL2 */
 
 static int wait_xbar_sts(uint16_t channel)
 {
@@ -1958,6 +1960,7 @@ static int wait_xbar_sts(uint16_t channel)
 	return 0;
 }
 
+#ifdef IMAGE_BL2
 static void flexclkgen_config_channel(uint16_t channel, unsigned int clk_src,
 				      unsigned int prediv, unsigned int findiv)
 {
@@ -2086,7 +2089,8 @@ static void stm32_enable_oscillator_lse(struct stm32_clk_priv *priv)
 
 static int stm32mp2_clk_switch_to_hsi(struct stm32_clk_priv *priv)
 {
-	stm32mp2_a35_ss_on_hsi();
+	/* on reset, bypass use HSI for CA35 clock (FLEXGEN63 = ck_cpu1_ext2f) */
+	stm32mp2_a35_ss_on_bypass();
 	stm32mp2_clk_muxsel_on_hsi(priv);
 #if !STM32MP_M33_TDCID
 	stm32mp2_clk_xbar_on_hsi(priv);
@@ -2591,7 +2595,19 @@ int stm32mp2_pll1_disable(void)
 	saved_pll_freq1_reg = mmio_read_32(pll_freq1_reg);
 	saved_pll_freq2_reg = mmio_read_32(pll_freq2_reg);
 
-	stm32mp2_a35_ss_on_hsi();
+	/* save FLEXGEN63 MUX setting */
+	saved_xbar63cfgr = mmio_read_32(stm32mp2_clock_data.base + RCC_XBAR63CFGR);
+
+	if ((saved_xbar63cfgr & RCC_XBAR63CFGR_XBAR63SEL_MASK) != XBAR_SRC_HSI) {
+		/* use HSI for CA35 bypass clock (FLEXGEN63 = ck_cpu1_ext2f) */
+		mmio_clrsetbits_32(stm32mp2_clock_data.base + RCC_XBAR63CFGR,
+				   RCC_XBAR63CFGR_XBAR63SEL_MASK, XBAR_SRC_HSI);
+		if (wait_xbar_sts(63) != 0) {
+			panic();
+		}
+	}
+
+	stm32mp2_a35_ss_on_bypass();
 
 	mmio_clrbits_32(pll_enable_reg, A35_SS_PLL_ENABLE_PD);
 
@@ -2615,6 +2631,9 @@ int stm32mp2_pll1_enable(void)
 	if (ret != 0) {
 		panic();
 	}
+
+	/* restore FLEXGEN63 MUX setting */
+	mmio_write_32(stm32mp2_clock_data.base + RCC_XBAR63CFGR, saved_xbar63cfgr);
 
 	return 0;
 #endif
