@@ -23,6 +23,12 @@
 
 #include <platform_def.h>
 
+#ifdef IMAGE_BL31
+static uint32_t saved_pll_freq1_reg;
+static uint32_t saved_pll_freq2_reg;
+uint32_t saved_xbar63cfgr;
+#endif
+
 struct stm32_osci_dt_cfg {
 	unsigned long freq;
 	uint32_t drive;
@@ -1569,6 +1575,7 @@ static void stm32mp2_clk_xbar_on_hsi(struct stm32_clk_priv *priv)
 	}
 }
 #endif
+#endif /* IMAGE_BL2 */
 
 static int stm32mp2_a35_pll1_start(void)
 {
@@ -1607,6 +1614,7 @@ static int stm32mp2_a35_pll1_start(void)
 	return 0;
 }
 
+#ifdef IMAGE_BL2
 static void stm32mp2_a35_pll1_config(uint32_t fbdiv, uint32_t refdiv, uint32_t postdiv1,
 				     uint32_t postdiv2)
 {
@@ -2576,12 +2584,37 @@ int stm32mp2_pll1_disable(void)
 #ifdef IMAGE_BL2
 	return -EPERM;
 #else
-	uintptr_t a35_ss_address = A35SSC_BASE;
-	uintptr_t pll_enable_reg = a35_ss_address + A35_SS_PLL_ENABLE;
+	const uintptr_t pll_freq1_reg = A35SSC_BASE + A35_SS_PLL_FREQ1;
+	const uintptr_t pll_freq2_reg = A35SSC_BASE + A35_SS_PLL_FREQ2;
+	const uintptr_t pll_enable_reg = A35SSC_BASE + A35_SS_PLL_ENABLE;
+
+	saved_pll_freq1_reg = mmio_read_32(pll_freq1_reg);
+	saved_pll_freq2_reg = mmio_read_32(pll_freq2_reg);
 
 	stm32mp2_a35_ss_on_hsi();
 
 	mmio_clrbits_32(pll_enable_reg, A35_SS_PLL_ENABLE_PD);
+
+	return 0;
+#endif
+}
+
+int stm32mp2_pll1_enable(void)
+{
+#ifdef IMAGE_BL2
+	return -EPERM;
+#else
+	int ret;
+	const uintptr_t pll_freq1_reg = A35SSC_BASE + A35_SS_PLL_FREQ1;
+	const uintptr_t pll_freq2_reg = A35SSC_BASE + A35_SS_PLL_FREQ2;
+
+	mmio_write_32(pll_freq1_reg, saved_pll_freq1_reg);
+	mmio_write_32(pll_freq2_reg, saved_pll_freq2_reg);
+
+	ret = stm32mp2_a35_pll1_start();
+	if (ret != 0) {
+		panic();
+	}
 
 	return 0;
 #endif
