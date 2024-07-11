@@ -20,6 +20,7 @@
 #include <drivers/st/stm32mp_reset.h>
 #include <drivers/st/stm32mp2_ddr_helpers.h>
 #include <lib/mmio.h>
+#include <lib/el3_runtime/context_mgmt.h>
 #include <lib/psci/psci.h>
 #include <lib/spinlock.h>
 #include <plat/common/platform.h>
@@ -27,6 +28,8 @@
 #include <platform_def.h>
 #include <stm32mp2_context.h>
 #include <stm32mp2_private.h>
+
+#include "../../../lib/psci/psci_private.h"
 
 /* Default value for STM32MP25 with STPMIC25, defined in AN5727 */
 #define DEFAULT_POPL_D1		3U
@@ -394,6 +397,20 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 		return;
 	}
 
+	/* For power down the SPD hooks is called by the PSCI stack */
+	if (psci_get_pstate_type(stateid) != PSTATE_TYPE_POWERDOWN) {
+		/* Call the cpu suspend handler registered by the Secure Payload */
+		if ((psci_spd_pm != NULL) && (psci_spd_pm->svc_suspend != NULL)) {
+			unsigned int max_lvl = LVL_CORE;
+
+			if (stateid == PWRSTATE_LPLV_STOP1) {
+				max_lvl = LVL_D1;
+			}
+			cm_el1_sysregs_context_save(NON_SECURE);
+			psci_spd_pm->svc_suspend(max_lvl);
+		}
+	}
+
 	/* Request STOP for both cores */
 	mmio_write_32(rcc_base + RCC_C1SREQSETR, RCC_C1SREQSETR_STPREQ_MASK);
 
@@ -615,6 +632,23 @@ static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
 		ddr_sr_exit();
 		ddr_restore_sr_mode();
 		stm32mp2_disable_rcc_wakeup_irq(rcc_base);
+
+		/* the cpu suspend finish handler registered by the Secure
+		 * Payload Dispatcher (SPD) to let it do any bookeeping.
+		 */
+		if ((psci_spd_pm != NULL) && (psci_spd_pm->svc_suspend_finish != NULL)) {
+			unsigned int max_lvl = LVL_CORE;
+
+			if (stateid == PWRSTATE_LPLV_STOP1) {
+				max_lvl = LVL_D1;
+			}
+
+			psci_spd_pm->svc_suspend_finish(max_lvl, false);
+
+			/* Restore non-secure state */
+			cm_el1_sysregs_context_restore(NON_SECURE);
+			cm_set_next_eret_context(NON_SECURE);
+		}
 		break;
 	default:
 		ERROR("Invalid state id %x\n", stateid);
