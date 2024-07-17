@@ -296,7 +296,9 @@ static void set_gpio(uint32_t bank, uint32_t pin, uint32_t mode, uint32_t type,
 #endif
 	}
 #else /* !STM32MP13 && !STM32MP15 */
+#if !STM32MP_M33_TDCID
 	set_gpio_secure_cfg(bank, pin, true);
+#endif
 #endif /* STM32MP13 || STM32MP15 */
 }
 
