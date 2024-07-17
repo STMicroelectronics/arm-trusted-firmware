@@ -152,15 +152,7 @@ struct stm32_clk_priv *clk_stm32_get_priv(void);
 int clk_get_index(struct stm32_clk_priv *priv, unsigned long binding_id);
 const struct clk_stm32 *_clk_get(struct stm32_clk_priv *priv, int id);
 
-void clk_oscillator_set_bypass(struct stm32_clk_priv *priv, int id, bool digbyp, bool bypass);
-void clk_oscillator_set_drive(struct stm32_clk_priv *priv, int id, uint8_t lsedrv);
-void clk_oscillator_set_css(struct stm32_clk_priv *priv, int id, bool css);
-
 int _clk_stm32_gate_wait_ready(struct stm32_clk_priv *priv, uint16_t gate_id, bool ready_on);
-
-int clk_oscillator_wait_ready(struct stm32_clk_priv *priv, int id, bool ready_on);
-int clk_oscillator_wait_ready_on(struct stm32_clk_priv *priv, int id);
-int clk_oscillator_wait_ready_off(struct stm32_clk_priv *priv, int id);
 
 int clk_stm32_get_counter(unsigned long binding_id);
 
@@ -318,67 +310,11 @@ struct clk_stm32_fixed_rate_cfg {
 		.ops		= STM32_FIXED_RATE_OPS,\
 	}
 
-#define BYPASS(_offset, _bit_byp, _bit_digbyp) &(struct stm32_clk_bypass){\
-	.offset		= (_offset),\
-	.bit_byp	= (_bit_byp),\
-	.bit_digbyp	= (_bit_digbyp),\
-}
-
-#define CSS(_offset, _bit_css)	&(struct stm32_clk_css){\
-	.offset		= (_offset),\
-	.bit_css	= (_bit_css),\
-}
-
-#define DRIVE(_offset, _shift, _width, _default) &(struct stm32_clk_drive){\
-	.offset		= (_offset),\
-	.drv_shift	= (_shift),\
-	.drv_width	= (_width),\
-	.drv_default	= (_default),\
-}
-
-#define OSCILLATOR(idx_osc, _id, _name, _gate_id, _gate_rdy_id, _bypass, _css, _drive) \
-	[(idx_osc)] = (struct clk_oscillator_data){\
-		.name		= (_name),\
-		.id_clk		= (_id),\
-		.gate_id	= (_gate_id),\
-		.gate_rdy_id	= (_gate_rdy_id),\
-		.bypass		= (_bypass),\
-		.css		= (_css),\
-		.drive		= (_drive),\
-	}
-
 struct clk_oscillator_data *clk_oscillator_get_data(struct stm32_clk_priv *priv, int id);
-
-void clk_stm32_osc_init(struct stm32_clk_priv *priv, int id);
-bool clk_stm32_osc_gate_is_enabled(struct stm32_clk_priv *priv, int id);
-int clk_stm32_osc_gate_enable(struct stm32_clk_priv *priv, int id);
-void clk_stm32_osc_gate_disable(struct stm32_clk_priv *priv, int id);
 
 struct stm32_osc_cfg {
 	uint8_t osc_id;
 };
-
-#define CLK_OSC(idx, _idx, _parent, _osc_id) \
-	[(idx)] = (struct clk_stm32){ \
-		.binding	= (_idx),\
-		.parent		= (_parent),\
-		.flags		= CLK_IS_CRITICAL,\
-		.clock_cfg	= &(struct stm32_osc_cfg){\
-			.osc_id = (_osc_id),\
-		},\
-		.ops		= STM32_OSC_OPS,\
-	}
-
-#define CLK_OSC_FIXED(idx, _idx, _parent, _osc_id) \
-	[(idx)] = (struct clk_stm32){ \
-		.binding	= (_idx),\
-		.parent		= (_parent),\
-		.flags		= CLK_IS_CRITICAL,\
-		.clock_cfg	= &(struct stm32_osc_cfg){\
-			.osc_id	= (_osc_id),\
-		},\
-		.ops		= STM32_OSC_NOGATE_OPS,\
-	}
 
 extern const struct stm32_clk_ops clk_mux_ops;
 extern const struct stm32_clk_ops clk_stm32_divider_ops;
@@ -387,8 +323,6 @@ extern const struct stm32_clk_ops clk_fixed_factor_ops;
 extern const struct stm32_clk_ops clk_gate_ops;
 extern const struct stm32_clk_ops clk_timer_ops;
 extern const struct stm32_clk_ops clk_stm32_fixed_rate_ops;
-extern const struct stm32_clk_ops clk_stm32_osc_ops;
-extern const struct stm32_clk_ops clk_stm32_osc_nogate_ops;
 
 enum {
 	NO_OPS,
@@ -399,8 +333,6 @@ enum {
 	STM32_GATE_OPS,
 	STM32_TIMER_OPS,
 	STM32_FIXED_RATE_OPS,
-	STM32_OSC_OPS,
-	STM32_OSC_NOGATE_OPS,
 
 	STM32_LAST_OPS
 };
