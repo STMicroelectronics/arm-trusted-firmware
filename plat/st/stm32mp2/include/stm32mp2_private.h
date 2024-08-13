@@ -103,6 +103,8 @@ uint32_t stm32_otp_read_sw_lock(uint32_t otp, bool *value);
 bool stm32_is_bsec_closed(void);
 #endif /* STM32MP_M33_TDCID */
 
+uint32_t otp_mirror_read(uint32_t *val, uint32_t otp);
+
 void stm32mp_ca35_set_vbar(uintptr_t vbar);
 
 #endif /* STM32MP2_PRIVATE_H */

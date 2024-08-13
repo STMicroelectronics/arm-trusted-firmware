@@ -278,6 +278,7 @@ PLAT_BL_COMMON_SOURCES		+=	drivers/st/bsec/bsec3.c
 else
 PLAT_BL_COMMON_SOURCES		+=	plat/st/stm32mp2/stm32mp2_otp.c
 endif
+PLAT_BL_COMMON_SOURCES		+=	plat/st/stm32mp2/stm32mp2_otp_mirror.c
 
 PLAT_BL_COMMON_SOURCES		+=	drivers/st/iwdg/stm32_iwdg.c				\
 					drivers/st/reset/stm32mp2_reset.c			\

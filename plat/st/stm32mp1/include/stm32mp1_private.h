@@ -63,4 +63,9 @@ static inline uint32_t stm32_otp_read_sw_lock(uint32_t otp, bool *value)
 	return bsec_read_sw_lock(otp, value);
 }
 
+static inline uint32_t otp_mirror_read(uint32_t *val, uint32_t otp)
+{
+	return BSEC_ERROR;
+}
+
 #endif /* STM32MP1_PRIVATE_H */

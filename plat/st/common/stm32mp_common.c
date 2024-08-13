@@ -203,6 +203,10 @@ int stm32_get_otp_value_from_idx(const uint32_t otp_idx, uint32_t *otp_val)
 
 	assert(otp_val != NULL);
 
+	if (otp_mirror_read(otp_val, otp_idx) == BSEC_OK) {
+		return 0;
+	}
+
 #if defined(IMAGE_BL2)
 	ret = stm32_otp_shadow_read(otp_val, otp_idx);
 #elif defined(IMAGE_BL31) || defined(IMAGE_BL32)
