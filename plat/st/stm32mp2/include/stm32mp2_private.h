@@ -93,6 +93,15 @@ static inline bool stm32_is_bsec_closed(void)
 {
 	return (bsec_get_state() & BSEC_STATE_MASK) == BSEC_STATE_CLOSED;
 }
+
+static inline bool stm32_otp_is_hwkey_valid(void)
+{
+	if ((bsec_get_state() & BSEC_HARDWARE_KEY) != 0U) {
+		return true;
+	}
+
+	return false;
+}
 #else /* STM32MP_M33_TDCID */
 uint32_t stm32_otp_probe(void);
 uint32_t stm32_otp_read(uint32_t *val, uint32_t otp);

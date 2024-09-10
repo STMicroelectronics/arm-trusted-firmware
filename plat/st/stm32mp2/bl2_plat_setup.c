@@ -575,6 +575,14 @@ static void prepare_encryption(void)
 	}
 #endif /* STM32MP_SUPPORT_PM */
 
+#if STM32MP21
+	/* Check HWKEY validity before writing RISAF encryption key*/
+	if (!stm32_otp_is_hwkey_valid()) {
+		ERROR("Invalid HWKEY\n");
+		panic();
+	}
+#endif /* STM32MP21 */
+
 	if (stm32mp2_risaf_write_encryption_key(RISAF4_INST, mkey) != 0) {
 		panic();
 	}
