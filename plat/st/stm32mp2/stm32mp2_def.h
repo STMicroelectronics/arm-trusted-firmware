@@ -343,6 +343,15 @@ enum ddr_type {
 
 #define EXTI1_C1IMR2_WKUP_MASK			GENMASK_32(57 - 32, 52 - 32)
 
+/* EXTI1 software interrupt event register  */
+#define EXTI1_SWIER3				U(0x48)
+#define EXTI1_RPR3				U(0x4C)
+
+#define EXTI1_BIT(_id)				BIT_32(_id % 32)
+
+#define EXTI1_C2SEV				EXTI1_BIT(64)
+#define EXTI1_C1SEV				EXTI1_BIT(65)
+
 /*******************************************************************************
  * STM32MP2 EXTI2
  ******************************************************************************/

@@ -155,11 +155,38 @@ static void print_reset_reason(void)
 	INFO("Reset reason: %s (0x%x)\n", reason_str, rstsr);
 }
 
+#if STM32MP_M33_TDCID
+/*
+ * notify_cpu2 sends an event (SEV) to CPU2 to notify it that BL2 has
+ * finished its execution and doesn't need the RIF boot configuration
+ * anymore and wait clear of pending bit to acknowledge the trasaction.
+ */
+static void notify_cpu2(void)
+{
+	/* clear CPU2 SEV event to cpu1 (exti 64)*/
+	mmio_write_32(STM32MP_EXTI1_BASE + EXTI1_RPR3, EXTI1_C2SEV);
+
+	/* Send CPU1 SEV event to cpu2 (exti 65)*/
+	mmio_write_32(STM32MP_EXTI1_BASE + EXTI1_SWIER3, EXTI1_C1SEV);
+
+	for ( ; ; ) {
+		if ((mmio_read_32(STM32MP_EXTI1_BASE + EXTI1_RPR3) & EXTI1_C1SEV) == 0U) {
+			break;
+		}
+	}
+}
+#endif
+
 void bl2_el3_early_platform_setup(u_register_t arg0 __unused,
 				  u_register_t arg1 __unused,
 				  u_register_t arg2 __unused,
 				  u_register_t arg3 __unused)
 {
+#if STM32MP_M33_TDCID
+	/* Synchronisation point between TF-A and TF-M */
+	notify_cpu2();
+#endif
+
 	iac_dump();
 
 #if STM32MP_UART_PROGRAMMER || STM32MP_USB_PROGRAMMER
