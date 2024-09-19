@@ -9,7 +9,11 @@
 #include <string.h>
 
 #include <common/debug.h>
+#if STM32MP21
+#include <drivers/st/stm32mp1_usb.h>
+#else /* STM32MP21 */
 #include <drivers/st/usb_dwc3.h>
+#endif /* STM32MP21 */
 #include <drivers/usb_device.h>
 
 #include <platform_def.h>
@@ -321,15 +325,20 @@ static const struct usb_desc dfu_desc = {
 
 static struct usb_handle usb_core_handle;
 static struct pcd_handle pcd_handle;
+#if !STM32MP21
 static dwc3_handle_t dwc3_handle;
+#endif /* !STM32MP21 */
 
 struct usb_handle *usb_dfu_plat_init(void)
 {
 	/* prepare USB Driver */
 	pcd_handle.in_ep[0].maxpacket = USB_MAX_EP0_SIZE;
 	pcd_handle.out_ep[0].maxpacket = USB_MAX_EP0_SIZE;
-	usb_dwc3_init_driver(&usb_core_handle, &pcd_handle, &dwc3_handle,
-			     (void *)USB_DWC3_BASE);
+#if STM32MP21
+	stm32mp1_usb_init_driver(&usb_core_handle, &pcd_handle, (uint32_t *)USB_OTG_BASE);
+#else /* STM32MP21 */
+	usb_dwc3_init_driver(&usb_core_handle, &pcd_handle, &dwc3_handle, (void *)USB_DWC3_BASE);
+#endif /* STM32MP21 */
 
 	/* keep the configuration from ROM code */
 	usb_core_handle.ep0_state = USBD_EP0_DATA_IN;

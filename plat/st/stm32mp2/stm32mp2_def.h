@@ -147,7 +147,7 @@
 #endif /* STM32MP21 */
 #define RETRAM_SIZE				U(0x00020000)
 
-#if defined(IMAGE_BL2) && STM32MP_USB_PROGRAMMER
+#if defined(IMAGE_BL2) && STM32MP_USB_PROGRAMMER && !STM32MP21
 #define STM32MP_USB_DWC3_SIZE			PAGE_SIZE
 #define STM32MP_USB_DWC3_BASE			(STM32MP_SYSRAM_BASE + \
 						 STM32MP_SYSRAM_SIZE - \
@@ -159,7 +159,7 @@
 #define STM32MP_SYSRAM_MEM_SIZE			(STM32MP_SYSRAM_SIZE - \
 						 STM32MP_SYSRAM_DEVICE_SIZE)
 #define STM32MP_SYSRAM_MEM_BASE			STM32MP_SYSRAM_BASE
-#endif /* IMAGE_BL2 && STM32MP_USB_PROGRAMMER */
+#endif /* IMAGE_BL2 && STM32MP_USB_PROGRAMMER && !STM32MP21 */
 
 /* DDR configuration */
 #define STM32MP_DDR_BASE			U(0x80000000)
@@ -481,7 +481,11 @@ static inline uintptr_t tamp_bkpr(uint32_t idx)
 /*******************************************************************************
  * STM32MP2 USB
  ******************************************************************************/
+#if STM32MP21
+#define USB_OTG_BASE				U(0x48300000)
+#else /* STM32MP21 */
 #define USB_DWC3_BASE				U(0x48300000)
+#endif /* STM32MP21 */
 
 /*******************************************************************************
  * STM32MP2 DDRCTRL
