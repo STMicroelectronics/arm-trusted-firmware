@@ -57,6 +57,14 @@ $(warning DTB_FILE_NAME=$(DTB_FILE_NAME))
 $(error Cannot enable more than one STM32MP2x flag)
 endif
 
+STM32MP_USE_EXTERNAL_HEAP 	:=	1
+
+ifeq (${TRUSTED_BOARD_BOOT},1)
+# PKA algo to include
+PKA_USE_NIST_P256		:=	1
+PKA_USE_BRAINPOOL_P256T1	:=	1
+endif
+
 # STM32 image header version v2.2 or v2.3 for STM32MP21
 STM32_HEADER_VERSION_MAJOR	:=	2
 ifeq ($(STM32MP21),1)
@@ -64,6 +72,9 @@ STM32_HEADER_VERSION_MINOR	:=	3
 else
 STM32_HEADER_VERSION_MINOR	:=	2
 endif
+
+PKA_USE_NIST_P256		?=	0
+PKA_USE_BRAINPOOL_P256T1 	?=	0
 
 STM32_HASH_VER			:=	4
 STM32_RNG_VER			:=	4
@@ -133,6 +144,11 @@ ifeq (${STM32MP_DDR_FIP_IO_STORAGE},1)
 # Add the FW_DDR to FIP and specify the same to certtool
 $(eval $(call TOOL_ADD_IMG,STM32MP_DDR_FW,--ddr-fw))
 endif
+ifeq ($(GENERATE_COT),1)
+STM32MP_CFG_CERT		:=	$(BUILD_PLAT)/stm32mp_cfg_cert.crt
+# Add the STM32MP_CFG_CERT to FIP and specify the same to certtool
+$(eval $(call TOOL_ADD_PAYLOAD,${STM32MP_CFG_CERT},--stm32mp-cfg-cert))
+endif
 
 # Ultratronik Specific Boards
 ifeq ($(findstring ultra-fly,$(DTB_FILE_NAME)),ultra-fly)
@@ -150,11 +166,15 @@ endif
 # Enable flags for C files
 $(eval $(call assert_booleans,\
 	$(sort \
+		PKA_USE_BRAINPOOL_P256T1 \
+		PKA_USE_NIST_P256 \
+		STM32MP_CRYPTO_ROM_LIB \
 		STM32MP_DDR_DUAL_AXI_PORT \
 		STM32MP_DDR_FIP_IO_STORAGE \
 		STM32MP_DDR3_TYPE \
 		STM32MP_DDR4_TYPE \
 		STM32MP_LPDDR4_TYPE \
+		STM32MP_USE_EXTERNAL_HEAP \
 		STM32MP21 \
 		STM32MP23 \
 		STM32MP25 \
@@ -174,6 +194,8 @@ $(eval $(call assert_numerics,\
 $(eval $(call add_defines,\
 	$(sort \
 		DWL_BUFFER_BASE \
+		PKA_USE_BRAINPOOL_P256T1 \
+		PKA_USE_NIST_P256 \
 		PLAT_DEF_FIP_UUID \
 		PLAT_PARTITION_MAX_ENTRIES \
 		PLAT_TBBR_IMG_DEF \
@@ -181,11 +203,13 @@ $(eval $(call add_defines,\
 		STM32_RNG_VER \
 		STM32_RNG_VER_MINOR \
 		STM32_TF_A_COPIES \
+		STM32MP_CRYPTO_ROM_LIB \
 		STM32MP_DDR_DUAL_AXI_PORT \
 		STM32MP_DDR_FIP_IO_STORAGE \
 		STM32MP_DDR3_TYPE \
 		STM32MP_DDR4_TYPE \
 		STM32MP_LPDDR4_TYPE \
+		STM32MP_USE_EXTERNAL_HEAP \
 		STM32MP21 \
 		STM32MP23 \
 		STM32MP25 \
@@ -231,6 +255,11 @@ BL2_SOURCES			+=	drivers/st/crypto/stm32_hash.c
 
 BL2_SOURCES			+=	drivers/st/rif/stm32_rifsc.c 				\
 					drivers/st/rif/stm32mp2_risaf.c
+
+ifeq (${TRUSTED_BOARD_BOOT},1)
+BL2_SOURCES			+=	drivers/st/crypto/stm32_pka.c
+BL2_SOURCES			+=	drivers/st/crypto/stm32_saes.c
+endif
 
 ifneq ($(filter 1,${STM32MP_EMMC} ${STM32MP_SDMMC}),)
 BL2_SOURCES			+=	drivers/st/mmc/stm32_sdmmc2.c
