@@ -520,6 +520,8 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 		break;
 	}
 
+	stm32mp_ca35_lpi_isolate();
+
 	/* Clear previous status */
 	mmio_setbits_32(pwr_base + PWR_CPU1CR, PWR_CPU1CR_CSSF);
 	if (!cpu2_running) {
@@ -612,10 +614,10 @@ static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
 		stm32mp_gic_resume();
 		stm32mp_gic_cpuif_enable();
 
+#if !STM32MP21
 		/* Restore register in CA35SS */
 		stm32mp_ca35_set_vbar(stm32_sec_entrypoint);
 
-#if !STM32MP21
 		/* Start the secondary core if it was running before STOP */
 		if ((core_id == STM32MP_PRIMARY_CPU) &&
 		    stm32mp_state_check(STM32MP_SECONDARY_CPU, STATE_START)) {
@@ -628,6 +630,7 @@ static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
 	case PWRSTATE_LP_STOP1:
 	case PWRSTATE_LPLV_STOP1:
 		VERBOSE("STOP1 exit\n");
+		stm32mp_ca35_lpi_restore();
 		/* Exit DDR self refresh mode after STOP mode */
 		ddr_sr_exit();
 		ddr_restore_sr_mode();
