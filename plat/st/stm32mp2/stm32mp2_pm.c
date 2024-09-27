@@ -1033,6 +1033,13 @@ static void stm32_get_sys_suspend_power_state(psci_power_state_t *req_state)
 		VERBOSE("%s: max_pwr_state = PWRSTATE_LP_STOP2, M33 is running\n", __func__);
 	}
 
+	/* Trace to debug low power mode restriction */
+	if (max_pwr_state != PWRSTATE_STANDBY) {
+		INFO("max_pwr_state=%x C1IMR1=%x C1IMR2=%x C1IMR3=%x CPU2D2SR=%x\n",
+		     max_pwr_state, c1imr1, c1imr2, c1imr3,
+		     mmio_read_32(pwr_base + PWR_CPU2D2SR));
+	}
+
 	/* Search the max supported POWERDOWN modes  <= max_pwr_state */
 	for (i = ARRAY_SIZE(stm32mp_supported_pwr_states) - 1U; i > 0U; i--) {
 		pwr_state = stm32mp_supported_pwr_states[i];
