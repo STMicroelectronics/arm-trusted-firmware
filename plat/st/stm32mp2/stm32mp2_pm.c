@@ -76,6 +76,11 @@ static u_register_t saved_scr_el3;
 static uint32_t lpstop1_pwrlpdly;
 static uint32_t stop2_pwrlpdly;
 
+#if !STM32MP21
+/* bitfield to indicate the modified AMEN bit for LP-SRAM1/2/3 */
+static uint32_t saved_lpsram_amen;
+#endif
+
 /* Support PSCI v1.0 Extended State-ID with the recommended encoding */
 #define LVL_CORE		U(0)
 #define LVL_D1			U(1)
@@ -187,6 +192,61 @@ static void stm32mp_state_set(unsigned int core_id, unsigned int state_id, bool 
 	if (spin_lock_available) {
 		spin_unlock(&stm32mp_state_lock);
 	}
+}
+
+/* LPSRAM1/2/3 autonomous support (AMEN) when D3 is used in low power */
+static void lpsram_autonomous_mode_set(uintptr_t rcc_base)
+{
+#if !STM32MP21 /* STM32MP21 Series don't have D3 domain */
+	const uint32_t mask = RCC_C3CFGR_C3EN | RCC_C3CFGR_C3AMEN;
+
+	/* configure LPSRAM only when C3 is used in autonoumous mode */
+	if ((mmio_read_32(rcc_base + RCC_C3CFGR) & mask) != mask) {
+		return;
+	}
+
+	saved_lpsram_amen = 0U;
+
+	/* force autonomous mode (ANEN) when clock is enabled (EN) and ANEN is not yet set */
+	if ((mmio_read_32(rcc_base + RCC_LPSRAM1CFGR) &
+	     (RCC_LPSRAM1CFGR_LPSRAM1EN | RCC_LPSRAM1CFGR_LPSRAM1AMEN)) ==
+	      RCC_LPSRAM1CFGR_LPSRAM1EN) {
+		mmio_setbits_32(rcc_base + RCC_LPSRAM1CFGR,
+				RCC_LPSRAM1CFGR_LPSRAM1AMEN);
+		saved_lpsram_amen |=  BIT(0);
+	}
+	if ((mmio_read_32(rcc_base + RCC_LPSRAM2CFGR) &
+	     (RCC_LPSRAM2CFGR_LPSRAM2EN | RCC_LPSRAM2CFGR_LPSRAM2AMEN)) ==
+	      RCC_LPSRAM2CFGR_LPSRAM2EN) {
+		mmio_setbits_32(rcc_base + RCC_LPSRAM2CFGR,
+				RCC_LPSRAM2CFGR_LPSRAM2AMEN);
+		saved_lpsram_amen |=  BIT(1);
+	}
+	if ((mmio_read_32(rcc_base + RCC_LPSRAM3CFGR) &
+	     (RCC_LPSRAM3CFGR_LPSRAM3EN | RCC_LPSRAM3CFGR_LPSRAM3AMEN)) ==
+	      RCC_LPSRAM3CFGR_LPSRAM3EN) {
+		mmio_setbits_32(rcc_base + RCC_LPSRAM3CFGR,
+				RCC_LPSRAM3CFGR_LPSRAM3AMEN);
+		saved_lpsram_amen |=  BIT(2);
+	}
+#endif /* !STM32MP21 */
+}
+
+static void lpsram_autonomous_mode_restore(uintptr_t rcc_base)
+{
+#if !STM32MP21
+	if (saved_lpsram_amen & BIT(0))
+		mmio_clrbits_32(rcc_base + RCC_LPSRAM1CFGR,
+				RCC_LPSRAM1CFGR_LPSRAM1AMEN);
+	if (saved_lpsram_amen & BIT(1))
+		mmio_clrbits_32(rcc_base + RCC_LPSRAM2CFGR,
+				RCC_LPSRAM2CFGR_LPSRAM2AMEN);
+	if (saved_lpsram_amen & BIT(2))
+		mmio_clrbits_32(rcc_base + RCC_LPSRAM3CFGR,
+				RCC_LPSRAM3CFGR_LPSRAM3AMEN);
+
+	saved_lpsram_amen = 0U;
+#endif /* !STM32MP21 */
 }
 
 /*******************************************************************************
@@ -460,6 +520,7 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 
 	case PWRSTATE_LPLV_STOP1:
 		print_mode_verbose("LPLV_Stop1");
+		lpsram_autonomous_mode_set(rcc_base);
 		mmio_write_32(pwr_base + PWR_CPU1CR, PWR_CPU1CR_LPDS_D1 | PWR_CPU1CR_LVDS_D1);
 		if (!cpu2_running) {
 			mmio_write_32(pwr_base + PWR_CPU2CR,
@@ -494,6 +555,7 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 
 	case PWRSTATE_LPLV_STOP2:
 		print_mode_info("LPLV_Stop2");
+		lpsram_autonomous_mode_set(rcc_base);
 		mmio_write_32(pwr_base + PWR_CPU1CR, PWR_CPU1CR_PDDS_D1);
 		if (!cpu2_running) {
 			mmio_write_32(pwr_base + PWR_CPU2CR,
@@ -507,6 +569,7 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 
 	case PWRSTATE_STANDBY:
 		print_mode_info("Standby1");
+		lpsram_autonomous_mode_set(rcc_base);
 		mmio_write_32(pwr_base + PWR_CPU1CR, PWR_CPU1CR_PDDS_D1 | PWR_CPU1CR_PDDS_D2);
 		if (!cpu2_running) {
 			mmio_write_32(pwr_base + PWR_CPU2CR, PWR_CPU2CR_PDDS_D2);
@@ -661,6 +724,8 @@ static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
 
 	/* Restore SCR */
 	write_scr_el3(saved_scr_el3);
+
+	lpsram_autonomous_mode_restore(rcc_base);
 
 	/* Core synchronization to protect DDR access */
 	stm32mp_state_set(STM32MP_PRIMARY_CPU, STATE_DDR, true);
