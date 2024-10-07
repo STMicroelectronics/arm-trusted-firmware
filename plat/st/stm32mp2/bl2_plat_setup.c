@@ -494,9 +494,11 @@ skip_console_init:
 	}
 #endif
 
+#if !STM32MP_M33_TDCID
 	if (stm32_rng_init() != 0) {
 		panic();
 	}
+#endif
 
 	if (fixed_regulator_register() != 0) {
 		panic();
