@@ -458,6 +458,7 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 	bool standby __maybe_unused = false;
 	uint32_t stateid = stm32_get_stateid(target_state->pwr_domain_state);
 	bool cpu2_running = stm32_pwr_cpu2_state_is_running(pwr_base);
+	uint32_t pwr_r3cidcfgr = 0U;
 
 	/* If retention only at D1 level return as nothing is to be done */
 	if (stateid == PWRSTATE_RUN) {
@@ -504,6 +505,13 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 	/* Disable DDRSHR to avoid STANDBY/STOP exit issue */
 	mmio_clrbits_32(rcc_base + RCC_DDRITFCFGR, RCC_DDRITFCFGR_DDRSHR);
 #endif
+
+	if (!cpu2_running) {
+		/* Filtering for CID1 = CA35 on PWR resource 3 = PWR_CPU2CR */
+		pwr_r3cidcfgr = mmio_read_32(pwr_base + PWR_R3CIDCFGR);
+		mmio_write_32(pwr_base + PWR_R3CIDCFGR,
+			      (RIF_CID1 << PWR_R3CIDCFGR_SCID_SHIFT) | PWR_R3CIDCFGR_CFEN);
+	}
 
 	/* Perform the PWR configuration for the requested mode */
 	switch (stateid) {
@@ -1293,6 +1301,21 @@ static void stm32_pm_tdcid_init(void *fdt)
 	lpstop1_pwrlpdly = PWRLPDLYCR_VAL(param.lpstop1dly, lsmcu);
 	/* Wait 2ms for Stop2 */
 	stop2_pwrlpdly = PWRLPDLYCR_VAL(2000, lsmcu);
+}
+#endif /* !STM32MP_M33_TDCID */
+
+static void stm32_pm_init(void *fdt)
+{
+	uintptr_t rcc_base = stm32mp_rcc_base();
+
+	stm32mp2_setup_rcc_wakeup_irq(rcc_base);
+
+	/* Clear CSleep and Stop request for CPU1 */
+	mmio_write_32(rcc_base + RCC_C1SREQCLRR, RCC_C1SREQSETR_STPREQ_MASK);
+
+#if !STM32MP_M33_TDCID
+	stm32_pm_tdcid_init(fdt);
+#endif
 }
 #endif /* !STM32MP_M33_TDCID */
 
