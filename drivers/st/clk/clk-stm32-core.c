@@ -444,8 +444,17 @@ int clk_stm32_enable_call_ops(struct stm32_clk_priv *priv, uint16_t id)
 {
 	const struct stm32_clk_ops *ops = _clk_get_ops(priv, id);
 
+	if ((ops->is_enabled != NULL) && ops->is_enabled(priv, id)) {
+		return 0;
+	}
+
 	if (ops->enable != NULL) {
 		ops->enable(priv, id);
+	}
+
+	if ((ops->is_enabled != NULL) && !ops->is_enabled(priv, id)) {
+		ERROR("failed to enable clock id: %u\n", id);
+		panic();
 	}
 
 	return 0;
