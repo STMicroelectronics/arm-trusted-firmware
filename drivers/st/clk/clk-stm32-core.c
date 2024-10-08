@@ -502,11 +502,14 @@ int _clk_stm32_enable(struct stm32_clk_priv *priv, int id)
 
 void clk_stm32_disable_call_ops(struct stm32_clk_priv *priv, uint16_t id)
 {
+/* Do not disable clock when not TDCID */
+#if !STM32MP_M33_TDCID
 	const struct stm32_clk_ops *ops = _clk_get_ops(priv, id);
 
 	if (ops->disable != NULL) {
 		ops->disable(priv, id);
 	}
+#endif
 }
 
 static void _clk_stm32_disable_core(struct stm32_clk_priv *priv, int id)
