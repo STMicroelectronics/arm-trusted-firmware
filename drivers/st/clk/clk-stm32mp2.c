@@ -1805,9 +1805,9 @@ static void stm32mp2_a35_ss_on_bypass(void)
 }
 
 #ifdef IMAGE_BL2
+#if !STM32MP_M33_TDCID
 static void stm32mp2_clk_muxsel_on_hsi(struct stm32_clk_priv *priv)
 {
-#if !STM32MP_M33_TDCID
 	mmio_clrbits_32(priv->base + RCC_MUXSELCFGR,
 			RCC_MUXSELCFGR_MUXSEL0_MASK |
 			RCC_MUXSELCFGR_MUXSEL1_MASK |
@@ -1817,14 +1817,8 @@ static void stm32mp2_clk_muxsel_on_hsi(struct stm32_clk_priv *priv)
 			RCC_MUXSELCFGR_MUXSEL5_MASK |
 			RCC_MUXSELCFGR_MUXSEL6_MASK |
 			RCC_MUXSELCFGR_MUXSEL7_MASK);
-#else
-	/* MUXSEL5 for PLL1 selection = CA35 clock source, always accessible */
-	mmio_clrbits_32(priv->base + RCC_MUXSELCFGR,
-			RCC_MUXSELCFGR_MUXSEL5_MASK);
-#endif
 }
 
-#if !STM32MP_M33_TDCID
 static void stm32mp2_clk_xbar_on_hsi(struct stm32_clk_priv *priv)
 {
 	uintptr_t xbar0cfgr = priv->base + RCC_XBAR0CFGR;
@@ -2005,6 +1999,9 @@ static void clk_stm32_pll_config_csg(struct stm32_clk_priv *priv,
 }
 
 static int stm32_clk_configure_mux(struct stm32_clk_priv *priv, uint32_t data);
+#if STM32MP_M33_TDCID
+static int stm32_clk_check_mux(struct stm32_clk_priv *priv, uint32_t data);
+#endif
 
 static inline struct stm32_pll_dt_cfg *clk_stm32_pll_get_pdata(int pll_idx)
 {
@@ -2023,7 +2020,11 @@ static int _clk_stm32_pll1_init(struct stm32_clk_priv *priv, int pll_idx,
 
 	stm32mp2_a35_ss_on_bypass();
 
+#if STM32MP_M33_TDCID
+	ret = stm32_clk_check_mux(priv, pll_conf->src);
+#else
 	ret = stm32_clk_configure_mux(priv, pll_conf->src);
+#endif
 	if (ret != 0) {
 		panic();
 	}
@@ -2352,8 +2353,8 @@ static int stm32mp2_clk_switch_to_hsi(struct stm32_clk_priv *priv)
 {
 	/* on reset, bypass use HSI for CA35 clock (FLEXGEN63 = ck_cpu1_ext2f) */
 	stm32mp2_a35_ss_on_bypass();
-	stm32mp2_clk_muxsel_on_hsi(priv);
 #if !STM32MP_M33_TDCID
+	stm32mp2_clk_muxsel_on_hsi(priv);
 	stm32mp2_clk_xbar_on_hsi(priv);
 #endif
 
@@ -2414,6 +2415,16 @@ static int stm32_clk_configure_mux(struct stm32_clk_priv *priv, uint32_t data)
 
 	return clk_mux_set_parent(priv, mux_id, sel);
 }
+
+#if STM32MP_M33_TDCID
+static int stm32_clk_check_mux(struct stm32_clk_priv *priv, uint32_t data)
+{
+    int mux_id = (data & MUX_ID_MASK) >> MUX_ID_SHIFT;
+    int sel = (data & MUX_SEL_MASK) >> MUX_SEL_SHIFT;
+
+    return clk_mux_get_parent(priv, mux_id) != sel;
+}
+#endif
 
 static int stm32_clk_configure_clk_get_binding_id(struct stm32_clk_priv *priv, uint32_t data)
 {
