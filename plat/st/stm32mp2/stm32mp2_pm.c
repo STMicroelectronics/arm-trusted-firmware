@@ -840,6 +840,8 @@ static void stm32_system_off(void)
 		}
 	}
 
+	dcsw_op_all(DCCISW);
+
 	/* Force DDR off */
 	ddr_sub_system_clk_off();
 
@@ -866,13 +868,17 @@ static void stm32_system_off(void)
 	/* Deactivate all WakeUp except WKUP pins */
 	mmio_write_32(exti2_base + EXTI2_C1IMR1, 0U);
 	mmio_write_32(exti2_base + EXTI2_C1IMR2, 0U);
+#if !STM32MP21
 	mmio_write_32(exti2_base + EXTI2_C1IMR3, 0U);
+#endif /* !STM32MP21 */
 	mmio_write_32(exti2_base + EXTI2_C2IMR1, 0U);
 	mmio_write_32(exti2_base + EXTI2_C2IMR2, 0U);
+#if !STM32MP21
 	mmio_write_32(exti2_base + EXTI2_C2IMR3, 0U);
 	mmio_write_32(exti2_base + EXTI2_C3IMR1, 0U);
 	mmio_write_32(exti2_base + EXTI2_C3IMR2, 0U);
 	mmio_write_32(exti2_base + EXTI2_C3IMR3, 0U);
+#endif /* !STM32MP21 */
 
 	/* Disable STATE_RUNNING state for this core */
 	stm32mp_state_set(core_id, STATE_RUNNING, false);

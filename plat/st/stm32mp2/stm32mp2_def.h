@@ -346,17 +346,25 @@ enum ddr_type {
 /*******************************************************************************
  * STM32MP2 EXTI2
  ******************************************************************************/
+#if !STM32MP21
 #define STM32MP_EXTI2_BASE			U(0x46230000)
+#else
+#define STM32MP_EXTI2_BASE			U(0x442D0000)
+#endif /* !STM32MP21 */
 
 #define EXTI2_C1IMR1				U(0x80)
 #define EXTI2_C1IMR2				U(0x90)
+#if !STM32MP21
 #define EXTI2_C1IMR3				U(0xA0)
+#endif /* !STM32MP21 */
 #define EXTI2_C2IMR1				U(0xC0)
 #define EXTI2_C2IMR2				U(0xD0)
+#if !STM32MP21
 #define EXTI2_C2IMR3				U(0xE0)
 #define EXTI2_C3IMR1				U(0x100)
 #define EXTI2_C3IMR2				U(0x110)
 #define EXTI2_C3IMR3				U(0x120)
+#endif /* !STM32MP21 */
 
 /*******************************************************************************
  * STM32MP2 GPIO
