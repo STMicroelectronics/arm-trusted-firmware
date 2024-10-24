@@ -482,6 +482,16 @@ void bl2_el3_plat_arch_setup(void)
 
 	stm32_iwdg_refresh();
 
+#if STM32MP_M33_TDCID
+	/*
+	 * boot interface instance must be forced to 2 in case of eMMC
+	 * single boot device to avoid a ROM issue when M33 is TDCID.
+	 */
+	if (boot_context->boot_interface_selected == BOOT_API_CTX_BOOT_INTERFACE_SEL_FLASH_EMMC) {
+		boot_context->boot_interface_instance = 2U;
+	}
+#endif
+
 	if (stm32_save_boot_info(boot_context) != 0) {
 		panic();
 	}
