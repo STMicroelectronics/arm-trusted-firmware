@@ -4,9 +4,17 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+STM32MP_M33_TDCID		?=	0
+
 # Extra partitions used to find FIP, contains:
+ifeq (${STM32MP_M33_TDCID},1)
+# fsbl-m (2), m33ddr (2), m33lp (2), m33fw (2), metadata (2) and the
+# FIP partitions (2)
+STM32_EXTRA_PARTS		:=	12
+else
 # metadata (2) and fsbl-m (2) and the FIP partitions (default is 2).
 STM32_EXTRA_PARTS		:=	6
+endif
 
 include plat/st/common/common.mk
 
@@ -42,7 +50,6 @@ TF_CFLAGS			+=	-DSTM32MP2X
 STM32MP21			?=	0
 STM32MP23			?=	0
 STM32MP25			?=	0
-STM32MP_M33_TDCID		?=	0
 
 ifneq ($(findstring stm32mp21,$(DTB_FILE_NAME)),)
 STM32MP21			:=	1
