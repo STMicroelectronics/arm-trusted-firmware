@@ -8,7 +8,6 @@
 
 #define CMD_DIV		0
 #define CMD_MUX		1
-#define CMD_CLK		2
 #define CMD_FLEXGEN	3
 
 #define CMD_ADDR_BIT	0x80000000
@@ -28,32 +27,6 @@
 
 #define MUX_SEL_SHIFT	0
 #define MUX_SEL_MASK	0x0000000F
-
-/* CLK define */
-#define CLK_ON_MASK	BIT(21)
-#define CLK_ON_SHIFT	21
-
-#define CLK_ID_MASK	GENMASK_32(20, 12)
-#define CLK_ID_SHIFT	12
-
-#define CLK_NO_DIV_MASK	0x0000080
-#define CLK_DIV_MASK	GENMASK_32(10, 5)
-#define CLK_DIV_SHIFT	5
-
-#define CLK_NO_SEL_MASK	0x00000010
-#define CLK_SEL_MASK	GENMASK_32(3, 0)
-#define CLK_SEL_SHIFT	0
-
-#define CLK_CFG(clk_id, sel, div, state)	((CMD_CLK << CMD_SHIFT) |\
-						 ((state) << CLK_ON_SHIFT) |\
-						 ((clk_id) << CLK_ID_SHIFT) |\
-						 ((div) << CLK_DIV_SHIFT) |\
-						 ((sel) << CLK_SEL_SHIFT))
-
-#define CLK_OFF		0
-#define CLK_ON		1
-#define CLK_NODIV	0x00000040
-#define CLK_NOMUX	0x00000010
 
 /* Flexgen define */
 #define FLEX_ID_SHIFT	20

@@ -2426,41 +2426,6 @@ static int stm32_clk_check_mux(struct stm32_clk_priv *priv, uint32_t data)
 }
 #endif
 
-static int stm32_clk_configure_clk_get_binding_id(struct stm32_clk_priv *priv, uint32_t data)
-{
-	unsigned long binding_id = ((unsigned long)data & CLK_ID_MASK) >> CLK_ID_SHIFT;
-
-	return clk_get_index(priv, binding_id);
-}
-
-static int stm32_clk_configure_clk(struct stm32_clk_priv *priv, uint32_t data)
-{
-	int sel = (data & CLK_SEL_MASK) >> CLK_SEL_SHIFT;
-	bool enable = ((data & CLK_ON_MASK) >> CLK_ON_SHIFT) != 0U;
-	int clk_id = 0;
-	int ret = 0;
-
-	clk_id = stm32_clk_configure_clk_get_binding_id(priv, data);
-	if (clk_id < 0) {
-		return clk_id;
-	}
-
-	if (sel != CLK_NOMUX) {
-		ret = _clk_stm32_set_parent_by_index(priv, clk_id, sel);
-		if (ret != 0) {
-			return ret;
-		}
-	}
-
-	if (enable) {
-		clk_stm32_enable_call_ops(priv, clk_id);
-	} else {
-		clk_stm32_disable_call_ops(priv, clk_id);
-	}
-
-	return 0;
-}
-
 static int stm32_clk_configure(struct stm32_clk_priv *priv, uint32_t val)
 {
 	uint32_t cmd = (val & CMD_MASK) >> CMD_SHIFT;
@@ -2474,10 +2439,6 @@ static int stm32_clk_configure(struct stm32_clk_priv *priv, uint32_t val)
 
 	case CMD_MUX:
 		ret = stm32_clk_configure_mux(priv, cmd_data);
-		break;
-
-	case CMD_CLK:
-		ret = stm32_clk_configure_clk(priv, cmd_data);
 		break;
 
 	default:
