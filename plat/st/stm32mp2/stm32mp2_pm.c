@@ -1203,6 +1203,9 @@ static void stm32_pm_init(void *fdt)
 	/* RCC init: DDR is shared by default */
 	mmio_setbits_32(rcc_base + RCC_DDRITFCFGR, RCC_DDRITFCFGR_DDRSHR);
 
+	/* Allow CPU1 (A35) to wake-up from D1 DStop1 */
+	mmio_setbits_32(rcc_base + RCC_CPUBOOTCR, RCC_CPUBOOTCR_BOOT_CPU1);
+
 	/* Legacy mode: only CPU1 is allowed to boot, core1 is OFF */
 	mmio_setbits_32(rcc_base + RCC_LEGBOOTCR, RCC_LEGBOOTCR_LEGACY_BEN);
 
