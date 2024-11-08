@@ -13,6 +13,7 @@
 #include <drivers/delay_timer.h>
 #include <drivers/st/nvmem.h>
 #include <drivers/st/stm32_console.h>
+#include <drivers/st/stm32_uart_regs.h>
 #include <drivers/st/stm32mp_clkfunc.h>
 #include <drivers/st/stm32mp_reset.h>
 #include <lib/mmio.h>
@@ -64,6 +65,7 @@
 #define FWU_INFO_CNT_OFF		U(4)
 
 static console_t console;
+static unsigned long console_clk;
 static struct spinlock lock;
 
 uintptr_t plat_get_ns_image_entrypoint(void)
@@ -334,6 +336,16 @@ static void set_console(uintptr_t base, uint32_t clk_rate)
 	console_set_scope(&console, console_flags);
 }
 
+bool stm32mp_uart_console_is_running(void) {
+
+	uint32_t en_bits = USART_CR1_UE | USART_CR1_TE;
+
+	if(!clk_is_enabled(console_clk))
+		return false;
+
+	return (mmio_read_32(console.base + USART_CR1) & en_bits) == en_bits;
+}
+
 int stm32mp_uart_console_setup(void)
 {
 	struct dt_node_info dt_uart_info;
@@ -350,12 +362,12 @@ int stm32mp_uart_console_setup(void)
 		return -ENODEV;
 	}
 
-#if defined(IMAGE_BL2)
 	if ((dt_uart_info.clock < 0) ||
 	    (dt_uart_info.reset < 0)) {
 		return -ENODEV;
 	}
-#endif
+
+	console_clk = dt_uart_info.clock;
 
 #if STM32MP_UART_PROGRAMMER || !defined(IMAGE_BL2)
 	if ((stm32_get_boot_interface(&boot_itf, &boot_instance) != 0) ||

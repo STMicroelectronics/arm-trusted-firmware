@@ -89,6 +89,9 @@ uintptr_t get_uart_address(uint32_t instance_nb);
 /* Setup the UART console */
 int stm32mp_uart_console_setup(void);
 
+/* Check if uart used as console is suspended */
+bool stm32mp_uart_console_is_running(void);
+
 void stm32_save_header(void);
 uintptr_t stm32_get_header_address(void);
 
