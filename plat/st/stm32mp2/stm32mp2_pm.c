@@ -757,6 +757,9 @@ static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
 	stm32mp_state_set(STM32MP_PRIMARY_CPU, STATE_DDR, true);
 	/* Unblock the other core in CPU standby loop */
 	sev();
+
+	/* Restart console output if stopped previously */
+	console_switch_state(CONSOLE_FLAG_RUNTIME);
 }
 
 static void stm32_pwr_domain_pwr_down_wfi(const psci_power_state_t *target_state)
@@ -935,6 +938,14 @@ static int stm32_validate_power_state(unsigned int power_state,
 	unsigned int state_id;
 	unsigned int i;
 
+	/*
+	 * First function called for a cpu suspend command:
+	 * disable traces when uart suspended
+	 */
+	if (!stm32mp_uart_console_is_running()) {
+		console_switch_state(0);
+	}
+
 	assert(req_state != NULL);
 
 	/*
@@ -984,6 +995,14 @@ static int stm32_validate_power_state(unsigned int power_state,
 
 static int stm32_validate_ns_entrypoint(uintptr_t entrypoint)
 {
+	/*
+	 * First function called for a system suspend command:
+	 * disable traces when uart suspended
+	 */
+	if (!stm32mp_uart_console_is_running()) {
+		console_switch_state(0);
+	}
+
 	/* The non-secure entry point must be in DDR */
 	if (entrypoint < STM32MP_DDR_BASE) {
 		return PSCI_E_INVALID_ADDRESS;
@@ -1338,3 +1357,11 @@ int plat_setup_psci_ops(uintptr_t sec_entrypoint,
 
 	return 0;
 }
+
+/*
+ * This driver disable logs if the uart used as console is not available
+ * in function stm32_validate_power_state() after a cpu suspend command.
+ * But this function is also called by psci_get_stat(), that will never be
+ * called in our context.
+ */
+CASSERT(ENABLE_PSCI_STAT == 0, driver_not_compatible_with_psci_stat);
