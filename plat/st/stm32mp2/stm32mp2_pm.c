@@ -909,10 +909,14 @@ static void stm32_system_off(void)
 #if !STM32MP21
 	mmio_write_32(exti2_base + EXTI2_C1IMR3, 0U);
 #endif /* !STM32MP21 */
+	/* Deactivate CID filtering on EXTI2_C2IMRx */
+	mmio_write_32(exti2_base + EXTI_CmCIDCFGR(1U), 0U);
 	mmio_write_32(exti2_base + EXTI2_C2IMR1, 0U);
 	mmio_write_32(exti2_base + EXTI2_C2IMR2, 0U);
 #if !STM32MP21
 	mmio_write_32(exti2_base + EXTI2_C2IMR3, 0U);
+	/* Deactivate CID filtering on EXTI2_C3IMRx */
+	mmio_write_32(exti2_base + EXTI_CmCIDCFGR(2U), 0U);
 	mmio_write_32(exti2_base + EXTI2_C3IMR1, 0U);
 	mmio_write_32(exti2_base + EXTI2_C3IMR2, 0U);
 	mmio_write_32(exti2_base + EXTI2_C3IMR3, 0U);
