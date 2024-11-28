@@ -825,6 +825,7 @@ static void stm32_system_off(void)
 		panic();
 	}
 
+#if !STM32MP21
 	if (!stm32_freeze_other_core(core_id)) {
 		WARN("PSCI system off with other core running.\n");
 
@@ -837,14 +838,13 @@ static void stm32_system_off(void)
 		/* After reset, the core is stopped, waiting in WFI loop */
 		stm32mp_state_set(STM32MP_SECONDARY_CPU, STATE_START, false);
 
-#if !STM32MP21
 		/* Reset the secondary core */
 		mmio_write_32(RCC_BASE + RCC_C1P1RSTCSETR, RCC_C1P1RSTCSETR_C1P1PORRST);
-#endif /* !STM32MP21 */
 
 		/* Forbid access to DDR */
 		stm32mp_state_set(STM32MP_PRIMARY_CPU, STATE_DDR, false);
 	}
+#endif /* !STM32MP21 */
 
 	/* If CPU2 is not in reset */
 	if (stm32_pwr_cpu2_state_is_running(pwr_base)) {
