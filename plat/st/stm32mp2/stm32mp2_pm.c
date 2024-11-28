@@ -827,7 +827,7 @@ static void stm32_system_off(void)
 
 #if !STM32MP21
 	if (!stm32_freeze_other_core(core_id)) {
-		WARN("PSCI system off with other core running.\n");
+		VERBOSE("PSCI system off with other core running.\n");
 
 		/* Core is no more running */
 		stm32mp_state_set(STM32MP_SECONDARY_CPU, STATE_RUNNING, false);
