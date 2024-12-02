@@ -8,6 +8,7 @@
 
 #include <arch_helpers.h>
 #include <common/debug.h>
+#include <common/tf_crc32.h>
 #include <drivers/clk.h>
 #include <drivers/st/stm32mp1_ddr_helpers.h>
 #include <drivers/st/stm32mp1_ddr_regs.h>
@@ -32,10 +33,14 @@
  * MAILBOX_MAGIC_V3:
  * Context provides V2 content, low power entry point, BL2 code start, end and
  * BL2_END (102 bytes). And, only for STM32MP13, adds MCE master key (16 bytes).
+ *
+ * MAILBOX_MAGIC_V4:
+ * Context provides V3 content, size and CRC protection.
  */
 #define MAILBOX_MAGIC_V1		(0x0001U << 16U)
 #define MAILBOX_MAGIC_V2		(0x0002U << 16U)
 #define MAILBOX_MAGIC_V3		(0x0003U << 16U)
+#define MAILBOX_MAGIC_V4		(0x0004U << 16U)
 #define MAILBOX_MAGIC			(MAILBOX_MAGIC_V3 | \
 					 TRAINING_AREA_SIZE)
 
@@ -65,6 +70,8 @@ struct backup_data_s {
 	uint8_t mce_mkey[MCE_KEY_SIZE_IN_BYTES];
 	struct stm32_mce_region_s mce_regions[MCE_IP_MAX_REGION_NB];
 #endif
+	uint32_t size;
+	uint32_t crc_32;
 };
 
 uint32_t stm32_pm_get_optee_ep(void)
@@ -83,6 +90,7 @@ uint32_t stm32_pm_get_optee_ep(void)
 	case MAILBOX_MAGIC_V1:
 	case MAILBOX_MAGIC_V2:
 	case MAILBOX_MAGIC_V3:
+	case MAILBOX_MAGIC_V4:
 		if (MAGIC_AREA_SIZE(backup_data->magic) != TRAINING_AREA_SIZE) {
 			panic();
 		}
@@ -131,7 +139,7 @@ void stm32_context_save_bl2_param(void)
 	backup_data->bl2_code_base = BL_CODE_BASE;
 	backup_data->bl2_code_end = BL_CODE_END;
 	backup_data->bl2_end = BL2_END;
-	backup_data->magic = MAILBOX_MAGIC_V3;
+	backup_data->magic = MAILBOX_MAGIC_V4;
 	backup_data->zq0cr0_zdata = ddr_get_io_calibration_val();
 
 	clk_disable(BKPSRAM);
@@ -155,9 +163,23 @@ uint32_t stm32_get_zdata_from_context(void)
 	return zdata;
 }
 
+static uint32_t stm32mp_pm_crc_check(struct backup_data_s *data)
+{
+	uint32_t saved_crc;
+	uint32_t crc;
+
+	saved_crc = data->crc_32;
+	data->crc_32 = 0U;
+	crc =  tf_crc32(0U, (unsigned char *)data, data->size);
+	data->crc_32 = saved_crc;
+
+	return crc;
+}
+
 bool stm32_pm_context_is_valid(void)
 {
 	struct backup_data_s *backup_data;
+	uint32_t crc_32 = 0U;
 	bool ret;
 
 	clk_enable(BKPSRAM);
@@ -169,6 +191,22 @@ bool stm32_pm_context_is_valid(void)
 	case MAILBOX_MAGIC_V2:
 	case MAILBOX_MAGIC_V3:
 		ret = true;
+		break;
+	case MAILBOX_MAGIC_V4:
+		if (backup_data->size < sizeof(*backup_data)) {
+			ret = false;
+		} else {
+			crc_32 = stm32mp_pm_crc_check(backup_data);
+			ret = (crc_32 == backup_data->crc_32);
+		}
+		if (!ret) {
+			ERROR("pm context invalid (crc=%x vs %x, size=%u vs %u)\n",
+			      backup_data->crc_32, crc_32, backup_data->size, sizeof(*backup_data));
+			backup_data->magic = 0U;
+		}
+		VERBOSE("%s(crc=%x vs %x, size=%u vs %u, magic=%x vs %x) = %d\n", __func__,
+		        backup_data->crc_32, crc_32, backup_data->size, sizeof(*backup_data),
+		        backup_data->magic, MAILBOX_MAGIC_V4, ret);
 		break;
 	default:
 		ret = false;
