@@ -331,6 +331,7 @@ enum ddr_type {
 #define EXTI1_C1IMR2				U(0x90)
 #define EXTI1_C1IMR3				U(0xA0)
 
+#define EXTI1_C1IMR1_GPIO			GENMASK_32(15, 0)
 #define EXTI1_C1IMR1_PVD			BIT_32(16)
 #define EXTI1_C1IMR1_PVM			BIT_32(17)
 

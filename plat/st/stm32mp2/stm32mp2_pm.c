@@ -1078,13 +1078,13 @@ static void stm32_get_sys_suspend_power_state(psci_power_state_t *req_state)
 	uint32_t c1imr3 = mmio_read_32(exti_base + EXTI1_C1IMR3);
 
 	/* Verify the max level supported according to the activated EXTI1 */
-	if ((c1imr1 & (EXTI1_C1IMR1_PVD | EXTI1_C1IMR1_PVM)) != 0U) {
+	if ((c1imr1 & (EXTI1_C1IMR1_GPIO | EXTI1_C1IMR1_PVD | EXTI1_C1IMR1_PVM)) != 0U) {
 		max_pwr_state = PWRSTATE_LPLV_STOP2;
 		VERBOSE("%s: max_pwr_state = PWRSTATE_LPLV_STOP2 C1IMR1=%x\n", __func__, c1imr1);
 	}
 
 	/* Wake-up pin are connected directly to PWR */
-	if (((c1imr1 & ~(EXTI1_C1IMR1_PVD | EXTI1_C1IMR1_PVM)) != 0U) ||
+	if (((c1imr1 & ~(EXTI1_C1IMR1_GPIO | EXTI1_C1IMR1_PVD | EXTI1_C1IMR1_PVM)) != 0U) ||
 	    ((c1imr2 & ~EXTI1_C1IMR2_WKUP_MASK) != 0U) || (c1imr3 != 0U)) {
 		max_pwr_state = PWRSTATE_LP_STOP2;
 		VERBOSE("%s: max_pwr_state = PWRSTATE_LP_STOP2, C1IMR1=%x, C1IMR2=%x, C1IMR3=%x\n",
