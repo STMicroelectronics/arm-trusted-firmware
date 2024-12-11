@@ -417,15 +417,6 @@ void stm32mp2_ddr_init(struct stm32mp_ddr_priv *priv,
 			panic();
 		}
 
-		VERBOSE("disable DDR PHY retention\n");
-		if (cid_filtering) {
-			ddr_disable_cid_filtering();
-		}
-		mmio_setbits_32(priv->pwr + PWR_CR11, PWR_CR11_DDRRETDIS);
-		if (cid_filtering) {
-			ddr_enable_cid_filtering();
-		}
-
 		ddr_reset(priv);
 
 		ddr_sysconf_configuration(priv, config);
@@ -445,8 +436,21 @@ void stm32mp2_ddr_init(struct stm32mp_ddr_priv *priv,
 	stm32mp_ddr_set_reg(priv, REG_PERF, &config->c_perf, ddr_registers);
 
 	if (!config->self_refresh) {
+		VERBOSE("disable DDR PHY retention\n");
+		if (cid_filtering) {
+			ddr_disable_cid_filtering();
+		}
+		mmio_setbits_32(priv->pwr + PWR_CR11, PWR_CR11_DDRRETDIS);
+		if (cid_filtering) {
+			ddr_enable_cid_filtering();
+		}
+
+		udelay(DDR_DELAY_1US);
+
 		/*  DDR core and PHY reset de-assert */
 		mmio_clrbits_32(priv->rcc + RCC_DDRITFCFGR, RCC_DDRITFCFGR_DDRRST);
+
+		udelay(DDR_DELAY_1US);
 
 		disable_refresh(priv->ctl);
 	}

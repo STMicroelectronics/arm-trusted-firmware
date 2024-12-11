@@ -316,6 +316,8 @@ static int sr_ssr_entry(bool standby)
 		if (cid_filtering) {
 			ddr_enable_cid_filtering();
 		}
+
+		udelay(DDR_DELAY_1US);
 	}
 
 	mmio_clrsetbits_32(rcc_base + RCC_DDRCPCFGR, RCC_DDRCPCFGR_DDRCPLPEN,
@@ -545,6 +547,8 @@ void ddr_sub_system_clk_off(void)
 	if (cid_filtering) {
 		ddr_enable_cid_filtering();
 	}
+
+	udelay(DDR_DELAY_1US);
 
 	/* Reset DDR sub system */
 	mmio_write_32(rcc_base + RCC_DDRCPCFGR, RCC_DDRCPCFGR_DDRCPRST);
