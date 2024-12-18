@@ -161,6 +161,11 @@
 	};
 };
 
+&iwdg1 {
+	timeout-sec = <32>;
+	status = "okay";
+};
+
 &pwr {
 	vddio1: vddio1 {
 		vddio1-supply = <&vddio_sdcard>;
