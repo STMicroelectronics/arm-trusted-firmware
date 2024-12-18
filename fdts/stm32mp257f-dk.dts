@@ -53,6 +53,10 @@
 	vddq-supply = <&vdd2_ddr>;
 };
 
+&hash {
+	status = "okay";
+};
+
 &i2c7 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c7_pins_a>;
@@ -175,7 +179,15 @@
 	};
 };
 
+&pka {
+	status = "okay";
+};
+
 &rng {
+	status = "okay";
+};
+
+&saes {
 	status = "okay";
 };
 
