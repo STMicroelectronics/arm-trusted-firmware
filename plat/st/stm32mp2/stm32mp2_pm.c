@@ -903,8 +903,10 @@ static void stm32_system_off(void)
 
 	dcsw_op_all(DCCISW);
 
+#if !STM32MP_M33_TDCID
 	/* Force DDR off */
 	ddr_sub_system_clk_off();
+#endif
 
 	/* Prevent interrupts from spuriously waking up this cpu */
 	stm32mp_gic_cpuif_disable();
