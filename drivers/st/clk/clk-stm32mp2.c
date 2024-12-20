@@ -26,11 +26,14 @@
 #ifdef IMAGE_BL31
 static uint32_t saved_pll_freq1_reg;
 static uint32_t saved_pll_freq2_reg;
+#if !STM32MP_M33_TDCID
 static uint32_t saved_findiv2cfgr;
-static uint32_t saved_findiv5cfgr;
-static uint32_t saved_findiv63cfgr;
 static uint32_t saved_xbar2cfgr;
+
+static uint32_t saved_findiv5cfgr;
 static uint32_t saved_xbar5cfgr;
+#endif /* STM32MP_M33_TDCID */
+static uint32_t saved_findiv63cfgr;
 static uint32_t saved_xbar63cfgr;
 #endif
 
@@ -2863,18 +2866,19 @@ int stm32mp2_pll1_disable(void)
 	saved_pll_freq2_reg = mmio_read_32(pll_freq2_reg);
 
 	/* save FLEXGEN MUX setting */
-	saved_findiv2cfgr = mmio_read_32(stm32mp2_clock_data.base + RCC_FINDIV2CFGR);
-	saved_findiv5cfgr = mmio_read_32(stm32mp2_clock_data.base + RCC_FINDIV5CFGR);
 	saved_findiv63cfgr = mmio_read_32(stm32mp2_clock_data.base + RCC_FINDIV63CFGR);
-	saved_xbar2cfgr = mmio_read_32(stm32mp2_clock_data.base + RCC_XBAR2CFGR);
-	saved_xbar5cfgr = mmio_read_32(stm32mp2_clock_data.base + RCC_XBAR5CFGR);
 	saved_xbar63cfgr = mmio_read_32(stm32mp2_clock_data.base + RCC_XBAR63CFGR);
+#if !STM32MP_M33_TDCID
+	saved_findiv2cfgr = mmio_read_32(stm32mp2_clock_data.base + RCC_FINDIV2CFGR);
+	saved_xbar2cfgr = mmio_read_32(stm32mp2_clock_data.base + RCC_XBAR2CFGR);
+	saved_findiv5cfgr = mmio_read_32(stm32mp2_clock_data.base + RCC_FINDIV5CFGR);
+	saved_xbar5cfgr = mmio_read_32(stm32mp2_clock_data.base + RCC_XBAR5CFGR);
 
 	/*
 	 * use the clock tree expected by ROM code to avoid a poling timeout
 	 * issue for wake up of Stop2 low power modes, so use HSI for
-	 * flexgen 2 : ck_icn_ddr (ck_icn_m_cpu1)
-	 * flexgen 5 : ck_icn_nic (ck_icn_s_bootrom)
+	 * flexgen 2 : ck_icn_ddr (ck_icn_m_cpu1)            (when CA35TDCID)
+	 * flexgen 5 : ck_icn_nic (ck_icn_s_bootrom)         (when CA35TDCID)
 	 * flexgen 63 : ck_cpu1_ext2f, the CA35 bypass clock
 	 */
 
@@ -2903,6 +2907,7 @@ int stm32mp2_pll1_disable(void)
 			panic();
 		}
 	}
+#endif /* STM32MP_M33_TDCID */
 
 	if ((saved_xbar63cfgr & RCC_XBAR63CFGR_XBAR63SEL_MASK) != XBAR_SRC_HSI) {
 		mmio_clrsetbits_32(stm32mp2_clock_data.base + RCC_XBAR63CFGR,
@@ -2942,6 +2947,7 @@ int stm32mp2_pll1_enable(void)
 		panic();
 	}
 
+#if !STM32MP_M33_TDCID
 	/* restore FLEXGEN MUX setting */
 	if ((saved_xbar2cfgr & RCC_XBAR2CFGR_XBAR2SEL_MASK) != XBAR_SRC_HSI) {
 		mmio_write_32(stm32mp2_clock_data.base + RCC_FINDIV2CFGR, saved_findiv2cfgr);
@@ -2965,6 +2971,7 @@ int stm32mp2_pll1_enable(void)
 		}
 	}
 
+#endif /* STM32MP_M33_TDCID */
 	if ((saved_xbar63cfgr & RCC_XBAR63CFGR_XBAR63SEL_MASK) != XBAR_SRC_HSI) {
 		mmio_write_32(stm32mp2_clock_data.base + RCC_FINDIV63CFGR, saved_findiv63cfgr);
 		if (wait_findivsr(63) != 0) {
