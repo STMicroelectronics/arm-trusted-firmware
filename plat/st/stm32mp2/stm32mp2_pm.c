@@ -409,6 +409,17 @@ static bool stm32_pwr_cpu2_state_is_running(uintptr_t pwr_base)
 #endif
 }
 
+#if !STM32MP_M33_TDCID
+static bool stm32_pwr_cpu3_state_is_running(__maybe_unused uintptr_t pwr_base)
+{
+#if STM32MP21
+	return false;
+#else
+	return (mmio_read_32(pwr_base + PWR_CPU3D3SR) & PWR_CPU3D3SR_CSTATE_MASK) != 0U;
+#endif
+}
+#endif
+
 static int stm32_pwr_domain_validate_suspend(const psci_power_state_t *target_state)
 {
 	uintptr_t pwr_base = stm32mp_pwr_base();
@@ -773,6 +784,7 @@ static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
 static void stm32_pwr_domain_pwr_down_wfi(const psci_power_state_t *target_state)
 {
 	u_register_t mpidr = read_mpidr();
+	uintptr_t pwr_base __maybe_unused = stm32mp_pwr_base();
 	unsigned int core_id = MPIDR_AFFLVL0_VAL(mpidr);
 
 	/* Core is no more running (stopped or suspended) */
@@ -805,6 +817,14 @@ static void stm32_pwr_domain_pwr_down_wfi(const psci_power_state_t *target_state
 		/* Save the context when all the core are requested to stop */
 		stm32_pm_context_save(target_state);
 	}
+
+#if !STM32MP_M33_TDCID
+	bool is_cpu3_running = stm32_pwr_cpu3_state_is_running(pwr_base);
+	if (psci_is_last_on_cpu_safe(plat_my_core_pos()) && is_cpu3_running) {
+		/* Send an IRQ to the M0+ using EXTI2 C1SEV to warn about D1/D2 standby. */
+		mmio_write_32(STM32MP_EXTI2_BASE + EXTI2_SWIER2, EXTI2_C1SEV);
+        }
+#endif /* !STM32MP_M33_TDCID */
 
 	/* Synchronize instruction flow before auto-reset from WFI */
 	isb();

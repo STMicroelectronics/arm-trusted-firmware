@@ -362,6 +362,7 @@ enum ddr_type {
 #define STM32MP_EXTI2_BASE			U(0x442D0000)
 #endif /* !STM32MP21 */
 
+#define EXTI2_SWIER2				U(0x28)
 #define EXTI2_C1IMR1				U(0x80)
 #define EXTI2_C1IMR2				U(0x90)
 #if !STM32MP21
@@ -377,6 +378,8 @@ enum ddr_type {
 #endif /* !STM32MP21 */
 
 #define EXTI_CmCIDCFGR(n)			(0x300U + ((n) * 4U))
+#define EXTI2_BIT(_id)				BIT_32(_id % 32)
+#define EXTI2_C1SEV				EXTI2_BIT(60)
 
 /*******************************************************************************
  * STM32MP2 GPIO
