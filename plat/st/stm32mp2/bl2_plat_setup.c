@@ -817,4 +817,7 @@ void bl2_el3_plat_prepare_exit(void)
 
 	/* Unmask potential tamper before exit */
 	stm32mp_syscfg_mask_potential_tamper_disable();
+
+	/* Increment hide protection level */
+	bsec_increment_hdpl();
 }
