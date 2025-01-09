@@ -24,6 +24,10 @@
 
 #define MAX_NB_TRIES		U(3)
 
+#if STM32MP21
+#define BSEC_HDPL2		U(0x8A)
+#endif /* STM32MP21 */
+
 /*
  * IP configuration
  */
@@ -527,3 +531,21 @@ uint32_t bsec_read_otp(uint32_t *val, uint32_t otp)
 
 	return bsec_shadow_read_otp(val, otp);
 }
+
+#if STM32MP21
+/*
+ * bsec_increment_hdpl: increment HDPL level
+ */
+void bsec_increment_hdpl(void)
+{
+	uint32_t hdpl;
+
+	mmio_write_32(BSEC_BASE + BSEC_HDPLACR, BSEC_HDPLACR_INC_MAGIC);
+
+	hdpl = mmio_read_32(BSEC_BASE + BSEC_HDPLASR) & BSEC_HDPLASR_HDPL;
+	if (hdpl != BSEC_HDPL2) {
+		ERROR("Failed to increment HDPL : 0x%x\n", hdpl);
+		panic();
+	}
+}
+#endif /* STM32MP21 */

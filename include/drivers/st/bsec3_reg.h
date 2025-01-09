@@ -29,6 +29,10 @@
 #define BSEC_UNMAPR			U(0xE24)
 #define BSEC_SR				U(0xE40)
 #define BSEC_OTPSR			U(0xE44)
+#if STM32MP21
+#define BSEC_HDPLASR			U(0xEB4)
+#define BSEC_HDPLACR			U(0xEB8)
+#endif /* STM32MP21 */
 #define BSEC_WRCR			U(0xF00)
 #define BSEC_HWCFGR			U(0xFF0)
 #define BSEC_VERR			U(0xFF4)
@@ -104,6 +108,14 @@
 #define BSEC_OTPSR_PPLF			BIT_32(20)
 #define BSEC_OTPSR_PPLMF		BIT_32(21)
 #define BSEC_OTPSR_AMEF			BIT_32(22)
+
+#if STM32MP21
+/* BSEC_HDPLASR register fields */
+#define BSEC_HDPLASR_HDPL		GENMASK_32(7, 0)
+
+/* BSEC_HDPLACR register fields */
+#define BSEC_HDPLACR_INC_MAGIC		U(0x60B166E7)
+#endif /* STM32MP21 */
 
 /* BSEC_VERR register fields */
 #define BSEC_VERR_MASK			GENMASK_32(7, 0)
