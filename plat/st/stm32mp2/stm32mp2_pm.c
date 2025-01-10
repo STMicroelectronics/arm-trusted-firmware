@@ -400,7 +400,7 @@ static bool stm32_freeze_other_core(unsigned int core_id)
 	return result;
 }
 
-static bool stm32_pwr_cpu2_state_is_running(uintptr_t pwr_base)
+static bool stm32_pwr_cpu2_state_is_running(__maybe_unused uintptr_t pwr_base)
 {
 #if STM32MP_M33_TDCID
 	return true;
