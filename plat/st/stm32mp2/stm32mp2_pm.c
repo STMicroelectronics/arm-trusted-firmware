@@ -78,9 +78,15 @@ static uint32_t lpstop1_pwrlpdly;
 static uint32_t stop2_pwrlpdly;
 #endif
 
-#if !STM32MP21 && !STM32MP_M33_TDCID
+/* PM data saved in pm context during Standby */
+#if STM32MP21 || STM32MP_M33_TDCID
+#define PM_CTX_DATA	NULL
+#define PM_CTX_SIZE	U(0)
+#else
 /* bitfield to indicate the modified AMEN bit for LP-SRAM1/2/3 */
 static uint32_t saved_lpsram_amen;
+#define PM_CTX_DATA	&saved_lpsram_amen
+#define PM_CTX_SIZE	sizeof(saved_lpsram_amen)
 #endif
 
 /* Support PSCI v1.0 Extended State-ID with the recommended encoding */
@@ -815,7 +821,7 @@ static void stm32_pwr_domain_pwr_down_wfi(const psci_power_state_t *target_state
 	if (psci_is_last_on_cpu_safe(plat_my_core_pos()) &&
 	    stm32_get_stateid(target_state->pwr_domain_state) == PWRSTATE_STANDBY) {
 		/* Save the context when all the core are requested to stop */
-		stm32_pm_context_save(target_state);
+		stm32_pm_context_save(target_state, PM_CTX_DATA, PM_CTX_SIZE);
 	}
 
 #if !STM32MP_M33_TDCID
@@ -1404,6 +1410,14 @@ int plat_setup_psci_ops(uintptr_t sec_entrypoint,
 	*psci_ops = &stm32_psci_ops;
 
 	return 0;
+}
+
+/*******************************************************************************
+ * PM init after Standby
+ ******************************************************************************/
+void stm32_pm_context_init(void)
+{
+	stm32_pm_context_restore(PM_CTX_DATA, PM_CTX_SIZE);
 }
 
 /*

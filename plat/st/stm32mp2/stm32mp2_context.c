@@ -22,6 +22,9 @@
 #define BACKUP_CTX_CLK		CK_BUS_BKPSRAM
 #define ENC_KEY_SIZE_IN_BYTES	RISAF_KEY_SIZE_IN_BYTES
 
+/* Size of data for caller, the PM functions */
+#define DATA_SIZE		U(4)
+
 /* Magic used to indicated valid = ' ' 'M' 'P' '2' */
 #define CONTEXT_MAGIC			0x204D5032
 
@@ -37,6 +40,7 @@ struct backup_data_s {
 	optee_context_t opteed_sp_context[OPTEED_CORE_COUNT];
 #endif
 	uintptr_t fdt_bl31;
+	uint8_t data[DATA_SIZE];
 };
 
 void stm32mp_pm_save_enc_mkey_in_context(uint8_t *data)
@@ -80,7 +84,7 @@ bool stm32_pm_context_is_valid(void)
 	return ret;
 }
 
-void stm32_pm_context_save(const psci_power_state_t *state)
+void stm32_pm_context_save(const psci_power_state_t *state, const void *data, size_t size)
 {
 	void *cpu_context;
 	struct backup_data_s *backup_data;
@@ -119,10 +123,15 @@ void stm32_pm_context_save(const psci_power_state_t *state)
 	fdt_get_address(&fdt);
 	backup_data->fdt_bl31 = (uintptr_t)fdt;
 
+	/* Copy other data in Backup SRAM */
+	assert(size <= (size_t)DATA_SIZE);
+	if ((data != NULL) && (size != 0U)) {
+		(void)memcpy(&backup_data->data, data, MIN(size, (size_t)DATA_SIZE));
+	}
 	clk_disable(BACKUP_CTX_CLK);
 }
 
-void stm32_pm_context_restore(void)
+void stm32_pm_context_restore(void *data, size_t size)
 {
 	void *cpu_context;
 	struct backup_data_s *backup_data;
@@ -165,6 +174,10 @@ void stm32_pm_context_restore(void)
 	if (ret < 0) {
 		ERROR("%s: failed to open DT (%d)\n", __func__, ret);
 		panic();
+	}
+
+	if ((data != NULL) && (size != 0U)) {
+		(void)memcpy(data, (const void *)&backup_data->data, MIN(size, (size_t)DATA_SIZE));
 	}
 
 	clk_disable(BACKUP_CTX_CLK);

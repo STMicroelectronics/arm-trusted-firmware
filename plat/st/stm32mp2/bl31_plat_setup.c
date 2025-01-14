@@ -137,7 +137,7 @@ void bl31_plat_arch_setup(void)
 		/* Initialize the runtime services e.g. PSCI. */
 		runtime_svc_init();
 
-		stm32_pm_context_restore();
+		stm32_pm_context_init();
 
 		/* Jump manually to BL31 warm entry point, with MMU disabled. */
 		dsbsy();
