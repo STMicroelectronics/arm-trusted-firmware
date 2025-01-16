@@ -624,6 +624,9 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 		}
 #endif
 		stm32mp_gic_cpuif_disable();
+#if STM32MP_M33_TDCID
+		stm32mp_gic_save();
+#endif
 		stm32mp2_pll1_disable();
 		break;
 
@@ -714,7 +717,26 @@ static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
 	switch (stateid) {
 	case PWRSTATE_STANDBY:
 		VERBOSE("STANDBY exit\n");
-#if !STM32MP_M33_TDCID
+#if STM32MP_M33_TDCID
+		/* Restore system for warmboot after D1 DStandby exit */
+		if ((mmio_read_32(rcc_base + RCC_C1BOOTRSTSCLRR) &
+		     RCC_C1BOOTRSTSCLRR_STBYC1RSTF) == 0U) {
+			stm32mp_stgen_config(clk_get_rate(CK_KER_STGEN));
+			stm32mp2_pll1_enable();
+			stm32mp_gic_resume();
+			stm32mp_gic_cpuif_enable();
+#if !STM32MP21
+			stm32mp_ca35_set_vbar(stm32_sec_entrypoint);
+			/* Start the secondary core if it was running before Standby */
+			if ((core_id == STM32MP_PRIMARY_CPU) &&
+			    stm32mp_state_check(STM32MP_SECONDARY_CPU, STATE_START)) {
+				/* Reset the secondary core to execute warm boot */
+				mmio_write_32(RCC_BASE + RCC_C1P1RSTCSETR,
+					      RCC_C1P1RSTCSETR_C1P1PORRST);
+			}
+#endif /* !STM32MP21 */
+		}
+#else
 		/* Restore the DDR self refresh mode */
 		ddr_restore_sr_mode();
 #endif
