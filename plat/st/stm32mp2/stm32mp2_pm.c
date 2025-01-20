@@ -1420,6 +1420,9 @@ int plat_setup_psci_ops(uintptr_t sec_entrypoint,
 void stm32_pm_context_init(void)
 {
 	stm32_pm_context_restore(PM_CTX_DATA, PM_CTX_SIZE);
+
+	/* Clear PM context in BKPSRAM: cold boot at next wake-up */
+	stm32_pm_context_clear();
 }
 
 /*
