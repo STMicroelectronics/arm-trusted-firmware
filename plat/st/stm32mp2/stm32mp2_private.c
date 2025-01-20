@@ -637,6 +637,10 @@ bool stm32mp_is_wakeup_from_standby(void)
 		if ((rstsr & RCC_C1BOOTRSTSCLRR_PADRSTF) != 0U) {
 			return false;
 		}
+		/* CPU1=CA35 reset performed by CPU2=M33 */
+		if ((rstsr & RCC_C1BOOTRSTSCLRR_STBYC1RSTF) == 0U) {
+			return false;
+		}
 		if (stm32_pm_context_is_valid()) {
 			standby = 1;
 		} else {
