@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <common/tf_crc32.h>
 #include <drivers/clk.h>
 #include <lib/el3_runtime/context_mgmt.h>
 #include <lib/el3_runtime/cpu_data.h>
@@ -26,10 +27,22 @@
 #define DATA_SIZE		U(4)
 
 /* Magic used to indicated valid = ' ' 'M' 'P' '2' */
-#define CONTEXT_MAGIC			0x204D5032
+#define CONTEXT_MAGIC			U(0x204D5032)
+
+/* VERSION to check compatibility of pm backup data between bl2 and bl31 */
+#define ST_CTX_VER_MAJOR		1U
+#define ST_CTX_VER_MINOR		0U
+#define ST_CTX_VERSION			((ST_CTX_VER_MAJOR << 8U) | ST_CTX_VER_MINOR)
+#define ST_CTX_VER_GET_MAJOR(version)	(((version) & GENMASK_32(15, 8)) >> 8U)
+#define ST_CTX_VER_GET_MINOR(version)	((version) & GENMASK_32(7, 0))
 
 struct backup_data_s {
 	uint32_t magic;
+#if STM32MP_CONTEXT_VERSION
+	uint16_t version;
+	uint16_t size;
+	uint32_t crc_32;
+#endif
 	uint8_t enc_mkey[ENC_KEY_SIZE_IN_BYTES];
 	psci_power_state_t standby_pwr_state;
 	cpu_context_t saved_cpu_s_context[PLATFORM_CORE_COUNT];
@@ -42,6 +55,20 @@ struct backup_data_s {
 	uintptr_t fdt_bl31;
 	uint8_t data[DATA_SIZE];
 };
+
+#if STM32MP_CONTEXT_VERSION
+static uint32_t stm32mp_pm_crc_check(struct backup_data_s *data)
+{
+	uint32_t saved_crc = data->crc_32;
+	uint32_t crc;
+
+	data->crc_32 = 0U;
+	crc =  tf_crc32(0U, (unsigned char *)data, data->size);
+	data->crc_32 = saved_crc;
+
+	return crc;
+}
+#endif
 
 void stm32mp_pm_save_enc_mkey_in_context(uint8_t *data)
 {
@@ -72,13 +99,45 @@ void stm32mp_pm_get_enc_mkey_from_context(uint8_t *data)
 bool stm32_pm_context_is_valid(void)
 {
 	struct backup_data_s *backup_data;
-	bool ret;
+	bool ret = true;
+#if STM32MP_CONTEXT_VERSION
+	uint32_t crc_32 = 0U;
+#endif
 
 	backup_data = (struct backup_data_s *)BACKUP_CTX_ADDR;
 
 	clk_enable(BACKUP_CTX_CLK);
 
-	ret = (backup_data->magic == CONTEXT_MAGIC);
+	if (backup_data->magic != CONTEXT_MAGIC) {
+		ret = false;
+	} else {
+#if STM32MP_CONTEXT_VERSION
+		if ((ST_CTX_VER_GET_MAJOR(backup_data->version) != ST_CTX_VER_MAJOR) ||
+		    (ST_CTX_VER_GET_MINOR(backup_data->version) < ST_CTX_VER_MINOR) ||
+		    (backup_data->size < sizeof(*backup_data))) {
+			ret = false;
+		} else {
+			crc_32 = stm32mp_pm_crc_check(backup_data);
+			if (crc_32 != backup_data->crc_32) {
+				ret = false;
+			}
+		}
+
+		if (!ret) {
+			ERROR("pm context invalid (crc=%x vs %x, size=%u vs %lu, ver=%x vs %x)\n",
+			      backup_data->crc_32, crc_32, backup_data->size, sizeof(*backup_data),
+			      backup_data->version, ST_CTX_VERSION);
+			backup_data->magic = 0U;
+		}
+#endif
+	}
+
+#if STM32MP_CONTEXT_VERSION
+	VERBOSE("%s(crc=%x vs %x, size=%u vs %lu, ver=%x vs %x) = %d\n", __func__,
+	        backup_data->crc_32, crc_32, backup_data->size, sizeof(*backup_data),
+	        backup_data->version, ST_CTX_VERSION, ret);
+#endif
+
 	clk_disable(BACKUP_CTX_CLK);
 
 	return ret;
@@ -128,6 +187,16 @@ void stm32_pm_context_save(const psci_power_state_t *state, const void *data, si
 	if ((data != NULL) && (size != 0U)) {
 		(void)memcpy(&backup_data->data, data, MIN(size, (size_t)DATA_SIZE));
 	}
+
+#if STM32MP_CONTEXT_VERSION
+	backup_data->version = ST_CTX_VERSION;
+	backup_data->size = (uint16_t)sizeof(*backup_data);
+	backup_data->crc_32 = stm32mp_pm_crc_check(backup_data);
+
+	VERBOSE("%s(crc=%x, size=%u, version=%x)\n", __func__,
+	        backup_data->crc_32, backup_data->size, backup_data->version);
+#endif
+
 	clk_disable(BACKUP_CTX_CLK);
 }
 
@@ -192,6 +261,11 @@ void stm32_pm_context_clear(void)
 	clk_enable(BACKUP_CTX_CLK);
 
 	backup_data->magic = 0U;
+#if STM32MP_CONTEXT_VERSION
+	backup_data->version = 0U;
+	backup_data->size = 0U;
+	backup_data->crc_32 = 0U;
+#endif
 
 	clk_disable(BACKUP_CTX_CLK);
 }
