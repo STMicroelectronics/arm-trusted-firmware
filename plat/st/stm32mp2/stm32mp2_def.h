@@ -759,5 +759,6 @@ enum ddr_type {
 #define DT_SDMMC2_COMPAT			"st,stm32mp25-sdmmc2"
 #define DT_TAMP_NVRAM_COMPAT			"st,stm32mp25-tamp-nvram"
 #define DT_UART_COMPAT				"st,stm32h7-uart"
+#define DT_CPU_COMPAT				"arm,cortex-a35"
 
 #endif /* STM32MP2_DEF_H */
