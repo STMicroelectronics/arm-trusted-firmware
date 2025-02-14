@@ -132,6 +132,13 @@ STM32MP_DDR_DUAL_AXI_PORT	:=	0
 STM32MP_DDR_FIP_IO_STORAGE	:=	0
 endif #STM32MP_M33_TDCID
 
+# SIP support
+ifeq ($(STM32MP_M33_TDCID),0)
+STM32MP_SIP_CA33SS_CLK    ?=    0
+else
+STM32MP_SIP_CA33SS_CLK    ?=    1
+endif
+
 # Device tree
 ifeq ($(STM32MP21),1)
 BL2_DTSI			:=	stm32mp21-bl2.dtsi
@@ -222,6 +229,7 @@ $(eval $(call assert_booleans,\
 		STM32MP21 \
 		STM32MP23 \
 		STM32MP25 \
+		STM32MP_SIP_CA33SS_CLK \
 		STM32MP_BL33_EL1 \
 )))
 
@@ -259,6 +267,7 @@ $(eval $(call add_defines,\
 		STM32MP_LPDDR4_TYPE \
 		STM32MP_M33_TDCID \
 		STM32MP_USE_EXTERNAL_HEAP \
+		STM32MP_SIP_CA33SS_CLK \
 		STM32MP21 \
 		STM32MP23 \
 		STM32MP25 \
@@ -415,6 +424,10 @@ BL31_SOURCES			+=	plat/st/common/stm32mp_svc_setup.c			\
 
 # Arm Archtecture services
 BL31_SOURCES			+=	services/arm_arch_svc/arm_arch_svc_setup.c
+
+ifeq (${STM32MP_SIP_CA33SS_CLK},1)
+BL31_SOURCES += plat/st/stm32mp2/services/ca35ss_clk_svc.c
+endif
 
 # Compilation rules
 .SUFFIXES:
