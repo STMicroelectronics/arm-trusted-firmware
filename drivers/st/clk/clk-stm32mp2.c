@@ -60,6 +60,19 @@ struct stm32_clk_platdata {
 	uint32_t *kernelclk;
 };
 
+#ifdef IMAGE_BL31
+#define PLL1_CFG_MAX_NB		4
+
+struct stm32_pll1_cfgs {
+	struct stm32_pll_dt_cfg cfgs[PLL1_CFG_MAX_NB];
+	uint64_t rates[PLL1_CFG_MAX_NB];
+	uint64_t prate;
+	int32_t pll1_cfg_nb;
+};
+
+static struct stm32_pll1_cfgs pll1_cfgs;
+#endif /* IMAGE_BL31 */
+
 /* A35 Sub-System which manages its own PLL (PLL1) */
 #define A35_SS_CHGCLKREQ	0x0000
 #define A35_SS_PLL_FREQ1	0x0080
@@ -1875,9 +1888,8 @@ static int stm32mp2_a35_pll1_start(void)
 	return 0;
 }
 
-#ifdef IMAGE_BL2
-static void stm32mp2_a35_pll1_config(uint32_t fbdiv, uint32_t refdiv, uint32_t postdiv1,
-				     uint32_t postdiv2)
+static void stm32mp2_a35_pll1_config(uint32_t fbdiv, uint32_t refdiv,
+				     uint32_t postdiv1, uint32_t postdiv2)
 {
 	uintptr_t a35_ss_address = A35SSC_BASE;
 	uintptr_t pll_freq1_reg = a35_ss_address + A35_SS_PLL_FREQ1;
@@ -1900,6 +1912,7 @@ static void stm32mp2_a35_pll1_config(uint32_t fbdiv, uint32_t refdiv, uint32_t p
 			   A35_SS_PLL_FREQ2_POSTDIV2_MASK);
 }
 
+#ifdef IMAGE_BL2
 static int clk_stm32_pll_config_output(struct stm32_clk_priv *priv,
 				       const struct stm32_clk_pll *pll,
 				       uint32_t *pllcfg,
@@ -2615,23 +2628,13 @@ static int stm32_clk_parse_fdt_all_oscillator(void *fdt, struct stm32_clk_platda
 
 	return 0;
 }
+#endif /* IMAGE_BL2 */
 
-static int clk_stm32_parse_pll_fdt(void *fdt, int subnode, struct stm32_pll_dt_cfg *pll)
+static int clk_stm32_parse_pll_cfg_fdt(void *fdt, struct stm32_pll_dt_cfg *pll,
+				       int subnode_pll)
 {
-	const fdt32_t *cuint = NULL;
-	int subnode_pll = 0;
 	uint32_t val = 0;
 	int err = 0;
-
-	cuint = fdt_getprop(fdt, subnode, "st,pll", NULL);
-	if (!cuint) {
-		return -FDT_ERR_NOTFOUND;
-	}
-
-	subnode_pll = fdt_node_offset_by_phandle(fdt, fdt32_to_cpu(*cuint));
-	if (subnode_pll < 0) {
-		return -FDT_ERR_NOTFOUND;
-	}
 
 	err = fdt_read_uint32_array(fdt, subnode_pll, "cfg", (int)PLLCFG_NB, pll->cfg);
 	if (err != 0) {
@@ -2662,6 +2665,27 @@ static int clk_stm32_parse_pll_fdt(void *fdt, int subnode, struct stm32_pll_dt_c
 	}
 
 	return 0;
+}
+
+#ifdef IMAGE_BL2
+static int clk_stm32_parse_pll_fdt(void *fdt, int subnode,
+				   struct stm32_pll_dt_cfg *pll)
+{
+	const fdt32_t *cuint = NULL;
+	int subnode_pll = 0;
+
+	cuint = fdt_getprop(fdt, subnode, "st,pll", NULL);
+	if (cuint == NULL) {
+		return -FDT_ERR_NOTFOUND;
+	}
+
+	subnode_pll = fdt_node_offset_by_phandle(fdt, fdt32_to_cpu(*cuint));
+
+	if (subnode_pll < 0) {
+		return -FDT_ERR_NOTFOUND;
+	}
+
+	return clk_stm32_parse_pll_cfg_fdt(fdt, pll, subnode_pll);
 }
 
 #define RCC_PLL_NAME_SIZE 12
@@ -2876,3 +2900,170 @@ int stm32mp2_pll1_enable(void)
 	return 0;
 #endif
 }
+
+#ifdef IMAGE_BL31
+uint64_t stm32mp2_pll1_recalc_rate()
+{
+	return clk_stm32_pll1_recalc_rate(NULL, 0, pll1_cfgs.prate);
+}
+
+int32_t stm32mp2_pll1_set_rate(uint64_t rate)
+{
+	int32_t cfg_idx;
+	int32_t err;
+
+	/* Find cfg_idx */
+	for (cfg_idx = 0; cfg_idx < pll1_cfgs.pll1_cfg_nb; cfg_idx++) {
+		if (pll1_cfgs.rates[cfg_idx] == rate) {
+			break;
+		}
+	}
+	if (cfg_idx == pll1_cfgs.pll1_cfg_nb) {
+		return -EINVAL;
+	}
+
+	/* Change the PLL1 rate */
+	stm32mp2_a35_ss_on_bypass();
+	stm32mp2_a35_pll1_config(pll1_cfgs.cfgs[cfg_idx].cfg[FBDIV],
+				 pll1_cfgs.cfgs[cfg_idx].cfg[REFDIV],
+				 pll1_cfgs.cfgs[cfg_idx].cfg[POSTDIV1],
+				 pll1_cfgs.cfgs[cfg_idx].cfg[POSTDIV2]);
+	err = stm32mp2_a35_pll1_start();
+
+	if (err != 0) {
+		ERROR("pll1_set_rate failed (%d)", err);
+		return err;
+	}
+
+	return 0;
+}
+
+static uint64_t pll1_rate_for_cfg(uint64_t pll1_prate,
+				  uint32_t pll1_cfg[PLLCFG_NB])
+{
+	uint64_t rate;
+
+	/* VCO */
+	rate = pll1_prate * pll1_cfg[FBDIV] / pll1_cfg[REFDIV];
+
+	/* Post divide */
+	if (pll1_cfg[POSTDIV1] != 0U && pll1_cfg[POSTDIV2] != 0U) {
+		rate = rate / (pll1_cfg[POSTDIV1] * pll1_cfg[POSTDIV2]);
+	}
+
+	return rate;
+}
+
+static int32_t stm32mp2_pll1_parse_dt(uint32_t sel)
+{
+	void *fdt = NULL;
+	int32_t node_rcc, node_pll1, subnode_pll1;
+	uint32_t dt_mux_id, dt_sel;
+	int32_t cfg_idx;
+	int32_t err;
+
+	if (fdt_get_address(&fdt) == 0) {
+		err = -ENOENT;
+		goto exit_label;
+	}
+
+	node_rcc = fdt_node_offset_by_compatible(fdt, -1, DT_RCC_CLK_COMPAT);
+	if (node_rcc < 0) {
+		err = -EINVAL;
+		goto exit_label;
+	}
+
+	node_pll1 = fdt_subnode_offset(fdt, node_rcc, "st,pll-1");
+	if (!fdt_check_node(node_pll1)) {
+		err = -EINVAL;
+		goto exit_label;
+	}
+
+	/* Iterate over PLL1 configurations */
+	subnode_pll1 = fdt_first_subnode(fdt, node_pll1);
+	for (cfg_idx = 0; cfg_idx < PLL1_CFG_MAX_NB; cfg_idx++) {
+		if (subnode_pll1 < 0) {
+			pll1_cfgs.pll1_cfg_nb = cfg_idx;
+			err = 0;
+			break;
+		}
+
+		/* Read attributes */
+		err = clk_stm32_parse_pll_cfg_fdt(fdt, &pll1_cfgs.cfgs[cfg_idx],
+					      subnode_pll1);
+		if (err != 0) {
+			break;
+		}
+
+		/* We are not expecting csg or frac configuration for PLL1 */
+		if (pll1_cfgs.cfgs[cfg_idx].frac != 0U
+		    || pll1_cfgs.cfgs[cfg_idx].csg_enabled) {
+			err = -EINVAL;
+			break;
+		}
+
+		/* If the src is given, verify it's the actual configuration */
+		if (pll1_cfgs.cfgs[cfg_idx].src == 0) {
+			err = -EINVAL;
+			break;
+		} else {
+			dt_mux_id = (pll1_cfgs.cfgs[cfg_idx].src & MUX_ID_MASK)
+				     >> MUX_ID_SHIFT;
+			dt_sel = (pll1_cfgs.cfgs[cfg_idx].src & MUX_SEL_MASK)
+				  >> MUX_SEL_SHIFT;
+
+			/* Verify it's the actual configuration */
+			if (dt_mux_id != MUX_MUXSEL5 || dt_sel != sel) {
+				err = -EINVAL;
+				break;
+			}
+		}
+
+		subnode_pll1 = fdt_next_subnode(fdt, subnode_pll1);
+	}
+	if (err != 0) {
+		goto exit_label;
+	}
+
+	err = 0;
+exit_label:
+	return err;
+
+}
+
+int32_t stm32mp2_pll1_init()
+{
+	int32_t cfg_idx;
+	uint32_t sel;
+	int err;
+
+	struct stm32_clk_priv *priv = clk_stm32_get_priv();
+
+	/* Get PLL1 actual reference clock */
+	sel = (mmio_read_32(RCC_BASE + RCC_MUXSELCFGR)
+	       & RCC_MUXSELCFGR_MUXSEL5_MASK) >> RCC_MUXSELCFGR_MUXSEL5_SHIFT;
+
+	/* Parse DT for PLL1 */
+	err = stm32mp2_pll1_parse_dt(sel);
+	if (err != 0) {
+		goto exit_label;
+	}
+
+	/* Find pll1 reference clock rate */
+	if (sel < sizeof(muxsel_src)) {
+		pll1_cfgs.prate = _clk_stm32_get_rate(priv, muxsel_src[sel]);
+	} else {
+		return -EINVAL;
+	}
+
+	/* Find rate for each config */
+	for (cfg_idx = 0; cfg_idx < pll1_cfgs.pll1_cfg_nb; cfg_idx++) {
+		pll1_cfgs.rates[cfg_idx] = pll1_rate_for_cfg(pll1_cfgs.prate,
+					    pll1_cfgs.cfgs[cfg_idx].cfg);
+	}
+
+	err = 0;
+exit_label:
+	return err;
+}
+#endif /* IMAGE_BL31 */

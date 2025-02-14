@@ -42,4 +42,8 @@ int stm32mp2_clk_init(void);
 int stm32mp2_pll1_disable(void);
 int stm32mp2_pll1_enable(void);
 
+int32_t stm32mp2_pll1_init();
+int32_t stm32mp2_pll1_set_rate(uint64_t rate);
+uint64_t stm32mp2_pll1_recalc_rate();
+
 #endif /* STM32MP2_CLK_H */
