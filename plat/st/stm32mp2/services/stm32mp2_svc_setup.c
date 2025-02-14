@@ -14,6 +14,7 @@
 #include <stm32mp2_smc.h>
 #include <stm32mp_svc_setup.h>
 
+#include "ca35ss_clk_svc.h"
 #include "stgen_svc.h"
 
 /*
@@ -21,6 +22,9 @@
  */
 int32_t plat_svc_smc_setup(void)
 {
+	if (ca35ss_clk_svc_setup()) {
+		panic();
+	}
 	return 0;
 }
 
@@ -45,6 +49,10 @@ void plat_svc_smc_handler(uint32_t smc_fid, u_register_t x1,
 		}
 
 		*ret1 = stgen_svc_handler();
+		break;
+	case STM32_SIP_CA35SS_CLK:
+		*ret1 = ca35ss_clk_svc_handler(x1, x2, x3, x4, ret2,
+					      ret2_enabled);
 		break;
 	default:
 		WARN("Unimplemented STM32MP2 Service Call: 0x%x\n", smc_fid);
