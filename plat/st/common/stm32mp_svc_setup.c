@@ -9,7 +9,6 @@
 
 #include <common/debug.h>
 #include <common/runtime_svc.h>
-#include <drivers/scmi-msg.h>
 #include <lib/psci/psci.h>
 #include <platform_def.h>
 #include <tools_share/uuid.h>
@@ -24,11 +23,7 @@ DEFINE_SVC_UUID2(stm32_sip_svc_uid,
 /* Setup STM32MP Standard Services */
 static int32_t stm32mp_svc_setup(void)
 {
-	/*
-	 * PSCI is the only specification implemented as a Standard Service.
-	 * Invoke PSCI setup from here.
-	 */
-	return 0;
+	return plat_svc_smc_setup();
 }
 
 /*

@@ -19,6 +19,14 @@
 #include "bsec_svc.h"
 
 /*
+ * Platform-level Standard Service SIP SMC setup.
+ */
+int32_t plat_svc_smc_setup(void)
+{
+	return 0;
+}
+
+/*
  * Platform Standard Service SMC handler. This handler will dispatch
  * calls to features handlers.
  */

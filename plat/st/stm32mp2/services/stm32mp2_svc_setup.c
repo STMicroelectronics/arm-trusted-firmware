@@ -17,6 +17,14 @@
 #include "stgen_svc.h"
 
 /*
+ * Platform-level Standard Service SIP SMC setup.
+ */
+int32_t plat_svc_smc_setup(void)
+{
+	return 0;
+}
+
+/*
  * Platform-level Standard Service SIP SMC handler. This handler will dispatch
  * the SMC to the correct feature handler.
  */
