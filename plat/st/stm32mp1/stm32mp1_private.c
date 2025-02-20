@@ -303,7 +303,7 @@ uint32_t stm32mp_get_chip_dev_id(void)
 #endif
 }
 
-static uint32_t get_part_number(void)
+uint32_t stm32mp_get_part_number(void)
 {
 	static uint32_t part_number;
 
@@ -344,7 +344,7 @@ void stm32mp_get_soc_name(char name[STM32_SOC_NAME_SIZE])
 	const char *cpu_s, *cpu_r, *pkg;
 
 	/* MPUs Part Numbers */
-	switch (get_part_number()) {
+	switch (stm32mp_get_part_number()) {
 #if STM32MP13
 	case STM32MP135F_PART_NB:
 		cpu_s = "135F";
@@ -501,7 +501,7 @@ bool stm32mp_is_single_core(void)
 #if STM32MP15
 	bool single_core = false;
 
-	switch (get_part_number()) {
+	switch (stm32mp_get_part_number()) {
 	case STM32MP151A_PART_NB:
 	case STM32MP151C_PART_NB:
 	case STM32MP151D_PART_NB:
@@ -554,7 +554,7 @@ bool stm32mp_is_auth_supported(void)
 {
 	bool supported = false;
 
-	switch (get_part_number()) {
+	switch (stm32mp_get_part_number()) {
 #if STM32MP13
 	case STM32MP131C_PART_NB:
 	case STM32MP131F_PART_NB:

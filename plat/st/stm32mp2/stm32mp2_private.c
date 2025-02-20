@@ -221,7 +221,7 @@ uint32_t stm32mp_get_chip_dev_id(void)
 	return stm32mp_syscfg_get_chip_dev_id();
 }
 
-static uint32_t get_part_number(void)
+uint32_t stm32mp_get_part_number(void)
 {
 	static uint32_t part_number;
 
@@ -254,7 +254,7 @@ void stm32mp_get_soc_name(char name[STM32_SOC_NAME_SIZE])
 	char *cpu_s, *cpu_r, *pkg;
 
 	/* MPUs Part Numbers */
-	switch (get_part_number()) {
+	switch (stm32mp_get_part_number()) {
 #if STM32MP21
 	case STM32MP211A_PART_NB:
 		cpu_s = "211A";
@@ -493,7 +493,7 @@ bool stm32mp_is_single_core(void)
 #else /* STM32MP21 */
 	bool single_core = false;
 
-	switch (get_part_number()) {
+	switch (stm32mp_get_part_number()) {
 #if STM32MP23
 	case STM32MP231A_PART_NB:
 	case STM32MP231C_PART_NB:
@@ -551,7 +551,7 @@ bool stm32mp_is_auth_supported(void)
 {
 	bool supported = false;
 
-	switch (get_part_number()) {
+	switch (stm32mp_get_part_number()) {
 #if STM32MP21
 	case STM32MP211C_PART_NB:
 	case STM32MP211F_PART_NB:

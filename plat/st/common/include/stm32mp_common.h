@@ -119,6 +119,9 @@ bool stm32_gpio_is_secure_at_reset(unsigned int bank);
 /* Return node offset for target GPIO bank ID @bank or a FDT error code */
 int stm32_get_gpio_bank_pinctrl_node(void *fdt, unsigned int bank);
 
+/* Get device part number (RPN) */
+uint32_t stm32mp_get_part_number(void);
+
 /* Get the chip revision */
 uint32_t stm32mp_get_chip_version(void);
 /* Get the chip device ID */
