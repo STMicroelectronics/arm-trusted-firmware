@@ -26,6 +26,11 @@
 #ifdef IMAGE_BL31
 static uint32_t saved_pll_freq1_reg;
 static uint32_t saved_pll_freq2_reg;
+static uint32_t saved_findiv2cfgr;
+static uint32_t saved_findiv5cfgr;
+static uint32_t saved_findiv63cfgr;
+static uint32_t saved_xbar2cfgr;
+static uint32_t saved_xbar5cfgr;
 static uint32_t saved_xbar63cfgr;
 #endif
 
@@ -2191,6 +2196,7 @@ static int wait_predivsr(uint16_t channel)
 
 	return 0;
 }
+#endif /* IMAGE_BL2 */
 
 static int wait_findivsr(uint16_t channel)
 {
@@ -2219,7 +2225,6 @@ static int wait_findivsr(uint16_t channel)
 
 	return 0;
 }
-#endif /* IMAGE_BL2 */
 
 static int wait_xbar_sts(uint16_t channel)
 {
@@ -2857,14 +2862,57 @@ int stm32mp2_pll1_disable(void)
 	saved_pll_freq1_reg = mmio_read_32(pll_freq1_reg);
 	saved_pll_freq2_reg = mmio_read_32(pll_freq2_reg);
 
-	/* save FLEXGEN63 MUX setting */
+	/* save FLEXGEN MUX setting */
+	saved_findiv2cfgr = mmio_read_32(stm32mp2_clock_data.base + RCC_FINDIV2CFGR);
+	saved_findiv5cfgr = mmio_read_32(stm32mp2_clock_data.base + RCC_FINDIV5CFGR);
+	saved_findiv63cfgr = mmio_read_32(stm32mp2_clock_data.base + RCC_FINDIV63CFGR);
+	saved_xbar2cfgr = mmio_read_32(stm32mp2_clock_data.base + RCC_XBAR2CFGR);
+	saved_xbar5cfgr = mmio_read_32(stm32mp2_clock_data.base + RCC_XBAR5CFGR);
 	saved_xbar63cfgr = mmio_read_32(stm32mp2_clock_data.base + RCC_XBAR63CFGR);
 
+	/*
+	 * use the clock tree expected by ROM code to avoid a poling timeout
+	 * issue for wake up of Stop2 low power modes, so use HSI for
+	 * flexgen 2 : ck_icn_ddr (ck_icn_m_cpu1)
+	 * flexgen 5 : ck_icn_nic (ck_icn_s_bootrom)
+	 * flexgen 63 : ck_cpu1_ext2f, the CA35 bypass clock
+	 */
+
+	if ((saved_xbar2cfgr & RCC_XBAR2CFGR_XBAR2SEL_MASK) != XBAR_SRC_HSI) {
+		mmio_clrsetbits_32(stm32mp2_clock_data.base + RCC_XBAR2CFGR,
+				   RCC_XBAR2CFGR_XBAR2SEL_MASK, XBAR_SRC_HSI);
+		if (wait_xbar_sts(2) != 0) {
+			panic();
+		}
+		mmio_clrsetbits_32(stm32mp2_clock_data.base + RCC_FINDIV2CFGR,
+				   RCC_FINDIV2CFGR_FINDIV2_MASK, 0U);
+		if (wait_findivsr(2) != 0) {
+			panic();
+		}
+	}
+
+	if ((saved_xbar5cfgr & RCC_XBAR5CFGR_XBAR5SEL_MASK) != XBAR_SRC_HSI) {
+		mmio_clrsetbits_32(stm32mp2_clock_data.base + RCC_XBAR5CFGR,
+				   RCC_XBAR5CFGR_XBAR5SEL_MASK, XBAR_SRC_HSI);
+		if (wait_xbar_sts(5) != 0) {
+			panic();
+		}
+		mmio_clrsetbits_32(stm32mp2_clock_data.base + RCC_FINDIV5CFGR,
+				   RCC_FINDIV5CFGR_FINDIV5_MASK, 0U);
+		if (wait_findivsr(5) != 0) {
+			panic();
+		}
+	}
+
 	if ((saved_xbar63cfgr & RCC_XBAR63CFGR_XBAR63SEL_MASK) != XBAR_SRC_HSI) {
-		/* use HSI for CA35 bypass clock (FLEXGEN63 = ck_cpu1_ext2f) */
 		mmio_clrsetbits_32(stm32mp2_clock_data.base + RCC_XBAR63CFGR,
 				   RCC_XBAR63CFGR_XBAR63SEL_MASK, XBAR_SRC_HSI);
 		if (wait_xbar_sts(63) != 0) {
+			panic();
+		}
+		mmio_clrsetbits_32(stm32mp2_clock_data.base + RCC_FINDIV63CFGR,
+				   RCC_FINDIV63CFGR_FINDIV63_MASK, 0U);
+		if (wait_findivsr(63) != 0) {
 			panic();
 		}
 	}
@@ -2894,8 +2942,39 @@ int stm32mp2_pll1_enable(void)
 		panic();
 	}
 
-	/* restore FLEXGEN63 MUX setting */
-	mmio_write_32(stm32mp2_clock_data.base + RCC_XBAR63CFGR, saved_xbar63cfgr);
+	/* restore FLEXGEN MUX setting */
+	if ((saved_xbar2cfgr & RCC_XBAR2CFGR_XBAR2SEL_MASK) != XBAR_SRC_HSI) {
+		mmio_write_32(stm32mp2_clock_data.base + RCC_FINDIV2CFGR, saved_findiv2cfgr);
+		if (wait_findivsr(2) != 0) {
+			panic();
+		}
+		mmio_write_32(stm32mp2_clock_data.base + RCC_XBAR2CFGR, saved_xbar2cfgr);
+		if (wait_xbar_sts(2) != 0) {
+			panic();
+			}
+	}
+
+	if ((saved_xbar5cfgr & RCC_XBAR5CFGR_XBAR5SEL_MASK) != XBAR_SRC_HSI) {
+		mmio_write_32(stm32mp2_clock_data.base + RCC_FINDIV5CFGR, saved_findiv5cfgr);
+		if (wait_findivsr(5) != 0) {
+			panic();
+		}
+		mmio_write_32(stm32mp2_clock_data.base + RCC_XBAR5CFGR, saved_xbar5cfgr);
+		if (wait_xbar_sts(5) != 0) {
+			panic();
+		}
+	}
+
+	if ((saved_xbar63cfgr & RCC_XBAR63CFGR_XBAR63SEL_MASK) != XBAR_SRC_HSI) {
+		mmio_write_32(stm32mp2_clock_data.base + RCC_FINDIV63CFGR, saved_findiv63cfgr);
+		if (wait_findivsr(63) != 0) {
+			panic();
+		}
+		mmio_write_32(stm32mp2_clock_data.base + RCC_XBAR63CFGR, saved_xbar63cfgr);
+		if (wait_xbar_sts(63) != 0) {
+			panic();
+		}
+	}
 
 	return 0;
 #endif
