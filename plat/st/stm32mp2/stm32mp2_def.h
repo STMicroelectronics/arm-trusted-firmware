@@ -161,6 +161,12 @@
 #define STM32MP_BSEC_MIRROR_BASE		SRAM1_BASE
 #define STM32MP_BSEC_MIRROR_SIZE		PAGE_SIZE
 
+#if STM32MP_M33_TDCID
+/* The second 4-kByte page of SRAM1 is used in CM33TDCID for the SCMI shared memory  */
+#define STM32MP_SCMI_SEC_SHMEM_BASE		(SRAM1_BASE + PAGE_SIZE)
+#define STM32MP_SCMI_SEC_SHMEM_SIZE		PAGE_SIZE
+#endif /* STM32MP_M33_TDCID */
+
 #if defined(IMAGE_BL2) && STM32MP_USB_PROGRAMMER && !STM32MP21
 #define STM32MP_USB_DWC3_SIZE			PAGE_SIZE
 #define STM32MP_USB_DWC3_BASE			(STM32MP_SYSRAM_BASE + \
@@ -257,7 +263,9 @@ enum ddr_type {
  * MAX_MMAP_REGIONS is usually:
  * BL stm32mp2_mmap size + mmap regions in *_plat_arch_setup
  */
-#if STM32MP_USB_PROGRAMMER || defined(IMAGE_BL31)
+#if defined(IMAGE_BL31) && STM32MP_M33_TDCID
+#define MAX_MMAP_REGIONS			8
+#elif STM32MP_USB_PROGRAMMER || defined(IMAGE_BL31)
 #define MAX_MMAP_REGIONS			7
 #else
 #define MAX_MMAP_REGIONS			6
