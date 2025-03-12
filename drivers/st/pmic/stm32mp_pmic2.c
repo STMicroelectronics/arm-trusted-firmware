@@ -409,6 +409,7 @@ static struct regul_handle_s pmic2_regul_handles[STPMIC2_NB_REG] = {
 	.node_name = name, \
 	.ops = &pmic2_ops, \
 	.driver_data = &pmic2_regul_handles[rid], \
+	.enable_ramp_delay = 1000, \
 }
 
 #define DEFINE_GPO(rid, name) \
