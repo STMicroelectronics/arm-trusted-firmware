@@ -166,4 +166,16 @@
 		       GIC_HIGHEST_SEC_PRIORITY,	\
 		       (grp), GIC_INTR_CFG_EDGE)
 
+#if STM32MP_M33_TDCID
+/*
+ * Define for RSE protocol support
+ */
+#define PLAT_RSE_COMMS_PAYLOAD_MAX_SIZE (0x40 + 0x800)
+/* IPCC base register for RSE notification */
+#define RSE_COMMS_IPCC_BASE		IPCC1_BASE
+/* Timeout in US for RSE response */
+#define RSE_COMMS_TIMEOUT_US	(1000000U)
+#define RSE_COMMS_IPCC_CHAN		(14U)
+#endif
+
 #endif /* PLATFORM_DEF_H */

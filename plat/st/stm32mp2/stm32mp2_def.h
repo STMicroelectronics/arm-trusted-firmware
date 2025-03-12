@@ -157,6 +157,12 @@
 #define RETRAM_SIZE				U(0x00020000)
 #define STM32MP_BACKUP_RAM_BASE			U(0x42000000)
 
+#if STM32MP_M33_TDCID
+/* RSE Shared Memory for Secure Boot in M33TD CID config */
+#define RSE_SHMEM_BASE			SRAM1_BASE + U(0x3000)
+#define RSE_SHMEM_SIZE			PAGE_SIZE
+#endif
+
 /* The first 4KB of SRAM1 are reserved are for BSEC mirror */
 #define STM32MP_BSEC_MIRROR_BASE		SRAM1_BASE
 #define STM32MP_BSEC_MIRROR_SIZE		PAGE_SIZE
@@ -263,12 +269,20 @@ enum ddr_type {
  * MAX_MMAP_REGIONS is usually:
  * BL stm32mp2_mmap size + mmap regions in *_plat_arch_setup
  */
+#if STM32MP_M33_TDCID
+#define RSE_SHMEM_REGION			1
+#define SCMI_SHMEM_REGION			1
+#else
+#define RSE_SHMEM_REGION			0
+#define SCMI_SHMEM_REGION			0
+#endif
+
 #if defined(IMAGE_BL31) && STM32MP_M33_TDCID
 #define MAX_MMAP_REGIONS			8
 #elif STM32MP_USB_PROGRAMMER || defined(IMAGE_BL31)
-#define MAX_MMAP_REGIONS			7
+#define MAX_MMAP_REGIONS			7 + RSE_SHMEM_REGION
 #else
-#define MAX_MMAP_REGIONS			6
+#define MAX_MMAP_REGIONS			6 + SCMI_SHMEM_REGION
 #endif
 
 /* DTB initialization value */

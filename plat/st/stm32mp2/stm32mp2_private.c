@@ -81,6 +81,14 @@
 					MT_EXECUTE_NEVER)
 
 #if defined(IMAGE_BL2)
+#if STM32MP_M33_TDCID
+#define MAP_RSE_SHMEM	MAP_REGION_FLAT(RSE_SHMEM_BASE, \
+					RSE_SHMEM_SIZE, \
+					MT_DEVICE | \
+					MT_RW | \
+					MT_SECURE | \
+					MT_EXECUTE_NEVER)
+#endif
 static const mmap_region_t stm32mp2_mmap[] = {
 #if STM32MP_USB_PROGRAMMER && !STM32MP21
 	MAP_SYSRAM_MEM,
@@ -92,6 +100,9 @@ static const mmap_region_t stm32mp2_mmap[] = {
 	MAP_SRAM1,
 #else
 	MAP_BSEC_MIRROR,
+#endif
+#if STM32MP_M33_TDCID
+	MAP_RSE_SHMEM,
 #endif
 	MAP_DEVICE,
 	{0}

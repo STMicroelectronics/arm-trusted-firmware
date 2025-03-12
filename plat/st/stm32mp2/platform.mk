@@ -391,6 +391,12 @@ BL2_SOURCES			+=	drivers/st/ddr/phy/phyinit/src/ddrphy_phyinit_d_loadimem.c				\
 					drivers/st/ddr/phy/phyinit/src/ddrphy_phyinit_g_execfw.c				\
 					drivers/st/ddr/phy/phyinit/src/ddrphy_phyinit_writeoutmem.c				\
 					drivers/st/ddr/phy/phyinit/usercustom/ddrphy_phyinit_usercustom_g_waitfwdone.c
+else
+# rse drivers
+BL2_SOURCES			+=	drivers/st/rse_shm/rse_comms_shm.c
+PLAT_MHU			:=	NO_MHU
+include drivers/arm/rse/rse_comms.mk
+BL2_SOURCES			+=	${RSE_COMMS_SOURCES}
 endif #STM32MP_M33_TDCID
 
 # BL31 sources
