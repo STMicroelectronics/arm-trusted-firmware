@@ -130,7 +130,6 @@
 				regulator-name = "vpp_ddr";
 				regulator-min-microvolt = <2500000>;
 				regulator-max-microvolt = <2500000>;
-				regulator-enable-ramp-delay = <1000>;
 			};
 			vdd_sdcard: ldo7 {
 				regulator-name = "vdd_sdcard";
