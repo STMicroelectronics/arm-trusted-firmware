@@ -31,13 +31,13 @@
  * BSEC open is considered invalid in OSTL use case.
  * @state: global state
  *           [1:0] BSEC state
- *             0b: Closed
- *             1b: Invalid
+ *             0Xb: Closed
+ *             1Xb: Invalid
  *           [8]: Hardware Key set = 1b
  */
 #define BSEC_STATE_CLOSED		U(0x0)
-#define BSEC_STATE_INVALID		U(0x1)
-#define BSEC_STATE_MASK			BIT(0)
+#define BSEC_STATE_INVALID		U(0x2)
+#define BSEC_STATE_MASK		        BIT(1)
 
 #define BSEC_HARDWARE_KEY		BIT_32(8)
 
