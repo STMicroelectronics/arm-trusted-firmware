@@ -8,6 +8,7 @@
 
 #include <common/debug.h>
 #include <common/fdt_wrappers.h>
+#include <drivers/delay_timer.h>
 #include <drivers/generic_delay_timer.h>
 #include <drivers/st/stm32mp2_clk.h>
 #include <drivers/st/stm32mp_clkfunc.h>
@@ -17,16 +18,27 @@
 #include <platform_def.h>
 
 #include "ca35ss_clk_svc.h"
+#include "scmi_private.h"
 #include <stm32mp2_smc.h>
 #include <stm32mp_common.h>
 #include <stm32mp_svc_setup.h>
 
 #define OPP_MAX_NB			4
 
-#define HW_NO_OVERDRIVE			BIT(0)
-#define HW_SUPPORTS_OVERDRIVE		BIT(1)
+#define HW_NO_OVERDRIVE			BIT_32(0)
+#define HW_SUPPORTS_OVERDRIVE		BIT_32(1)
 
-#define PART_NUMBER_SUPPORT_OVERDRIVE	BIT(31) /* stm32mp2xxD or stm32mp2xxF */
+#define PART_NUMBER_SUPPORT_OVERDRIVE	BIT_32(31) /* stm32mp2xxD or stm32mp2xxF */
+
+#define TIMEOUT_10MS_IN_US		10000U
+
+#if STM32MP23 || STM32MP25
+#define VOLTD_SCMI_STPMIC2_BUCK1	10U
+#define VOLTD_SCMI_STPMIC2_BUCK		VOLTD_SCMI_STPMIC2_BUCK1
+#elif STM32MP21
+#define VOLTD_SCMI_STPMIC2_BUCK3	7U
+#define VOLTD_SCMI_STPMIC2_BUCK		VOLTD_SCMI_STPMIC2_BUCK3
+#endif
 
 enum stm32_ca35ss_clk_svc_function {
 	CA35SS_CLK_SVC_NO_FUNCTION,
@@ -37,12 +49,11 @@ enum stm32_ca35ss_clk_svc_function {
 	CA35SS_CLK_SVC_NB_FUNCTION,
 };
 
-/* State machine */
 enum stm32_ca35ss_clk_svc_state {
 	CA35SS_CLK_SVC_STATE_NO_STATE,
 	CA35SS_CLK_SVC_STATE_BASE,
-	CA35SS_CLK_SVC_STATE_CHG,
-	CA35SS_CLK_SVC_STATE_CHG_PLL1_DONE,
+	CA35SS_CLK_SVC_STATE_GET_VOLT_POLL,
+	CA35SS_CLK_SVC_STATE_SET_VOLT_POLL,
 	CA35SS_CLK_SVC_STATE_NB_STATE,
 };
 
@@ -50,27 +61,70 @@ struct ca35ss_state
 {
 	int32_t state;
 	int32_t target_opp_idx;
+	bool pll1_done;
 };
 
-static struct ca35ss_state state;
-
-static void ca35ss_reinit_state(void)
-{
-	state.state = CA35SS_CLK_SVC_STATE_BASE;
-	state.target_opp_idx = -1;
-}
-
-/* Device tree parsing */
 struct ca35ss_opp
 {
 	uint64_t hz[OPP_MAX_NB];
-	uint32_t microvolt[OPP_MAX_NB];
+	uint32_t uvolt[OPP_MAX_NB];
 	uint32_t supported_hw[OPP_MAX_NB];
 	int32_t opp_nb;
 };
 
 static struct ca35ss_opp opp;
+static struct ca35ss_state state;
 
+/*
+ * There is no IRQ in TF-A BL31 and since TF-A BL31 is not preemptible, we chose
+ * not to poll from BL31. Therefore, we poll from Linux via an SMC and we use a
+ * state machine in TF-A BL31 to know what step of the DVFS we are at.
+ * The following sequence diagram shows the implementation with the associated
+ * states.
+ *
+ * ,-----.          ,----.          ,--------.          ,----.
+ * |Linux|          |TF-A|          |Sh. Mem.|          |TF-M|    STATE
+ * `--+--'          `-+--'          `---+----'          `-+--'
+ *    |  set_rate()   |                 |                 |       BASE
+ *    | ------------> |                 |                 |       BASE
+ *    |               |     get_volt    |                 |       GET_VOLT_POLL
+ *    |               | --------------> |                 |       GET_VOLT_POLL
+ *    |               |              Doorbell             |       GET_VOLT_POLL
+ *    |               | --------------------------------> |       GET_VOLT_POLL
+ *    |   ON_GOING    |                 |                 |       GET_VOLT_POLL
+ *    | < - - - - - - |                 |                 |       GET_VOLT_POLL
+ *                      [POLLING UNTIL CHANNEL IS FREE]
+ *    |    poll()     |                 |                 |       GET_VOLT_POLL
+ *    | ------------> |                 |                 |       GET_VOLT_POLL
+ *    |               |   Read voltage  |                 |       GET_VOLT_POLL
+ *    |               | --------------> |                 |       GET_VOLT_POLL
+ *    |               |       volt      |                 |       GET_VOLT_POLL
+ *    |               | < - - - - - - - |                 |       GET_VOLT_POLL
+ *    |               |     set_volt    |                 |       SET_VOLT_POLL
+ *    |               | --------------> |                 |       SET_VOLT_POLL
+ *    |               |              Doorbell             |       SET_VOLT_POLL
+ *    |               | --------------------------------> |       SET_VOLT_POLL
+ *    |   ON_GOING    |                 |                 |       SET_VOLT_POLL
+ *    |<- - - - - - - |                 |                 |       SET_VOLT_POLL
+ *                      [POLLING UNTIL CHANNEL IS FREE]
+ *    |    poll()     |                 |                 |       SET_VOLT_POLL
+ *    | ------------> |                 |                 |       SET_VOLT_POLL
+ *    |      OK       |                 |                 |       BASE
+ *    | < - - - - - - |                 |                 |       BASE
+ *
+ * Hence, from Linux the view is as simple as a set_rate() followed by a status
+ * polling and the whole voltage/rate synchronization is done in TF-A.
+ *
+ */
+
+static void ca35ss_set_state_base(void)
+{
+	state.state = CA35SS_CLK_SVC_STATE_BASE;
+	state.target_opp_idx = -1;
+	state.pll1_done = false;
+}
+
+/* Device tree parsing functions */
 static uint32_t get_opp_hw_filter(void) {
 	uint32_t opp_hw_filter = 0;
 	uint32_t part_number = stm32mp_get_part_number();
@@ -124,8 +178,8 @@ static int32_t dt_find_opp_node(void *fdt, int32_t *opp_nb)
 }
 
 static int32_t dt_read_opp(int32_t *opp_nb, uint64_t opp_hz[OPP_MAX_NB],
-		       uint32_t opp_microvolt[OPP_MAX_NB],
-		       uint32_t opp_supported_hw[OPP_MAX_NB])
+			   uint32_t opp_uvolt[OPP_MAX_NB],
+			   uint32_t opp_supported_hw[OPP_MAX_NB])
 {
 	int32_t subnode_opp = 0;
 	int32_t node_opp = 0;
@@ -148,7 +202,6 @@ static int32_t dt_read_opp(int32_t *opp_nb, uint64_t opp_hz[OPP_MAX_NB],
 	/* Iterate over OPP subnodes */
 	subnode_opp = fdt_first_subnode(fdt, node_opp);
 	for (int32_t opp_idx = 0; opp_idx < OPP_MAX_NB; opp_idx++) {
-
 		/* Is this an actual node? Otherwise you read all opp */
 		if (subnode_opp < 0) {
 			*opp_nb = opp_idx;
@@ -163,7 +216,7 @@ static int32_t dt_read_opp(int32_t *opp_nb, uint64_t opp_hz[OPP_MAX_NB],
 		}
 
 		err = fdt_read_uint32(fdt, subnode_opp, "opp-microvolt",
-				      &opp_microvolt[opp_idx]);
+				      &opp_uvolt[opp_idx]);
 		if (err != 0) {
 			return err;
 		}
@@ -185,31 +238,14 @@ static int32_t dt_read_opp(int32_t *opp_nb, uint64_t opp_hz[OPP_MAX_NB],
 	return 0;
 }
 
-/* Helpers / Utils */
-static bool clock_scale_before_volt_scale(void/* TODO */)
-{
-	/* TODO: implement this function */
-	return 0;
-}
-
-static uint32_t vddcpu_set_mvolt(int32_t opp_idx)
-{
-	if ((opp_idx < 0) || (opp.opp_nb < opp_idx)) {
-		return STM32_SMC_FAILED;
-	}
-
-	/* TODO: implement this function
-	ERROR("vddcpu_set_mvolt failed with status %d", 0); */
-	return STM32_SMC_FAILED;
-}
-
-static uint32_t vddcpu_set_mvolt_get_status(void)
-{
-	/* TODO: implement this function
-	ERROR("vddcpu_set_mvolt_get_status failed with status %d", 0); */
-	return STM32_SMC_FAILED;
-}
-
+/* SCMI helper functions */
+/**
+ * @brief Find the operating point index with the closest rate to target_rate.
+ *
+ * @param uint64_t target_rate The target rate.
+ * @return uint32_t The index of the closest OPP.
+ *
+ */
 static uint32_t get_closest_opp_idx(uint64_t target_rate)
 {
 	int32_t opp_idx, opp_idx_iter;
@@ -238,102 +274,213 @@ static uint32_t get_closest_opp_idx(uint64_t target_rate)
 	return opp_idx;
 }
 
-/* SMC setup */
+/**
+ * @brief Get the voltage level for the CPU domain. This function starts the
+ * operation: use the vddcpu_get_uvolt_poll() function to poll the result.
+ * @warning The caller expects the channel is ready for transfer unless what
+ * the function returns STM32_SMC_FAILED.
+ *
+ * @param uvolt Pointer to store the voltage level in microvolts.
+ * @return uint32_t Status of the operation.
+ *
+ */
+static uint32_t vddcpu_get_uvolt(void)
+{
+	if (scmi_channel_error()) {
+		scmi_channel_clear();
+		return STM32_SMC_FAILED;
+	}
+
+	if (scmi_channel_busy()) {
+		return STM32_SMC_FAILED;
+	}
+
+	scmi_voltd_level_get_snd(VOLTD_SCMI_STPMIC2_BUCK);
+	return STM32_SMC_ON_GOING;
+}
+
+/**
+ * @brief Poll for the result after the operation was started using the
+ * vddcpu_get_uvolt() function.
+ *
+ * @param uvolt Pointer to store the voltage level in microvolts.
+ * @return uint32_t Status of the operation.
+ *
+ */
+static uint32_t vddcpu_get_uvolt_poll(int32_t *uvolt)
+{
+	int32_t scmi_status;
+
+	if (scmi_channel_error()) {
+		scmi_channel_clear();
+		return STM32_SMC_FAILED;
+	}
+
+	if (scmi_channel_busy()) {
+		return STM32_SMC_ON_GOING;
+	}
+
+	scmi_status = scmi_voltd_level_get_rcv(uvolt);
+
+	if ((scmi_status != SCMI_SUCCESS) || (*uvolt < 0)) {
+		return STM32_SMC_FAILED;
+	} else {
+		return STM32_SMC_OK;
+	}
+}
+
+/**
+ * @brief Set the voltage level for the CPU domain. This function starts the
+ * operation: use the vddcpu_set_uvolt_poll() function to poll the result.
+ * @warning The caller expects the channel is ready for transfer unless what
+ * the function returns STM32_SMC_FAILED.
+ *
+ * @param opp_idx Index of the operating performance point.
+ * @return uint32_t Status of the operation.
+ *
+ */
+static uint32_t vddcpu_set_uvolt(int32_t opp_idx)
+{
+	if (scmi_channel_error()) {
+		scmi_channel_clear();
+		return STM32_SMC_FAILED;
+	}
+
+	if ((opp_idx < 0) || (opp.opp_nb < opp_idx) || (scmi_channel_busy())) {
+		return STM32_SMC_FAILED;
+	}
+
+	scmi_voltd_level_set_snd(VOLTD_SCMI_STPMIC2_BUCK, 0,
+				 opp.uvolt[opp_idx]);
+	return STM32_SMC_ON_GOING;
+}
+
+/**
+ * @brief Poll for the result after the operation was started using the
+ * vddcpu_set_uvolt() function.
+ *
+ * @return uint32_t Status of the operation.
+ *
+ */
+static uint32_t vddcpu_set_uvolt_poll(void)
+{
+	if (scmi_channel_error()) {
+		scmi_channel_clear();
+		return STM32_SMC_FAILED;
+	}
+
+	if (scmi_channel_busy()) {
+		return STM32_SMC_ON_GOING;
+	}
+
+	if (scmi_voltd_level_set_rcv() == SCMI_SUCCESS) {
+		return STM32_SMC_OK;
+	} else {
+		return STM32_SMC_FAILED;
+	}
+}
+
+/* SMC handler and setup functions */
 uint32_t ca35ss_clk_svc_setup(void)
 {
-	uint32_t status;
 	int32_t opp_idx;
 	int32_t err = 0;
+	uint32_t voltd_version;
+	uint64_t timeout_ref;
 	uint32_t opp_hw_filter = get_opp_hw_filter();
 
 	/* Read the DT to find available configurations */
 	opp.opp_nb = 0;
 	state.state = CA35SS_CLK_SVC_STATE_NO_STATE;
-	err = dt_read_opp(&opp.opp_nb, opp.hz, opp.microvolt, opp.supported_hw);
+	err = dt_read_opp(&opp.opp_nb, opp.hz, opp.uvolt, opp.supported_hw);
 	if ((err != 0) || (opp.opp_nb < 0)) {
 		if (opp.opp_nb < 0) {
-			/* 
+			/*
 			 * OPP is disabled in the DT. This is not a fail, the
 			 * handlers are simply disabled by not initializing the
-			 * state machine (state.state = NO_STATE).
-			 * 
+			 * state machine (state.state is NO_STATE).
+			 *
 			 */
-			status = STM32_SMC_OK;
-			goto exit_label;
+			return STM32_SMC_OK;
 		}
-		ERROR("ca35ss_clk_svc_setup: couldn't parse DT (%d)\n", err);
-		status = STM32_SMC_FAILED;
-		goto exit_label;
+		ERROR("%s: couldn't parse DT (%d)\n", __func__, err);
+		return STM32_SMC_FAILED;
 	}
 
 	/* Verify OPP supported hw */
 	for (opp_idx = 0; opp_idx < opp.opp_nb; opp_idx++) {
 		if (!(opp.supported_hw[opp_idx] | opp_hw_filter)) {
-			ERROR("ca35ss_clk_svc_setup: opp-supported-hw (0x%x) doesn't match hw\n",
-			      opp.supported_hw[opp_idx]);
-			status = STM32_SMC_FAILED;
-			goto exit_label;
+			ERROR("%s: opp-supported-hw (0x%x) doesn't match hw\n",
+			      __func__, opp.supported_hw[opp_idx]);
+			return STM32_SMC_FAILED;
 		}
 	}
 
 	/* Init stm32mp2 clock driver for PLL1 */
 	err = stm32mp2_pll1_init();
 	if (err != 0) {
-		ERROR("ca35ss_clk_svc_setup: couldn't init STM32MP2 PLL1 (%d)\n", err);
-		status = STM32_SMC_FAILED;
-		goto exit_label;
+		ERROR("%s: couldn't init STM32MP2 PLL1 (%d)\n", __func__, err);
+		return STM32_SMC_FAILED;
+	}
+
+	/* Verify SCMI availlability */
+	timeout_ref = timeout_init_us(TIMEOUT_10MS_IN_US);
+	while (scmi_channel_busy())
+	{
+		if (scmi_channel_error()
+		    || timeout_elapsed(timeout_ref)) {
+			/* Could not get a free channel */
+			scmi_channel_clear();
+			ERROR("%s: Couldn't get SCMI free channel\n", __func__);
+			return STM32_SMC_FAILED;
+		}
+		udelay(10);
+	}
+	if (scmi_voltd_protocol_version(&voltd_version) != SCMI_SUCCESS) {
+		ERROR("%s: couldn't get SCMI voltd protocol\n", __func__);
+		return STM32_SMC_FAILED;
 	}
 
 	/* Init state machine */
-	ca35ss_reinit_state();
+	ca35ss_set_state_base();
 
-	status = STM32_SMC_OK;
-
-exit_label:
-	return status;
+	return STM32_SMC_OK;
 }
 
-/* SMC handlers */
 static uint32_t ca35ss_clk_svc_handler_get_rate(uint32_t *rate)
 {
 	uint64_t calc_rate = stm32mp2_pll1_recalc_rate();
-	uint32_t status;
 
 	if (calc_rate > UINT32_MAX) {
 		/* This should not happen since the VCO max rate is 3200 MHz */
-		*rate = 0;
-		status = STM32_SMC_FAILED;
-	} else {
-		*rate = (uint32_t)calc_rate;
-		status = STM32_SMC_OK;
+		return STM32_SMC_FAILED;
 	}
 
-	return status;
+	*rate = (uint32_t)calc_rate;
+	return STM32_SMC_OK;
 }
 
-static uint32_t ca35ss_clk_svc_handler_round_rate(uint64_t rate, uint32_t *rounded_rate)
+static uint32_t ca35ss_clk_svc_handler_round_rate(uint64_t rate,
+						  uint32_t *rounded_rate)
 {
-	uint32_t status = STM32_SMC_OK;
 	int32_t opp_idx = get_closest_opp_idx(rate);
 
 	if (opp_idx >= opp.opp_nb) {
-		status = STM32_SMC_INVALID_PARAMS;
+		return STM32_SMC_INVALID_PARAMS;
 	}
 
 	if (opp.hz[opp_idx] > UINT32_MAX) {
-		*rounded_rate = 0;
-		status = STM32_SMC_FAILED;
-	} else {
-		*rounded_rate = (uint32_t) opp.hz[opp_idx];
+		return STM32_SMC_FAILED;
 	}
 
-	return status;
+	*rounded_rate = (uint32_t)opp.hz[opp_idx];
+
+	return STM32_SMC_OK;
 }
 
-uint32_t ca35ss_clk_svc_handler_set_rate(uint64_t target_rate)
+static uint32_t ca35ss_clk_svc_handler_set_rate(uint64_t target_rate)
 {
 	uint32_t status = STM32_SMC_FAILED;
-	int32_t err;
 	int32_t opp_idx;
 	uint64_t current_rate;
 
@@ -346,96 +493,119 @@ uint32_t ca35ss_clk_svc_handler_set_rate(uint64_t target_rate)
 
 	default:
 		/* ILLEGAL */
-		status = STM32_SMC_NO_PERM;
-		goto exit_label;
+		return STM32_SMC_NO_PERM;
 	}
 
 	/* Verify the asked target_rate is not the current rate */
 	current_rate = stm32mp2_pll1_recalc_rate();
 	if (current_rate == target_rate) {
-		status = STM32_SMC_OK;
-		goto exit_label;
+		return STM32_SMC_OK;
 	}
 
 	/* Find cfg for a given target_rate */
 	opp_idx = get_closest_opp_idx(target_rate);
 	if (opp_idx >= opp.opp_nb) {
-		status = STM32_SMC_INVALID_PARAMS;
-		goto exit_label;
+		return STM32_SMC_INVALID_PARAMS;
 	}
 
-	/* State: base -> changing */
-	state.target_opp_idx = opp_idx;
-	state.state = CA35SS_CLK_SVC_STATE_CHG;
-
-	/* Change PLL1 rate if to be done before changing vddcpu */
-	if (clock_scale_before_volt_scale(/* TODO*/)) {
-		err = stm32mp2_pll1_set_rate(opp.hz[opp_idx]);
-		if (err == 0) {
-			state.state = CA35SS_CLK_SVC_STATE_CHG_PLL1_DONE;
-		} else {
-			/* Something went wrong then back to base state */
-			status = STM32_SMC_FAILED;
-			goto exit_label_reinit_state;
-		}
-	}
-
-	/* Start asynchronous scaling of vcpu */
-	status = vddcpu_set_mvolt(opp_idx);
-
-	/* If not on-going then back to base state */
+	/* Initiate the operation of getting of current vddcpu */
+	status = vddcpu_get_uvolt();
 	if (status == STM32_SMC_ON_GOING) {
-		goto exit_label;
+		/* State: base -> get voltage polling */
+		state.state = CA35SS_CLK_SVC_STATE_GET_VOLT_POLL;
+		state.target_opp_idx = opp_idx;
 	}
 
-exit_label_reinit_state:
-	ca35ss_reinit_state();
-exit_label:
+	return status;
+}
+
+static uint32_t ca35ss_clk_svc_handler_poll_get_volt()
+{
+	uint32_t status;
+	int32_t err;
+	int32_t current_uvolt;
+	int32_t opp_idx = state.target_opp_idx;
+
+	/* Poll the status of the operation of getting of current vddcpu */
+	status = vddcpu_get_uvolt_poll(&current_uvolt);
+	if (status != STM32_SMC_OK) {
+		if (status != STM32_SMC_ON_GOING) {
+			/* Back to base state */
+			ca35ss_set_state_base();
+		}
+		return status;
+	}
+
+	/* Next step */
+	if (current_uvolt >= (int32_t)opp.uvolt[opp_idx]) {
+		/* If dicreasing voltage, then frequency scaling comes first */
+		err = stm32mp2_pll1_set_rate(opp.hz[opp_idx]);
+		if (err != 0) {
+			/* Back to base state */
+			ca35ss_set_state_base();
+			return STM32_SMC_FAILED;
+		}
+
+		/* pll1 has been scaled */
+		state.pll1_done = true;
+	}
+
+	/* Initiate the operation of scaling vddcpu */
+	status = vddcpu_set_uvolt(opp_idx);
+	if (status != STM32_SMC_ON_GOING) {
+		/* Back to base state */
+		ca35ss_set_state_base();
+	} else {
+		/* State: get voltage polling -> set voltage polling */
+		state.state = CA35SS_CLK_SVC_STATE_SET_VOLT_POLL;
+	}
+
+	return status;
+}
+
+static uint32_t ca35ss_clk_svc_handler_poll_set_volt(void)
+{
+	uint32_t status = STM32_SMC_FAILED;
+	uint64_t target_rate = opp.hz[state.target_opp_idx];
+
+	/* Poll the status of the operation of scaling vddcpu */
+	status = vddcpu_set_uvolt_poll();
+
+	if (status == STM32_SMC_ON_GOING) {
+		return STM32_SMC_ON_GOING;
+	}
+
+	if ((status == STM32_SMC_OK) && (!state.pll1_done)) {
+		/* Change PLL1 rate if not done yet */
+		status = stm32mp2_pll1_set_rate(target_rate);
+	}
+
+	/* Back to base state */
+	ca35ss_set_state_base();
+
 	return status;
 }
 
 static uint32_t ca35ss_clk_svc_handler_set_rate_status(void)
 {
-	uint32_t status = STM32_SMC_FAILED;
-	uint64_t target_rate = opp.hz[state.target_opp_idx];
+	uint32_t status;
 
-	/* This method can only be called in certain states */
+	/* Polling SMC: actual action depends on the state */
 	switch (state.state)
 	{
-	case CA35SS_CLK_SVC_STATE_CHG:
-	case CA35SS_CLK_SVC_STATE_CHG_PLL1_DONE:
-		/* LEGAL */
+	case CA35SS_CLK_SVC_STATE_GET_VOLT_POLL:
+		status = ca35ss_clk_svc_handler_poll_get_volt();
+		break;
+
+	case CA35SS_CLK_SVC_STATE_SET_VOLT_POLL:
+		status = ca35ss_clk_svc_handler_poll_set_volt();
 		break;
 
 	default:
 		/* ILLEGAL */
 		status = STM32_SMC_NO_PERM;
-		goto exit_label;
 	}
 
-	/* Get status for asynchronous scaling of vcpu */
-	status = vddcpu_set_mvolt_get_status();
-
-	switch (status)
-	{
-	case STM32_SMC_ON_GOING:
-		goto exit_label;
-
-	case STM32_SMC_OK:
-		/* Change PLL1 rate if not done yet */
-		if (state.state != CA35SS_CLK_SVC_STATE_CHG_PLL1_DONE) {
-			status = stm32mp2_pll1_set_rate(target_rate);
-		}
-		goto exit_label_reinit_state;
-
-	default:
-		/* Something went wrong */
-		goto exit_label_reinit_state;
-	}
-
-exit_label_reinit_state:
-	ca35ss_reinit_state();
-exit_label:
 	return status;
 }
 
