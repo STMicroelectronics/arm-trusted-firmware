@@ -33,7 +33,8 @@ enum syscfg_io_ids {
 	SYSFG_NB_IO_ID
 };
 
-void stm32mp_syscfg_enable_io_compensation(enum syscfg_io_ids id);
+void stm32mp_syscfg_enable_io_comp(enum syscfg_io_ids id);
+void stm32mp_syscfg_fixed_io_comp(enum syscfg_io_ids id, uint32_t pmos, uint32_t nmos);
 
 void stm32mp_syscfg_set_icn_qos(void);
 

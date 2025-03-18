@@ -45,6 +45,7 @@
 #define SYSCFG_CCCR_CS			BIT_32(9)
 #define SYSCFG_CCCR_EN			BIT_32(8)
 #define SYSCFG_CCCR_RAPSRC_MASK		GENMASK_32(7, 4)
+#define SYSCFG_CCCR_RAPSRC_SHIFT	4U
 #define SYSCFG_CCCR_RANSRC_MASK		GENMASK_32(3, 0)
 
 /* IO compensation CCSR registers bit definition */
@@ -160,7 +161,7 @@ size_t stm32mp_syscfg_get_mm_size(uint8_t bank)
  * @param  id: IO compensation ID
  * @retval 0.
  */
-void stm32mp_syscfg_enable_io_compensation(enum syscfg_io_ids id)
+void stm32mp_syscfg_enable_io_comp(enum syscfg_io_ids id)
 {
 	uintptr_t cccr_addr = SYSCFG_BASE + syscfg_cccr_offset[id];
 	uintptr_t ccsr_addr = cccr_addr + 4U;
@@ -184,6 +185,25 @@ void stm32mp_syscfg_enable_io_compensation(enum syscfg_io_ids id)
 		}
 
 	mmio_clrbits_32(cccr_addr, SYSCFG_CCCR_CS);
+}
+
+/*
+ * @brief  Set fixed IO compensation for an IO domain.
+ * @param  id: IO compensation ID
+ * @param  pmos: pmos compensation code
+ * @param  nmos: nmos compensation code
+ * @retval 0.
+ */
+void stm32mp_syscfg_fixed_io_comp(enum syscfg_io_ids id, uint32_t pmos, uint32_t nmos)
+{
+	uintptr_t cccr_addr = SYSCFG_BASE + syscfg_cccr_offset[id];
+	uint32_t value = 0U;
+
+	VERBOSE("Set fixed IO comp for id %u\n", id);
+
+	value = ((pmos << SYSCFG_CCCR_RAPSRC_SHIFT) & SYSCFG_CCCR_RAPSRC_MASK) |
+		(nmos & SYSCFG_CCCR_RANSRC_MASK);
+	mmio_write_32(cccr_addr, value);
 }
 
 #if STM32MP_SPI_NAND || STM32MP_SPI_NOR || STM32MP_HYPERFLASH

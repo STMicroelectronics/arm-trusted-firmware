@@ -5,6 +5,7 @@
  */
 
 #include <common/debug.h>
+#include <common/fdt_wrappers.h>
 #include <drivers/st/regulator.h>
 #include <lib/mmio.h>
 #include <lib/utils_def.h>
@@ -14,13 +15,14 @@
 #include <stm32mp2_private.h>
 
 #define IO_VOLTAGE_THRESHOLD_MV 2700
+#define IOCOMP_CODE_MAX 2
 
 struct pwr_regu {
 	const char *node_name;
 	uint32_t enable_reg;
 	uint32_t valid_mask;
 	uint32_t vrsel_mask;
-	int comp_idx;
+	enum syscfg_io_ids comp_idx;
 	const char *supply_name;
 };
 
@@ -166,6 +168,7 @@ int stm32mp2_pwr_init_io_domains(void)
 		}
 
 		if (stm32mp2_pwr_domain_is_enabled(regu)) {
+			uint32_t iocomp_code[IOCOMP_CODE_MAX] = {0U};
 			int ret;
 
 			VERBOSE("Init IO domain %d\n", i);
@@ -175,7 +178,20 @@ int stm32mp2_pwr_init_io_domains(void)
 				return ret;
 			}
 
-			stm32mp_syscfg_enable_io_compensation(regu->comp_idx);
+			ret = fdt_read_uint32_array(fdt, subnode, "st,iocomp",
+						    IOCOMP_CODE_MAX,
+						    iocomp_code);
+			if ((ret != 0) && (ret != -FDT_ERR_NOTFOUND)) {
+				return ret;
+			}
+
+			if (ret == -FDT_ERR_NOTFOUND) {
+				stm32mp_syscfg_enable_io_comp(regu->comp_idx);
+			} else {
+				stm32mp_syscfg_fixed_io_comp(regu->comp_idx,
+							     iocomp_code[0],
+							     iocomp_code[1]);
+			}
 		}
 	}
 
