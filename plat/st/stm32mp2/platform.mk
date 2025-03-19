@@ -425,8 +425,12 @@ BL31_SOURCES			+=	plat/st/common/stm32mp_svc_setup.c			\
 # Arm Archtecture services
 BL31_SOURCES			+=	services/arm_arch_svc/arm_arch_svc_setup.c
 
+ifeq (${STM32MP_M33_TDCID},1)
+BL31_SOURCES			+=	plat/st/stm32mp2/services/scmi_common.c
+endif
+
 ifeq (${STM32MP_SIP_CA33SS_CLK},1)
-BL31_SOURCES += plat/st/stm32mp2/services/ca35ss_clk_svc.c
+BL31_SOURCES 			+= 	plat/st/stm32mp2/services/ca35ss_clk_svc.c
 endif
 
 # Compilation rules
