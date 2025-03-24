@@ -216,8 +216,9 @@ enum {
 #define NVM_USER_SHR2		0xB7
 
 /* PRODUCT_ID bits definition */
-#define PMIC_NVM_ID_MASK	GENMASK_32(3, 0)
-#define PMIC_REF_ID_MASK	GENMASK_32(7, 4)
+#define PMIC_NVM_ID_MASK	((uint8_t)GENMASK_32(3, 0))
+#define PMIC_NVM_ID_SHIFT	0
+#define PMIC_REF_ID_MASK	((uint8_t)GENMASK_32(7, 4))
 #define PMIC_REF_ID_SHIFT	4
 #define PMIC_REF_ID_STPMIC1L	U(1)
 #define PMIC_REF_ID_STPMIC25	U(2)

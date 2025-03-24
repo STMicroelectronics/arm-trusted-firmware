@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024, STMicroelectronics - All Rights Reserved
+ * Copyright (C) 2024-2025, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -131,6 +131,7 @@ static int dt_pmic2_i2c_config(struct dt_node_info *i2c_info,
 bool initialize_pmic_i2c(void)
 {
 	int ret;
+	uint8_t val;
 	struct dt_node_info i2c_info;
 	struct i2c_handle_s *i2c = &i2c_handle;
 	uint32_t i2c_addr = 0U;
@@ -177,6 +178,12 @@ bool initialize_pmic_i2c(void)
 	pmic2 = &pmic2_handle;
 	pmic2->i2c_handle = &i2c_handle;
 	pmic2->i2c_addr = i2c_addr;
+
+	if (stpmic2_get_product_id(pmic2, &val) != 0) {
+		ERROR("Failed to access PMIC\n");
+		panic();
+	}
+	pmic2->ref_id = ((val & PMIC_REF_ID_MASK) >> PMIC_REF_ID_SHIFT);
 
 	return true;
 }
@@ -533,7 +540,7 @@ static int register_pmic2(void)
 void initialize_pmic(void)
 {
 	int ret;
-	uint8_t val;
+	uint8_t val __maybe_unused;
 
 	ret = initialize_pmic_i2c();
 	if (!ret) {
@@ -541,6 +548,8 @@ void initialize_pmic(void)
 		return;
 	}
 
+#if IMAGE_BL2
+#if LOG_LEVEL >= LOG_LEVEL_INFO
 	if (stpmic2_get_version(pmic2, &val) != 0) {
 		ERROR("Failed to access PMIC\n");
 		panic();
@@ -552,8 +561,8 @@ void initialize_pmic(void)
 		panic();
 	}
 	INFO("PMIC2 product ID = 0x%02x\n", val);
-
-	pmic2->ref_id = ((val & PMIC_REF_ID_MASK) >> PMIC_REF_ID_SHIFT);
+#endif
+#endif
 
 	ret = register_pmic2();
 	if (ret < 0) {
