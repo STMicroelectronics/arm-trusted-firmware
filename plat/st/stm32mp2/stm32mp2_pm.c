@@ -875,6 +875,7 @@ static void stm32_system_off(void)
 	uintptr_t rcc_base = stm32mp_rcc_base();
 	u_register_t mpidr = read_mpidr();
 	unsigned int core_id = MPIDR_AFFLVL0_VAL(mpidr);
+	uintptr_t exti1_base = STM32MP_EXTI1_BASE;
 	uintptr_t exti2_base = STM32MP_EXTI2_BASE;
 #if !STM32MP_M33_TDCID
 	uint32_t otp_idx = 0U;
@@ -944,6 +945,7 @@ static void stm32_system_off(void)
 
 #if !STM32MP_M33_TDCID
 	/* Force DDR off */
+	mmio_clrbits_32(rcc_base + RCC_DDRITFCFGR, RCC_DDRITFCFGR_DDRSHR);
 	ddr_sub_system_clk_off();
 #endif
 
@@ -974,6 +976,10 @@ static void stm32_system_off(void)
 	stm32_pm_context_clear();
 
 	/* Deactivate all WakeUp except WKUP pins */
+	mmio_write_32(exti1_base + EXTI1_C1IMR1, 0U);
+	mmio_write_32(exti1_base + EXTI1_C1IMR2, 0U);
+	mmio_write_32(exti1_base + EXTI1_C1IMR3, 0U);
+
 	mmio_write_32(exti2_base + EXTI2_C1IMR1, 0U);
 	mmio_write_32(exti2_base + EXTI2_C1IMR2, 0U);
 #if !STM32MP21
