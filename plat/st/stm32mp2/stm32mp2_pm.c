@@ -14,6 +14,7 @@
 #include <drivers/arm/gic_common.h>
 #include <drivers/arm/gicv2.h>
 #include <drivers/clk.h>
+#include <drivers/console.h>
 #include <drivers/generic_delay_timer.h>
 #include <drivers/st/bsec3_reg.h>
 #include <drivers/st/stm32mp_clkfunc.h>
@@ -654,6 +655,9 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 	/* Enable the Non-secure interrupt to wake up the CPU with WFI for pending interrupt */
 	saved_scr_el3 = read_scr_el3();
 	write_scr_el3(saved_scr_el3 | SCR_IRQ_BIT | SCR_FIQ_BIT);
+
+	/* Flush console if we enter in low power mode */
+	console_flush();
 }
 
 /*******************************************************************************
