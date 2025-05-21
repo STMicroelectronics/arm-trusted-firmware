@@ -572,6 +572,11 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 			mmio_write_32(pwr_base + PWR_CPU2CR,
 				      PWR_CPU2CR_LPDS_D2 | PWR_CPU2CR_LVDS_D2);
 		}
+
+		if (stm32_pwr_cpu3_state_is_running(pwr_base)) {
+			/* Send an IRQ to the M0+ using EXTI2 C1SEV to warn about clook switch. */
+			mmio_write_32(STM32MP_EXTI2_BASE + EXTI2_SWIER2, EXTI2_C1SEV);
+		}
 #endif
 		stm32mp2_enable_rcc_wakeup_irq(rcc_base);
 		break;
