@@ -971,7 +971,7 @@ static void stm32_system_off(void)
 	mmio_write_32(pwr_base + PWR_R3CIDCFGR, 0U);
 	mmio_write_32(pwr_base + PWR_CPU2CR, PWR_CPU2CR_PDDS_D2);
 #endif
-#if !STM32MP21
+#if !STM32MP_M33_TDCID && !STM32MP21
 	mmio_write_32(pwr_base + PWR_D3CR, PWR_D3CR_PDDS_D3);
 #endif /* !STM32MP21 */
 	stm32mp2_pll1_disable();
@@ -994,6 +994,7 @@ static void stm32_system_off(void)
 #if !STM32MP21
 	mmio_write_32(exti2_base + EXTI2_C1IMR3, 0U);
 #endif /* !STM32MP21 */
+#if !STM32MP_M33_TDCID
 	/* Deactivate CID filtering on EXTI2_C2IMRx */
 	mmio_write_32(exti2_base + EXTI_CmCIDCFGR(1U), 0U);
 	mmio_write_32(exti2_base + EXTI2_C2IMR1, 0U);
@@ -1006,6 +1007,7 @@ static void stm32_system_off(void)
 	mmio_write_32(exti2_base + EXTI2_C3IMR2, 0U);
 	mmio_write_32(exti2_base + EXTI2_C3IMR3, 0U);
 #endif /* !STM32MP21 */
+#endif /* !STM32MP_M33_TDCID */
 
 	/* Disable STATE_RUNNING state for this core */
 	stm32mp_state_set(core_id, STATE_RUNNING, false);
