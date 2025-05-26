@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2024, STMicroelectronics - All Rights Reserved
+ * Copyright (C) 2018-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: GPL-2.0+ OR BSD-3-Clause
  */
@@ -209,7 +209,7 @@ static const struct stm32mp_ddr_reg_info ddr_registers[REG_TYPE_NB] = {
 	},
 };
 
-static void stm32mp1_ddrphy_idone_wait(struct stm32mp_ddrphy *phy)
+static int stm32mp1_ddrphy_idone_wait(struct stm32mp_ddrphy *phy)
 {
 	uint32_t pgsr;
 	int error = 0;
@@ -252,11 +252,15 @@ static void stm32mp1_ddrphy_idone_wait(struct stm32mp_ddrphy *phy)
 	} while (((pgsr & DDRPHYC_PGSR_IDONE) == 0U) && (error == 0));
 	VERBOSE("\n[0x%lx] pgsr = 0x%x\n",
 		(uintptr_t)&phy->pgsr, pgsr);
+
+	return -error;
 }
 
-static void stm32mp1_ddrphy_init(struct stm32mp_ddrphy *phy, uint32_t pir)
+static int stm32mp1_ddrphy_init(struct stm32mp_ddrphy *phy, uint32_t pir)
 {
 	uint32_t pir_init = pir | DDRPHYC_PIR_INIT;
+	uint32_t zq0sr0;
+	int ret = 0;
 
 	mmio_write_32((uintptr_t)&phy->pir, pir_init);
 	VERBOSE("[0x%lx] pir = 0x%x -> 0x%x\n",
@@ -267,7 +271,17 @@ static void stm32mp1_ddrphy_init(struct stm32mp_ddrphy *phy, uint32_t pir)
 	udelay(DDR_DELAY_10US);
 
 	/* Wait DRAM initialization and Gate Training Evaluation complete */
-	stm32mp1_ddrphy_idone_wait(phy);
+	ret = stm32mp1_ddrphy_idone_wait(phy);
+	if (ret != 0) {
+		return ret;
+	}
+
+	zq0sr0 = mmio_read_32((uintptr_t)&phy->zq0sr0);
+	if (((zq0sr0 & DDRPHYC_ZQ0SRN_ZDONE) == 0U) || ((zq0sr0 & DDRPHYC_ZQ0SRN_ZERR) != 0U)) {
+		ret = -EINVAL;
+	}
+
+	return ret;
 }
 
 /* Wait quasi dynamic register update */
@@ -570,6 +584,7 @@ void stm32mp1_ddr_init(struct stm32mp_ddr_priv *priv,
 	}
 
 	if (ret != 0) {
+		ERROR("DDR power init failed\n");
 		panic();
 	}
 
@@ -673,7 +688,10 @@ void stm32mp1_ddr_init(struct stm32mp_ddr_priv *priv,
 	 *  4. Monitor PHY init status by polling PUBL register PGSR.IDONE
 	 *     Perform DDR PHY DRAM initialization and Gate Training Evaluation
 	 */
-	stm32mp1_ddrphy_idone_wait(priv->phy);
+	ret = stm32mp1_ddrphy_idone_wait(priv->phy);
+	if (ret != 0) {
+		panic();
+	}
 
 	/*
 	 *  5. Indicate to PUBL that controller performs SDRAM initialization
@@ -688,7 +706,10 @@ void stm32mp1_ddr_init(struct stm32mp_ddr_priv *priv,
 		pir |= DDRPHYC_PIR_DRAMRST; /* Only for DDR3 */
 	}
 
-	stm32mp1_ddrphy_init(priv->phy, pir);
+	ret = stm32mp1_ddrphy_init(priv->phy, pir);
+	if (ret != 0) {
+		panic();
+	}
 
 	/*
 	 *  6. SET DFIMISC.dfi_init_complete_en to 1
@@ -743,10 +764,16 @@ void stm32mp1_ddr_init(struct stm32mp_ddr_priv *priv,
 		pir |= DDRPHYC_PIR_RVTRN;
 	}
 
-	stm32mp1_ddrphy_init(priv->phy, pir);
+	ret = stm32mp1_ddrphy_init(priv->phy, pir);
+	if (ret != 0) {
+		panic();
+	}
 
-	/* 11. monitor PUB PGSR.IDONE to poll cpmpletion of training sequence */
-	stm32mp1_ddrphy_idone_wait(priv->phy);
+	/* 11. monitor PUB PGSR.IDONE to poll completion of training sequence */
+	ret = stm32mp1_ddrphy_idone_wait(priv->phy);
+	if (ret != 0) {
+		panic();
+	}
 
 	/*
 	 * 12. set back registers in step 8 to the original values if desidered

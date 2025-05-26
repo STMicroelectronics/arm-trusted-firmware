@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2022, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2017-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: GPL-2.0+ OR BSD-3-Clause
  */
@@ -185,6 +185,9 @@ struct stm32mp_ddrphy {
 #define DDRPHYC_ZQ0CRN_ZDATA_SHIFT		0
 #define DDRPHYC_ZQ0CRN_ZDEN			BIT(28)
 #define DDRPHYC_ZQ0CRN_ZQPD			BIT(31)
+
+#define DDRPHYC_ZQ0SRN_ZERR			BIT(30)
+#define DDRPHYC_ZQ0SRN_ZDONE			BIT(31)
 
 #define DDRPHYC_DXNGCR_DXEN			BIT(0)
 
