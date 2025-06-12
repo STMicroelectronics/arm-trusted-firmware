@@ -340,7 +340,11 @@ endif
 
 ifeq (${TRUSTED_BOARD_BOOT},1)
 BL2_SOURCES			+=	drivers/st/crypto/stm32_pka.c
+ifeq ($(STM32MP_M33_TDCID),0)
 BL2_SOURCES			+=	drivers/st/crypto/stm32_saes.c
+else
+BL2_SOURCES			+=	drivers/st/crypto/stm32_cryp.c
+endif
 endif
 
 ifneq ($(filter 1,${STM32MP_EMMC} ${STM32MP_SDMMC}),)
