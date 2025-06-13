@@ -8,10 +8,12 @@
 #include <errno.h>
 #include <limits.h>
 
+#include <mbedtls/sha256.h>
 #include <common/debug.h>
 #include <common/tbbr/cot_def.h>
 #include <drivers/clk.h>
 #include <drivers/st/stm32_hash.h>
+
 #include <lib/fconf/fconf.h>
 #include <lib/fconf/fconf_dyn_cfg_getter.h>
 #include <lib/fconf/fconf_tbbr_getter.h>
@@ -112,9 +114,14 @@ static int get_rotpk_hash(void *cookie, uint8_t *hash, size_t len)
 
 	pk_idx = param->pk_idx;
 
+#if STM32MP_CRYPTO_USE_SW
+	ret = mbedtls_sha256((uint8_t *)param->pk_hashes,
+			     param->nb_pk * sizeof(boot_api_sha256_t), calc_hash, 0);
+#else
 	stm32_hash_init(HASH_SHA256);
 	ret = stm32_hash_final_update((uint8_t *)param->pk_hashes,
 				      param->nb_pk * sizeof(boot_api_sha256_t), calc_hash);
+#endif
 	if (ret != 0) {
 		VERBOSE("%s: hash failed\n", __func__);
 		return -EINVAL;

@@ -18,9 +18,13 @@
 #include <lib/utils.h>
 #include <lib/xlat_tables/xlat_tables_v2.h>
 #include <mbedtls/asn1.h>
+#include <mbedtls/bignum.h>
+#include <mbedtls/ecdsa.h>
+#include <mbedtls/ecp.h>
 #include <mbedtls/md.h>
 #include <mbedtls/oid.h>
 #include <mbedtls/platform.h>
+#include <mbedtls/sha256.h>
 #include <mbedtls/x509.h>
 #include <plat/common/platform.h>
 #include <tools_share/firmware_encrypted.h>
@@ -44,6 +48,12 @@ struct stm32mp_auth_ops {
 static struct stm32mp_auth_ops auth_ops;
 #endif
 
+#if STM32MP_CRYPTO_USE_SW
+static void crypto_lib_init(void)
+{
+	NOTICE("TRUSTED_BOARD_BOOT support enabled (M33TD)\n");
+}
+#else
 static void crypto_lib_init(void)
 {
 	boot_api_context_t *boot_context __maybe_unused;
@@ -78,6 +88,7 @@ static void crypto_lib_init(void)
 #endif
 	}
 }
+#endif
 
 static int get_plain_pk_from_asn1(void *pk_ptr, unsigned int pk_len, void **plain_pk,
 				  size_t *len, int *pk_alg)
@@ -181,6 +192,115 @@ static int crypto_convert_pk(void *full_pk_ptr, unsigned int full_pk_len,
 	return ret;
 }
 #else /* STM32MP_CRYPTO_ROM_LIB*/
+#if STM32MP_CRYPTO_USE_SW
+int stm32_mbed_ecdsa_verif(void *hash, unsigned int hash_size,
+			   void *sig_r_ptr, unsigned int sig_r_size,
+			   void *sig_s_ptr, unsigned int sig_s_size,
+			   void *pk_x_ptr, unsigned int pk_x_size,
+			   void *pk_y_ptr, unsigned int pk_y_size,
+			   mbedtls_ecp_group_id cid)
+{
+	int ret;
+	mbedtls_ecp_group grp;
+	mbedtls_ecp_point Q;
+	mbedtls_mpi r, s;
+
+	/*Initialize structures */
+	mbedtls_ecp_group_init(&grp);
+	mbedtls_ecp_point_init(&Q);
+	mbedtls_mpi_init(&r);
+	mbedtls_mpi_init(&s);
+
+	/* Load the curve */
+	ret = mbedtls_ecp_group_load(&grp, cid);
+	if (ret != 0) {
+		goto cleanup;
+	}
+
+	/* Read public key coordinates */
+	ret = mbedtls_mpi_read_binary(&Q.MBEDTLS_PRIVATE(X), pk_x_ptr, pk_x_size);
+	if (ret != 0) {
+		goto cleanup;
+	}
+	ret = mbedtls_mpi_read_binary(&Q.MBEDTLS_PRIVATE(Y), pk_y_ptr, pk_y_size);
+	if (ret != 0) {
+		goto cleanup;
+	}
+	ret = mbedtls_mpi_lset(&Q.MBEDTLS_PRIVATE(Z), 1); /* Z = 1 for affine coordinates */
+	if (ret != 0) {
+		goto cleanup;
+	}
+
+	/* Read signature components */
+	ret = mbedtls_mpi_read_binary(&r, sig_r_ptr, sig_r_size);
+	if (ret != 0) {
+		goto cleanup;
+	}
+	ret = mbedtls_mpi_read_binary(&s, sig_s_ptr, sig_s_size);
+	if (ret != 0) {
+		goto cleanup;
+	}
+
+	/* Verify the signature */
+	ret = mbedtls_ecdsa_verify(&grp, hash, hash_size, &Q, &r, &s);
+
+cleanup:
+	mbedtls_ecp_group_free(&grp);
+	mbedtls_ecp_point_free(&Q);
+	mbedtls_mpi_free(&r);
+	mbedtls_mpi_free(&s);
+
+	return ret;
+}
+
+static uint32_t verify_signature(uint8_t *hash_in, uint8_t *pubkey_in,
+				 uint8_t *signature, uint32_t ecc_algo)
+{
+	int ret = -1;
+	mbedtls_ecp_group_id cid;
+
+	switch (ecc_algo) {
+	case BOOT_API_ECDSA_ALGO_TYPE_P256NIST:
+#if PKA_USE_NIST_P256
+		cid = MBEDTLS_ECP_DP_SECP256R1;
+		ret = 0;
+#else
+		WARN("%s nist_p256 requested but not included\n", __func__);
+#endif
+		break;
+	case BOOT_API_ECDSA_ALGO_TYPE_BRAINPOOL256:
+#if PKA_USE_BRAINPOOL_P256T1
+		cid = MBEDTLS_ECP_DP_BP256R1;
+		ret = 0;
+#else
+		WARN("%s brainpool_p256t1 requested but not included\n", __func__);
+#endif
+		break;
+	default:
+		WARN("%s unexpected ecc_algo(%u)\n", __func__, ecc_algo);
+		break;
+	}
+
+	if (ret < 0) {
+		return CRYPTO_ERR_SIGNATURE;
+	}
+
+	ret = stm32_mbed_ecdsa_verif(hash_in,
+				     BOOT_API_SHA256_DIGEST_SIZE_IN_BYTES,
+				     signature, BOOT_API_ECDSA_SIGNATURE_LEN_IN_BYTES / 2U,
+				     signature + BOOT_API_ECDSA_SIGNATURE_LEN_IN_BYTES / 2U,
+				     BOOT_API_ECDSA_SIGNATURE_LEN_IN_BYTES / 2U,
+				     pubkey_in, BOOT_API_ECDSA_PUB_KEY_LEN_IN_BYTES / 2U,
+				     pubkey_in + BOOT_API_ECDSA_PUB_KEY_LEN_IN_BYTES / 2U,
+				     BOOT_API_ECDSA_PUB_KEY_LEN_IN_BYTES / 2U, cid);
+
+	if (ret < 0) {
+		return CRYPTO_ERR_SIGNATURE;
+	}
+
+	return 0;
+}
+#else
 static uint32_t verify_signature(uint8_t *hash_in, uint8_t *pubkey_in,
 				 uint8_t *signature, uint32_t ecc_algo)
 {
@@ -227,6 +347,7 @@ static uint32_t verify_signature(uint8_t *hash_in, uint8_t *pubkey_in,
 
 	return 0;
 }
+#endif
 
 static int crypto_convert_pk(void *full_pk_ptr, unsigned int full_pk_len,
 			     void **hashed_pk_ptr, unsigned int *hashed_pk_len)
@@ -431,6 +552,13 @@ static int crypto_verify_signature(void *data_ptr, unsigned int data_len,
 	/* Need to free allocated 'next' in mbedtls_asn1_get_sequence_of */
 	mbedtls_free(seq.next);
 
+#if STM32MP_CRYPTO_USE_SW
+	ret = mbedtls_sha256((uint8_t *)data_ptr, data_len, image_hash, 0);
+	if (ret != 0) {
+		VERBOSE("%s: Mbed TLS hash failed\n", __func__);
+		return -EINVAL;
+	}
+#else
 	/* Compute hash for the data covered by the signature */
 	stm32_hash_init(HASH_SHA256);
 
@@ -439,6 +567,7 @@ static int crypto_verify_signature(void *data_ptr, unsigned int data_len,
 		VERBOSE("%s: stm32_hash_final_update (%d)\n", __func__, ret);
 		return CRYPTO_ERR_SIGNATURE;
 	}
+#endif
 
 	return verify_signature(image_hash, my_pk, sig, curve_id);
 }
@@ -464,6 +593,13 @@ static int crypto_verify_hash(void *data_ptr, unsigned int data_len,
 	digest_info_ptr = p;
 	digest_info_len = len;
 
+#if STM32MP_CRYPTO_USE_SW
+	ret = mbedtls_sha256(data_ptr, data_len, calc_hash, 0);
+	if (ret != 0) {
+		VERBOSE("%s: hash failed\n", __func__);
+		return CRYPTO_ERR_HASH;
+	}
+#else
 	stm32_hash_init(HASH_SHA256);
 
 	ret = stm32_hash_final_update(data_ptr, data_len, calc_hash);
@@ -471,6 +607,7 @@ static int crypto_verify_hash(void *data_ptr, unsigned int data_len,
 		VERBOSE("%s: hash failed\n", __func__);
 		return CRYPTO_ERR_HASH;
 	}
+#endif
 
 	ret = memcmp(calc_hash, digest_info_ptr, digest_info_len);
 	if (ret != 0) {

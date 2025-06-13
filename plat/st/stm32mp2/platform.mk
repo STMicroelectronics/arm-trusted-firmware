@@ -68,7 +68,13 @@ $(warning DTB_FILE_NAME=$(DTB_FILE_NAME))
 $(error Cannot enable more than one STM32MP2x flag)
 endif
 
+ifeq (${STM32MP_M33_TDCID},1)
+# When Cortex-M33 is TDCID, Cortex-A doesn't have access to HASH, SAES and PKA peripherals
+STM32MP_CRYPTO_USE_SW	:=	1
+STM32MP_USE_EXTERNAL_HEAP 	:=	0
+else
 STM32MP_USE_EXTERNAL_HEAP 	:=	1
+endif
 
 ifeq (${TRUSTED_BOARD_BOOT},1)
 # PKA algo to include
@@ -219,6 +225,7 @@ $(eval $(call assert_booleans,\
 		STM32MP_CRYPTO_ROM_LIB \
 		STM32_SAES_CRYP2 \
 		STM32MP_CONTEXT_VERSION \
+		STM32MP_CRYPTO_USE_SW \
 		STM32MP_DDR_DUAL_AXI_PORT \
 		STM32MP_DDR_FIP_IO_STORAGE \
 		STM32MP_DDR3_TYPE \
@@ -260,6 +267,7 @@ $(eval $(call add_defines,\
 		STM32_TF_A_COPIES \
 		STM32MP_CONTEXT_VERSION \
 		STM32MP_CRYPTO_ROM_LIB \
+		STM32MP_CRYPTO_USE_SW \
 		STM32MP_DDR_DUAL_AXI_PORT \
 		STM32MP_DDR_FIP_IO_STORAGE \
 		STM32MP_DDR3_TYPE \

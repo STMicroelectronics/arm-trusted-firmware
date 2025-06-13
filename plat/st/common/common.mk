@@ -19,6 +19,9 @@ ARM_LINUX_KERNEL_AS_BL33	:=	0
 # Use secure library from the ROM code for authentication
 STM32MP_CRYPTO_ROM_LIB		?=	0
 
+# Flag to be activated when the coprocessor owns the security IPs
+STM32MP_CRYPTO_USE_SW		?=	0
+
 # Please don't increment this value without good understanding of
 # the monotonic counter
 STM32_TF_VERSION		?=	0
