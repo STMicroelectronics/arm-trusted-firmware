@@ -18,6 +18,7 @@
 #include <drivers/generic_delay_timer.h>
 #include <drivers/st/bsec3_reg.h>
 #include <drivers/st/stm32mp_clkfunc.h>
+#include <drivers/st/stm32mp_ddr.h>
 #include <drivers/st/stm32mp_reset.h>
 #include <drivers/st/stm32mp2_ddr_helpers.h>
 #include <lib/mmio.h>
@@ -955,7 +956,7 @@ static void stm32_system_off(void)
 #if !STM32MP_M33_TDCID
 	/* Force DDR off */
 	mmio_clrbits_32(rcc_base + RCC_DDRITFCFGR, RCC_DDRITFCFGR_DDRSHR);
-	ddr_sub_system_clk_off();
+	stm32mp_board_ddr_power_off();
 #endif
 
 	/* Prevent interrupts from spuriously waking up this cpu */
