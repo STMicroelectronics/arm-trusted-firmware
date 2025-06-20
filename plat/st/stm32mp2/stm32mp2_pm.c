@@ -977,6 +977,8 @@ static void stm32_system_off(void)
 	stm32mp2_pll1_disable();
 
 #if !STM32MP_M33_TDCID
+	/* Maintain BKPSRAM content in power off to preserve TF-M ITS */
+	mmio_write_32(pwr_base + PWR_CR9, PWR_CR9_BKPRBSEN);
 	/* Do not maintain RETRAM memory content in Standby or Vbat */
 	mmio_write_32(pwr_base + PWR_CR10, PWR_CR10_RETRBSEN_DISABLE);
 #endif
@@ -1376,12 +1378,13 @@ static void stm32_pm_tdcid_init(void *fdt)
 	mmio_setbits_32(rcc_base + RCC_LEGBOOTCR, RCC_LEGBOOTCR_LEGACY_BEN);
 
 #if STM32MP21
-	/* Maintain BKPSRAM & RETRAM content in Standby */
+	/* Maintain BKPSRAM content in Standby */
 	mmio_write_32(pwr_base + PWR_CR9, PWR_CR9_BKPRBSEN);
 #else
-	/* Maintain BKPSRAM & LPSRAM1 & RETRAM content in Standby */
+	/* Maintain BKPSRAM & LPSRAM1 content in Standby */
 	mmio_write_32(pwr_base + PWR_CR9, PWR_CR9_BKPRBSEN | PWR_CR9_LPR1BSEN);
 #endif
+	/* Maintain RETRAM content in Standby */
 	mmio_write_32(pwr_base + PWR_CR10, PWR_CR10_RETRBSEN_STANDBY);
 
 	/* Prevent RETRAM erase */
