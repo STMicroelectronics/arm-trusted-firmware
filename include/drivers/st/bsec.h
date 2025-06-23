@@ -67,7 +67,7 @@ uint32_t bsec_permanent_lock_otp(uint32_t otp);
 uint32_t bsec_check_nsec_access_rights(uint32_t otp);
 #endif
 
-#if defined(STM32MP21) && STM32MP21 && !(defined(STM32MP_M33_TDCID) && STM32MP_M33_TDCID)
+#if defined(STM32MP21) && STM32MP21
 void bsec_increment_hdpl(void);
 #else
 static inline void bsec_increment_hdpl(void) {}

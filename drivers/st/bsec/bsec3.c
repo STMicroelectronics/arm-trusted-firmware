@@ -35,6 +35,7 @@
 #define BSEC_OTP_BANK_SHIFT		U(5)
 #define BSEC_TIMEOUT_VALUE		U(0x800000) /* ~7sec @1.2GHz */
 
+#if !STM32MP_M33_TDCID
 static uint32_t otp_bank(uint32_t otp)
 {
 	if (otp > STM32MP2_OTP_MAX_ID) {
@@ -531,6 +532,7 @@ uint32_t bsec_read_otp(uint32_t *val, uint32_t otp)
 
 	return bsec_shadow_read_otp(val, otp);
 }
+#endif /* !STM32MP_M33_TDCID */
 
 #if STM32MP21
 /*

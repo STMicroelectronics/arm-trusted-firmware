@@ -280,9 +280,9 @@ PLAT_BL_COMMON_SOURCES		+=	drivers/st/i2c/stm32_i2c.c
 
 PLAT_BL_COMMON_SOURCES		+=	plat/st/stm32mp2/stm32mp2_private.c
 
-ifeq ($(STM32MP_M33_TDCID),0)
 PLAT_BL_COMMON_SOURCES		+=	drivers/st/bsec/bsec3.c
-else
+
+ifneq ($(STM32MP_M33_TDCID),0)
 PLAT_BL_COMMON_SOURCES		+=	plat/st/stm32mp2/stm32mp2_otp.c
 endif
 PLAT_BL_COMMON_SOURCES		+=	plat/st/stm32mp2/stm32mp2_otp_mirror.c
