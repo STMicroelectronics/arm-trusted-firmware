@@ -19,7 +19,12 @@
  ******************************************************************************/
 
 /* Size of cacheable stacks */
+#if STM32MP_CRYPTO_USE_SW
+/* mbedtls needs more stack, especially with LTO */
+#define PLATFORM_STACK_SIZE		0x1000
+#else
 #define PLATFORM_STACK_SIZE		0xC00
+#endif
 
 #define STM32MP_PRIMARY_CPU		U(0x0)
 #define STM32MP_SECONDARY_CPU		U(0x1)
