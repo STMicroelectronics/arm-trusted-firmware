@@ -223,10 +223,6 @@ PLAT_BL_COMMON_SOURCES	+=	plat/st/stm32mp1/stm32mp1_private.c
 
 PLAT_BL_COMMON_SOURCES	+=	drivers/st/uart/aarch32/stm32_console.S
 
-ifneq (${ENABLE_STACK_PROTECTOR},0)
-PLAT_BL_COMMON_SOURCES	+=	plat/st/stm32mp1/stm32mp1_stack_protector.c
-endif
-
 PLAT_BL_COMMON_SOURCES	+=	lib/cpus/aarch32/cortex_a7.S
 
 PLAT_BL_COMMON_SOURCES	+=	drivers/arm/tzc/tzc400.c				\

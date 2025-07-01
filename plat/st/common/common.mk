@@ -70,6 +70,12 @@ STM32_TF_A_COPIES		:=	2
 # PLAT_PARTITION_MAX_ENTRIES must take care of STM32_TF-A_COPIES and other partitions
 PLAT_PARTITION_MAX_ENTRIES	:=	$(shell echo $$(($(STM32_TF_A_COPIES) + $(STM32_EXTRA_PARTS))))
 
+ifneq ($(ENABLE_STACK_PROTECTOR),0)
+# Enable the stack protector. If set "to strong", this improves
+# debugging at the cost of a size increase.
+PLAT_BL_COMMON_SOURCES		+=	plat/st/common/stm32mp_stack_protector.c
+endif
+
 ifeq (${PSA_FWU_SUPPORT},1)
 # Number of banks of updatable firmware
 NR_OF_FW_BANKS			:=	2
