@@ -313,6 +313,11 @@ int stm32mp_board_ddr_power_off(void)
 	 */
 	fixed_regulator_register();
 	initialize_pmic();
+
+	/* Force DDR in self refresh */
+	ddr_set_sr_mode(DDR_SSR_MODE);
+	ddr_sr_entry(true);
+
 	/* DDR and device tree is no more accessible when clk is deactivated */
 	ddr_sub_system_clk_off();
 	ddr_power_off(fdt, node);
