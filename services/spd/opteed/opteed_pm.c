@@ -206,6 +206,9 @@ static void opteed_system_off(void)
 	/* Enter OPTEE. We do not care about the return value because we
 	 * must continue the shutdown anyway */
 	opteed_synchronous_sp_entry(optee_ctx);
+
+	/* Clear the registered interrupt handler */
+	delete_interrupt_type_handler(INTR_TYPE_S_EL1);
 }
 
 /*******************************************************************************

@@ -221,6 +221,19 @@ int32_t register_interrupt_type_handler(uint32_t type,
 }
 
 /*******************************************************************************
+ * This function delete a handler for the 'type' of interrupt specified.
+ ******************************************************************************/
+int32_t delete_interrupt_type_handler(uint32_t type)
+{
+	assert(intr_type_descs[type].handler != NULL);
+
+	/* Save the handler */
+	intr_type_descs[type].handler = NULL;
+
+	return 0;
+}
+
+/*******************************************************************************
  * This function is called when an interrupt is generated and returns the
  * handler for the interrupt type (if registered). It returns NULL if the
  * interrupt type is not supported or its handler has not been registered.
