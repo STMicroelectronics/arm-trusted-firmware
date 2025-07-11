@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2024-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -64,5 +64,7 @@ static inline bool stm32_otp_is_closed_device(void)
 {
 	return bsec_mode_is_closed_device();
 }
+
+void stm32mp_ca35_set_vbar(uintptr_t vbar);
 
 #endif /* STM32MP2_PRIVATE_H */

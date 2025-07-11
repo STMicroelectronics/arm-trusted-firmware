@@ -262,7 +262,8 @@ BL31_SOURCES			+=	plat/st/stm32mp2/bl31_plat_setup.c			\
 					plat/st/stm32mp2/stm32mp2_topology.c
 
 ifeq ($(STM32MP_SUPPORT_PM),1)
-BL31_SOURCES			+=	plat/st/stm32mp2/stm32mp2_pm.c
+BL31_SOURCES			+=	plat/st/stm32mp2/stm32mp2_pm.c				\
+					plat/st/stm32mp2/stm32mp2_ca35ss.c
 endif
 
 # Generic GIC v2
