@@ -25,6 +25,8 @@
  */
 #define CA35SS_SSC_LPI_TSGEN_NTS(type)	(U(0x0D0) + A35SSC_SSC_ ## type)
 #define CA35SS_SSC_LPI_STGEN_NTS(type)	(U(0x140) + A35SSC_SSC_ ## type)
+#define CA35SS_SSC_OPP_REQ(type)	(U(0x1A0) + A35SSC_SSC_ ## type)
+#define CA35SS_SSC_MEM_CTRL(type)	(U(0x1C0) + A35SSC_SSC_ ## type)
 
 #define CA35SS_SYSCFG_VBAR_CR		0x2084U
 
@@ -39,6 +41,20 @@
  */
 #define CA35SS_SSC_LPI_STGEN_CSYSREQ			BIT_32(24)
 #define CA35SS_SSC_LPI_STGEN_CSYSACK			BIT_32(25)
+
+/*
+ * CA35SS_SSC_OPP_REQ register fields
+ */
+#define CA35SS_SSC_OPP_REQ_REQ				BIT_32(0)
+#define CA35SS_SSC_OPP_REQ_ACK				BIT_32(1)
+
+/*
+ * CA35SS_SSC_MEM_CTRL register fields
+ */
+#define CA35SS_SSC_MEM_CTRL_RM_MASK			GENMASK_32(2, 0)
+#define CA35SS_SSC_MEM_CTRL_RM_OVERDRIVE		U(3)
+#define CA35SS_SSC_MEM_CTRL_RME				BIT_32(3)
+
 #define TIMEOUT_US			U(1000)
 
 void stm32mp_ca35_set_vbar(uintptr_t vbar)
@@ -113,4 +129,60 @@ void stm32mp_ca35_lpi_restore(void)
 			}
 		}
 	}
+}
+
+/*
+ * Configure CA35SS for new OPP with syscfg register SSC_MEM and OPP_REQ
+ * the parameter overdrive indicates if the new OPP has an overdrive frequency
+ * NB: as STGEN is deactivated during OPP request, use polling without timeout
+ */
+void stm32mp_ca35_configure_opp(bool overdrive)
+{
+	uint32_t mem_ctrl = mmio_read_32(A35SSC_BASE + CA35SS_SSC_MEM_CTRL(RW));
+	uint32_t counter = UINT32_MAX;
+
+	/*
+	 * SSC_MEM control the speed of memories inside Cortex-A35
+	 * - RME: 0 default margin setting for nominal Cortex-A35 frequencies
+	 * - RME: 1 margin setting from RM[2:0]
+	 * - RM: CA35SS_SSC_MEM_CTRL_RM_OVERDRIVE the recommended value for
+	 *       Cortex-A35 overdrive frequencies, not used if RME = 0
+	 *
+	 * This function configure the CA35SS values only if the OPP change
+	 * (nominal vs overdrive)
+	 */
+	if (overdrive) {
+		if ((mem_ctrl & CA35SS_SSC_MEM_CTRL_RME) == CA35SS_SSC_MEM_CTRL_RME) {
+			return;
+		}
+		mmio_write_32(A35SSC_BASE + CA35SS_SSC_MEM_CTRL(WC1),
+			      CA35SS_SSC_MEM_CTRL_RM_MASK);
+		mmio_write_32(A35SSC_BASE + CA35SS_SSC_MEM_CTRL(WS1),
+			      CA35SS_SSC_MEM_CTRL_RME | CA35SS_SSC_MEM_CTRL_RM_OVERDRIVE);
+	} else {
+		if ((mem_ctrl & CA35SS_SSC_MEM_CTRL_RME) == 0U) {
+			return;
+		}
+		mmio_write_32(A35SSC_BASE + CA35SS_SSC_MEM_CTRL(WC1), CA35SS_SSC_MEM_CTRL_RME);
+	}
+
+	stm32mp_ca35_lpi_isolate();
+
+	/* Launch the OPP request*/
+	mmio_write_32(A35SSC_BASE + CA35SS_SSC_OPP_REQ(WS1), CA35SS_SSC_OPP_REQ_REQ);
+
+	/* Wait for the request to be complete */
+	while ((mmio_read_32(A35SSC_BASE + CA35SS_SSC_OPP_REQ(RW))
+		& CA35SS_SSC_OPP_REQ_ACK) == 0U) {
+		/* After LPI isolate, the ARM generic timer is frozen  */
+		counter--;
+		if (counter == 0U) {
+			panic();
+		}
+	}
+
+	/* Stop the OPP request */
+	mmio_write_32(A35SSC_BASE + CA35SS_SSC_OPP_REQ(WC1), CA35SS_SSC_OPP_REQ_REQ);
+
+	stm32mp_ca35_lpi_restore();
 }

@@ -118,5 +118,6 @@ uint32_t otp_mirror_read(uint32_t *val, uint32_t otp);
 void stm32mp_ca35_set_vbar(uintptr_t vbar);
 void stm32mp_ca35_lpi_isolate(void);
 void stm32mp_ca35_lpi_restore(void);
+void stm32mp_ca35_configure_opp(bool overdrive);
 
 #endif /* STM32MP2_PRIVATE_H */
