@@ -6,32 +6,57 @@
 
 #include <drivers/delay_timer.h>
 #include <drivers/scmi-msg.h>
+#include <drivers/scmi.h>
+#include <lib/mmio.h>
 
 #include "scmi_private.h"
 
 #define TIMEOUT_10MS_IN_US		10000U
 
+/* IPCC chanel used for ringbell for SCMI mailbox */
 #define IPCC_CHANNEL15			14U
 #define IPCC_CHANNEL			IPCC_CHANNEL15
 #define IPCC1_C1SCR			(IPCC1_BASE + 0x008U)
 
+/* SCMI message header format bit field */
+#define SCMI_HEADER_TOKEN_SHIFT		18U
+#define SCMI_HEADER_TOKEN_MASK		GENMASK_32(27, 18)
 #define SCMI_HEADER_PROTOCOL_SHIFT	10U
-#define SCMI_CHANNEL_FLAGS		0
+#define SCMI_HEADER_PROTOCOL_MASK	GENMASK_32(17, 10)
+#define SCMI_HEADER_MSG_ID_SHIFT	0U
+#define SCMI_HEADER_MSG_ID_MASK		GENMASK_32(7, 0)
 
-#define SCMI_PROTO_VOLTD		0x17U
+/* Helper macro to get info from a SCMI message header */
+#define SCMI_MSG_GET_TOKEN(_msg)							\
+	(((_msg) & SCMI_HEADER_TOKEN_MASK) >> SCMI_HEADER_TOKEN_SHIFT)
+#define SCMI_MSG_GET_PROTOCOL(_msg)							\
+	(((_msg) & SCMI_HEADER_PROTOCOL_MASK) >> SCMI_HEADER_PROTOCOL_SHIFT)
+#define SCMI_MSG_GET_MSG_ID(_msg)							\
+	(((_msg) & SCMI_HEADER_MSG_ID_MASK) >> SCMI_HEADER_MSG_ID_SHIFT)
+
+/* SCMI base protocol: mandatory messages IDs for all SCMI protocols */
 #define SCMI_MSG_PROTOCOL_VERSION	0x0U
+
+/* SCMI voltage domain protocol message IDs */
 #define SCMI_MSG_VOLTAGE_LEVEL_SET	0x7U
 #define SCMI_MSG_VOLTAGE_LEVEL_GET	0x8U
 
-#define SCMI_HEADER_VOLTD_PROTO_VERSION	((SCMI_PROTO_VOLTD << SCMI_HEADER_PROTOCOL_SHIFT) \
-					| SCMI_MSG_PROTOCOL_VERSION)
-#define SCMI_HEADER_VOLTD_LEVEL_SET	((SCMI_PROTO_VOLTD << SCMI_HEADER_PROTOCOL_SHIFT) \
-					| SCMI_MSG_VOLTAGE_LEVEL_SET)
-#define SCMI_HEADER_VOLTD_LEVEL_GET	((SCMI_PROTO_VOLTD << SCMI_HEADER_PROTOCOL_SHIFT) \
-					| SCMI_MSG_VOLTAGE_LEVEL_GET)
 
-#define SCMI_CHANNEL_BUSY(ch_status)	(((ch_status) & BIT_32(0)) == 0)
-#define SCMI_CHANNEL_ERROR(ch_status)	(((ch_status) & BIT_32(1)) == BIT_32(1))
+/* Helper macro to create an SCMI message header given protocol, message id and token.  */
+#define SCMI_MSG_CREATE(_protocol, _msg_id, _token)					\
+	((((_protocol) << SCMI_HEADER_PROTOCOL_SHIFT)  & SCMI_HEADER_PROTOCOL_MASK) |	\
+	 (((_msg_id) << SCMI_HEADER_MSG_ID_SHIFT) & SCMI_HEADER_MSG_ID_MASK) |		\
+	 (((_token) << SCMI_HEADER_TOKEN_SHIFT) & SCMI_HEADER_TOKEN_MASK))
+
+/* SMT Channel */
+#define SCMI_CHANNEL_FLAGS_POLL		0
+
+#define SCMI_CHANNEL_STATUS_ERROR	BIT_32(1)
+#define SCMI_CHANNEL_STATUS_FREE	BIT_32(0)
+
+#define SCMI_SHMEM_PAYLOAD_OFFSET	(7 * sizeof(uint32_t))
+#define SCMI_MAX_MESSAGE_PAYLOAD_SIZE	((SMT_BUF_SLOT_SIZE - SCMI_SHMEM_PAYLOAD_OFFSET) \
+					/ sizeof(uint32_t))
 
 struct scmi_shmem_layout {
 	uint32_t reserved0;
@@ -50,9 +75,9 @@ static struct scmi_shmem_layout *shmem = (struct scmi_shmem_layout *)STM32MP_SCM
  * @brief Ring the SCMI doorbell to notify the remote processor.
  *
  */
-void scmi_ring_doorbell(void)
+static void scmi_ring_doorbell(void)
 {
-	*(volatile uint32_t *)IPCC1_C1SCR = BIT_32(IPCC_CHANNEL + 16U);
+	mmio_write_32(IPCC1_C1SCR, BIT_32(IPCC_CHANNEL + 16U));
 }
 
 /**
@@ -61,8 +86,8 @@ void scmi_ring_doorbell(void)
  */
 void scmi_channel_clear(void)
 {
-	*(volatile uint32_t *)IPCC1_C1SCR = BIT_32(IPCC_CHANNEL);
-        shmem->channel_status = 1U;
+	mmio_write_32(IPCC1_C1SCR, BIT_32(IPCC_CHANNEL));
+	shmem->channel_status = SCMI_CHANNEL_STATUS_FREE;
 }
 
 /**
@@ -71,7 +96,7 @@ void scmi_channel_clear(void)
  */
 bool scmi_channel_busy(void)
 {
-        return SCMI_CHANNEL_BUSY(shmem->channel_status);
+	return (shmem->channel_status & SCMI_CHANNEL_STATUS_FREE) == 0;
 }
 
 /**
@@ -80,7 +105,7 @@ bool scmi_channel_busy(void)
  */
 bool scmi_channel_error(void)
 {
-        return SCMI_CHANNEL_ERROR(shmem->channel_status);
+	return (shmem->channel_status & SCMI_CHANNEL_STATUS_ERROR) != 0;
 }
 
 /**
@@ -95,15 +120,15 @@ int32_t scmi_voltd_protocol_version(uint32_t *version)
 	uint64_t timeout_ref;
 
 	shmem->channel_status = 0U;
-	shmem->channel_flags = SCMI_CHANNEL_FLAGS;
+	shmem->channel_flags = SCMI_CHANNEL_FLAGS_POLL;
 	shmem->length = sizeof(uint32_t);
-	shmem->message_header = SCMI_HEADER_VOLTD_PROTO_VERSION;
+	shmem->message_header = SCMI_MSG_CREATE(SCMI_PROTOCOL_ID_VOLTAGE_DOMAIN,
+						SCMI_MSG_PROTOCOL_VERSION, 0U);
 
 	scmi_ring_doorbell();
 
 	timeout_ref = timeout_init_us(TIMEOUT_10MS_IN_US);
-	while (SCMI_CHANNEL_BUSY(shmem->channel_status)
-	       && !SCMI_CHANNEL_ERROR(shmem->channel_status))
+	while (scmi_channel_busy() && !scmi_channel_error())
 	{
 		if (timeout_elapsed(timeout_ref)) {
 			return SCMI_ST_TIMEOUT;
@@ -111,16 +136,16 @@ int32_t scmi_voltd_protocol_version(uint32_t *version)
 		udelay(10);
 	}
 
-	if (SCMI_CHANNEL_ERROR(shmem->channel_status)) {
+	if (scmi_channel_error()) {
 		shmem->channel_status = 0U;
 		return SCMI_COMMS_ERROR;
 	}
 
 	scmi_channel_clear();
 
-        if (shmem->length != (3U * sizeof(uint32_t))) {
-                return SCMI_COMMS_ERROR;
-        }
+	if (shmem->length != (3U * sizeof(uint32_t))) {
+		return SCMI_COMMS_ERROR;
+	}
 
 	*version = shmem->payload[1];
 	return (int32_t)shmem->payload[0]; /* status */
@@ -135,10 +160,10 @@ int32_t scmi_voltd_protocol_version(uint32_t *version)
 void scmi_voltd_level_get_snd(uint32_t domain_id)
 {
 	shmem->channel_status = 0U;
-	shmem->channel_flags = SCMI_CHANNEL_FLAGS;
+	shmem->channel_flags = SCMI_CHANNEL_FLAGS_POLL;
 	shmem->length = 2U * sizeof(uint32_t);
-	shmem->message_header = SCMI_HEADER_VOLTD_LEVEL_GET;
-
+	shmem->message_header = SCMI_MSG_CREATE(SCMI_PROTOCOL_ID_VOLTAGE_DOMAIN,
+						SCMI_MSG_VOLTAGE_LEVEL_GET, 0U);
 	shmem->payload[0] = domain_id;
 	scmi_ring_doorbell();
 }
@@ -154,9 +179,9 @@ int32_t scmi_voltd_level_get_rcv(int32_t *voltage_level)
 {
 	scmi_channel_clear();
 
-        if (shmem->length != (3U * sizeof(uint32_t))) {
-                return SCMI_COMMS_ERROR;
-        }
+	if (shmem->length != (3U * sizeof(uint32_t))) {
+		return SCMI_COMMS_ERROR;
+	}
 
 	*voltage_level = shmem->payload[1];
 	return (int32_t)shmem->payload[0]; /* status */
@@ -171,13 +196,13 @@ int32_t scmi_voltd_level_get_rcv(int32_t *voltage_level)
  *
  */
 void scmi_voltd_level_set_snd(uint32_t domain_id, uint32_t flags,
-                              int32_t voltage_level)
+			      int32_t voltage_level)
 {
 	shmem->channel_status = 0U;
-	shmem->channel_flags = SCMI_CHANNEL_FLAGS;
+	shmem->channel_flags = SCMI_CHANNEL_FLAGS_POLL;
 	shmem->length = 4U * sizeof(uint32_t);
-	shmem->message_header = SCMI_HEADER_VOLTD_LEVEL_SET;
-
+	shmem->message_header = SCMI_MSG_CREATE(SCMI_PROTOCOL_ID_VOLTAGE_DOMAIN,
+						SCMI_MSG_VOLTAGE_LEVEL_GET, 0U);
 	shmem->payload[0] = domain_id;
 	shmem->payload[1] = flags;
 	shmem->payload[2] = (uint32_t)voltage_level;
@@ -195,9 +220,9 @@ int32_t scmi_voltd_level_set_rcv()
 {
 	scmi_channel_clear();
 
-        if (shmem->length != (2U * sizeof(uint32_t))) {
-                return SCMI_COMMS_ERROR;
-        }
+	if (shmem->length != (2U * sizeof(uint32_t))) {
+		return SCMI_COMMS_ERROR;
+	}
 
 	return (int32_t)shmem->payload[0]; /* status */
 }
