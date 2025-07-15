@@ -19,6 +19,7 @@
 
 #include "ca35ss_clk_svc.h"
 #include "scmi_private.h"
+#include <stm32mp2_private.h>
 #include <stm32mp2_smc.h>
 #include <stm32mp_common.h>
 #include <stm32mp_svc_setup.h>
@@ -39,6 +40,9 @@
 #define VOLTD_SCMI_STPMIC2_BUCK3	7U
 #define VOLTD_SCMI_STPMIC2_BUCK		VOLTD_SCMI_STPMIC2_BUCK3
 #endif
+
+/* Nominal rate for CA33SS in STM32MP2, to detect overdrive freq */
+#define NOMINAL_RATE			1200000
 
 enum stm32_ca35ss_clk_svc_function {
 	CA35SS_CLK_SVC_NO_FUNCTION,
@@ -61,7 +65,6 @@ struct ca35ss_state
 {
 	int32_t state;
 	int32_t target_opp_idx;
-	bool pll1_done;
 };
 
 struct ca35ss_opp
@@ -100,6 +103,7 @@ static struct ca35ss_state state;
  *    |               | --------------> |                 |       GET_VOLT_POLL
  *    |               |       volt      |                 |       GET_VOLT_POLL
  *    |               | < - - - - - - - |                 |       GET_VOLT_POLL
+ *    |               |  << set CA35 clock in bypass >>
  *    |               |     set_volt    |                 |       SET_VOLT_POLL
  *    |               | --------------> |                 |       SET_VOLT_POLL
  *    |               |              Doorbell             |       SET_VOLT_POLL
@@ -109,7 +113,7 @@ static struct ca35ss_state state;
  *                      [POLLING UNTIL CHANNEL IS FREE]
  *    |    poll()     |                 |                 |       SET_VOLT_POLL
  *    | ------------> |                 |                 |       SET_VOLT_POLL
- *    |      OK       |                 |                 |       BASE
+ *    |      OK       | << set PLL1 with target frequency >>
  *    | < - - - - - - |                 |                 |       BASE
  *
  * Hence, from Linux the view is as simple as a set_rate() followed by a status
@@ -121,7 +125,6 @@ static void ca35ss_set_state_base(void)
 {
 	state.state = CA35SS_CLK_SVC_STATE_BASE;
 	state.target_opp_idx = -1;
-	state.pll1_done = false;
 }
 
 /* Device tree parsing functions */
@@ -423,6 +426,16 @@ uint32_t ca35ss_clk_svc_setup(void)
 		return STM32_SMC_FAILED;
 	}
 
+	/* Verify supported setting for PLL1 */
+	for (opp_idx = 0; opp_idx < opp.opp_nb; opp_idx++) {
+		err = stm32mp2_pll1_check_rate(opp.hz[opp_idx]);
+		if (err != 0) {
+			ERROR("%s: PLL1 configuration for %lu Hz not found (%d)\n",
+			      __func__, opp.hz[opp_idx], err);
+			return STM32_SMC_FAILED;
+		}
+	}
+
 	/* Verify SCMI availlability */
 	timeout_ref = timeout_init_us(TIMEOUT_10MS_IN_US);
 	while (scmi_channel_busy())
@@ -519,12 +532,30 @@ static uint32_t ca35ss_clk_svc_handler_set_rate(uint64_t target_rate)
 	return status;
 }
 
+static uint32_t ca35ss_clk_svc_pll1_set(uint64_t target_rate)
+{
+	uint32_t status;
+
+	/* Change OPP/RM(overdrive) when moving OPP Nominal to Overdrive */
+	if (target_rate > NOMINAL_RATE) {
+		stm32mp_ca35_configure_opp(true);
+	}
+
+	/* Change PLL1 rate  */
+	status = stm32mp2_pll1_set_rate(target_rate);
+
+	/* Back to base state */
+	ca35ss_set_state_base();
+
+	return status;
+}
+
 static uint32_t ca35ss_clk_svc_handler_poll_get_volt()
 {
 	uint32_t status;
-	int32_t err;
 	int32_t current_uvolt;
 	int32_t opp_idx = state.target_opp_idx;
+	uint64_t target_rate = opp.hz[state.target_opp_idx];
 
 	/* Poll the status of the operation of getting of current vddcpu */
 	status = vddcpu_get_uvolt_poll(&current_uvolt);
@@ -536,21 +567,20 @@ static uint32_t ca35ss_clk_svc_handler_poll_get_volt()
 		return status;
 	}
 
-	/* Next step */
-	if (current_uvolt >= (int32_t)opp.uvolt[opp_idx]) {
-		/* If dicreasing voltage, then frequency scaling comes first */
-		err = stm32mp2_pll1_set_rate(opp.hz[opp_idx]);
-		if (err != 0) {
-			/* Back to base state */
-			ca35ss_set_state_base();
-			return STM32_SMC_FAILED;
-		}
+	/* Switch to bypass, PLL1 no more used */
+	stm32mp2_pll1_set_rate(0U);
 
-		/* pll1 has been scaled */
-		state.pll1_done = true;
+	/* Change OPP/RM(nominal) when moving OPP Overdrive to Nominal */
+	if (target_rate <= NOMINAL_RATE) {
+		stm32mp_ca35_configure_opp(false);
 	}
 
-	/* Initiate the operation of scaling vddcpu */
+	/* Check update voltage need*/
+	if (current_uvolt == (int32_t)opp.uvolt[opp_idx]) {
+		return ca35ss_clk_svc_pll1_set(target_rate);
+	}
+
+	/* Next step :  Update voltage */
 	status = vddcpu_set_uvolt(opp_idx);
 	if (status != STM32_SMC_ON_GOING) {
 		/* Back to base state */
@@ -575,15 +605,8 @@ static uint32_t ca35ss_clk_svc_handler_poll_set_volt(void)
 		return STM32_SMC_ON_GOING;
 	}
 
-	if ((status == STM32_SMC_OK) && (!state.pll1_done)) {
-		/* Change PLL1 rate if not done yet */
-		status = stm32mp2_pll1_set_rate(target_rate);
-	}
-
-	/* Back to base state */
-	ca35ss_set_state_base();
-
-	return status;
+	/* Change PLL1 rate  */
+	return ca35ss_clk_svc_pll1_set(target_rate);
 }
 
 static uint32_t ca35ss_clk_svc_handler_set_rate_status(void)
