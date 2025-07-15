@@ -2993,10 +2993,28 @@ uint64_t stm32mp2_pll1_recalc_rate()
 	return clk_stm32_pll1_recalc_rate(NULL, 0, pll1_cfgs.prate);
 }
 
+int32_t stm32mp2_pll1_check_rate(uint64_t rate)
+{
+	int32_t cfg_idx;
+
+	for (cfg_idx = 0; cfg_idx < pll1_cfgs.pll1_cfg_nb; cfg_idx++) {
+		if (pll1_cfgs.rates[cfg_idx] == rate) {
+			return 0;
+		}
+	}
+
+	return -EINVAL;
+}
+
 int32_t stm32mp2_pll1_set_rate(uint64_t rate)
 {
 	int32_t cfg_idx;
 	int32_t err;
+
+	if (rate == 0U) {
+		stm32mp2_a35_ss_on_bypass();
+		return 0;
+	}
 
 	/* Find cfg_idx */
 	for (cfg_idx = 0; cfg_idx < pll1_cfgs.pll1_cfg_nb; cfg_idx++) {

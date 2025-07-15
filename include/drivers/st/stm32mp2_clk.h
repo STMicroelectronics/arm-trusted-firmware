@@ -43,6 +43,7 @@ int stm32mp2_pll1_disable(void);
 int stm32mp2_pll1_enable(void);
 
 int32_t stm32mp2_pll1_init();
+int32_t stm32mp2_pll1_check_rate(uint64_t rate);
 int32_t stm32mp2_pll1_set_rate(uint64_t rate);
 uint64_t stm32mp2_pll1_recalc_rate();
 
