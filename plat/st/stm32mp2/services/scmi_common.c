@@ -37,10 +37,15 @@
 
 /* SCMI base protocol: mandatory messages IDs for all SCMI protocols */
 #define SCMI_MSG_PROTOCOL_VERSION	0x0U
+#define SCMI_MSG_PROTOCOL_MSG_ATTR	0x2U
 
 /* SCMI voltage domain protocol message IDs */
 #define SCMI_MSG_VOLTAGE_LEVEL_SET	0x7U
 #define SCMI_MSG_VOLTAGE_LEVEL_GET	0x8U
+
+/* SCMI system power management protocol message IDs */
+#define SCMI_MSG_SYS_PWR_STATE_SET	0x3U
+#define SCMI_MSG_SYS_PWR_STATE_GET	0x4U
 
 /* Helper macro on version of a SCMI protocol */
 #define SCMI_GET_VER_MAJOR(ver)		(((ver) >> 16) & GENMASK_32(15, 0))
@@ -51,6 +56,7 @@
 
 /* Expected SCMI protocol version for this driver */
 #define SCMI_PROTO_VER_VOLTAGE		SCMI_VERSION(1, 0)
+#define SCMI_PROTO_VER_SYS_PWR		SCMI_VERSION(1, 0)
 
 /* Check that the driver's version is same or higher than the reported SCMI version. */
 #define is_scmi_version_compatible(drv, scmi)						\
@@ -82,6 +88,8 @@ struct scmi_shmem_layout {
 static struct scmi_shmem_layout *shmem = (struct scmi_shmem_layout *)STM32MP_SCMI_SEC_SHMEM_BASE;
 
 unsigned int scmi_msg_token;
+
+bool scmi_sys_pwr_state_set_supported;
 
 /**
  * @brief Ring the SCMI doorbell to notify the remote processor.
@@ -261,6 +269,29 @@ static int32_t smci_proto_version_check(uint32_t proto_id, uint32_t expected)
 	return ret;
 }
 
+/* Query the protocol message attributes for a SCMI protocol */
+static int32_t scmi_proto_msg_attr(uint32_t proto_id, uint32_t command_id, uint32_t *attr)
+{
+	int32_t ret = scmi_channel_prepare(proto_id, SCMI_MSG_PROTOCOL_MSG_ATTR, 1U);
+
+	if (ret != SCMI_SUCCESS) {
+		return ret;
+	}
+
+	shmem->payload[0] = command_id;
+
+	scmi_ring_doorbell();
+
+	ret = scmi_rsp_wait(TIMEOUT_10MS_IN_US, 2U);
+	if (ret != SCMI_SUCCESS) {
+		return ret;
+	}
+
+	*attr = shmem->payload[1];
+
+	return (int32_t)shmem->payload[0]; /* status */
+}
+
 /**
  * @brief Get the SCMI voltage domain protocol version.
  *
@@ -355,14 +386,68 @@ int32_t scmi_voltd_level_set_rcv()
 	return (int32_t)shmem->payload[0]; /* status */
 }
 
+/*
+ * API to set the SCMI system power state
+ */
+int32_t scmi_sys_pwr_state_set(uint32_t flags, uint32_t system_state)
+{
+	int32_t ret;
+
+	if (!scmi_sys_pwr_state_set_supported) {
+		return SCMI_NOT_SUPPORTED;
+	}
+
+	ret = scmi_channel_prepare(SCMI_PROTOCOL_ID_SYS_POWER, SCMI_MSG_SYS_PWR_STATE_SET, 2U);
+	if (ret != SCMI_SUCCESS) {
+		return ret;
+	}
+
+	shmem->payload[0] = flags;
+	shmem->payload[1] = system_state;
+
+	scmi_ring_doorbell();
+
+	ret = scmi_rsp_wait(TIMEOUT_10MS_IN_US, 1U);
+	if (ret != SCMI_SUCCESS) {
+		return ret;
+	}
+
+	return (int32_t)shmem->payload[0]; /* status */
+}
+
+/* Check if the message SCMI SYSTEM_POWER_STATE_SET is supported */
+static void scmi_check_sys_pwr_state_set(void)
+{
+	uint32_t attr;
+	int32_t ret;
+
+	ret = scmi_proto_msg_attr(SCMI_PROTOCOL_ID_SYS_POWER, SCMI_MSG_SYS_PWR_STATE_SET, &attr);
+	if (ret == SCMI_SUCCESS) {
+		scmi_sys_pwr_state_set_supported = true;
+	} else {
+		scmi_sys_pwr_state_set_supported = false;
+		INFO("SCMI SYSTEM_POWER_STATE_SET not supported (%d)\n", ret);
+	}
+}
+
 int32_t scmi_init(void)
 {
 	int32_t ret;
 
+	scmi_sys_pwr_state_set_supported = false;
+
 	/* Initialize channel */
 	scmi_channel_clear();
 
+	/* Check supported protocol and messages */
+	ret = smci_proto_version_check(SCMI_PROTOCOL_ID_SYS_POWER, SCMI_PROTO_VER_SYS_PWR);
+	if (ret != SCMI_SUCCESS) {
+		goto err;
+	}
+	scmi_check_sys_pwr_state_set();
+
 	ret = smci_proto_version_check(SCMI_PROTOCOL_ID_VOLTAGE_DOMAIN, SCMI_PROTO_VER_VOLTAGE);
 
+err:
 	return ret;
 }
