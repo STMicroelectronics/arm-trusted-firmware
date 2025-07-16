@@ -298,7 +298,10 @@ static uint32_t vddcpu_get_uvolt(void)
 		return STM32_SMC_FAILED;
 	}
 
-	scmi_voltd_level_get_snd(VOLTD_SCMI_STPMIC2_BUCK);
+	if (scmi_voltd_level_get_snd(VOLTD_SCMI_STPMIC2_BUCK)) {
+		return STM32_SMC_FAILED;
+	}
+
 	return STM32_SMC_ON_GOING;
 }
 
@@ -353,8 +356,10 @@ static uint32_t vddcpu_set_uvolt(int32_t opp_idx)
 		return STM32_SMC_FAILED;
 	}
 
-	scmi_voltd_level_set_snd(VOLTD_SCMI_STPMIC2_BUCK, 0,
-				 opp.uvolt[opp_idx]);
+	if (scmi_voltd_level_set_snd(VOLTD_SCMI_STPMIC2_BUCK, 0, opp.uvolt[opp_idx])) {
+		return STM32_SMC_FAILED;
+	}
+
 	return STM32_SMC_ON_GOING;
 }
 
@@ -389,7 +394,6 @@ uint32_t ca35ss_clk_svc_setup(void)
 	int32_t opp_idx;
 	int32_t err = 0;
 	uint32_t voltd_version;
-	uint64_t timeout_ref;
 	uint32_t opp_hw_filter = get_opp_hw_filter();
 
 	/* Read the DT to find available configurations */
@@ -436,19 +440,12 @@ uint32_t ca35ss_clk_svc_setup(void)
 		}
 	}
 
-	/* Verify SCMI availlability */
-	timeout_ref = timeout_init_us(TIMEOUT_10MS_IN_US);
-	while (scmi_channel_busy())
-	{
-		if (scmi_channel_error()
-		    || timeout_elapsed(timeout_ref)) {
-			/* Could not get a free channel */
-			scmi_channel_clear();
-			ERROR("%s: Couldn't get SCMI free channel\n", __func__);
-			return STM32_SMC_FAILED;
-		}
-		udelay(10);
+	if (scmi_init() != 0) {
+		ERROR("%s: couldn't get SCMI voltd protocol\n", __func__);
+		return STM32_SMC_FAILED;
 	}
+
+	/* Verify SCMI voltage domain availability */
 	if (scmi_voltd_protocol_version(&voltd_version) != SCMI_SUCCESS) {
 		ERROR("%s: couldn't get SCMI voltd protocol\n", __func__);
 		return STM32_SMC_FAILED;

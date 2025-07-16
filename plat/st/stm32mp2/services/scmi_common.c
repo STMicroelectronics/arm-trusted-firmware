@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <common/debug.h>
 #include <drivers/delay_timer.h>
 #include <drivers/scmi-msg.h>
 #include <drivers/scmi.h>
@@ -41,12 +42,21 @@
 #define SCMI_MSG_VOLTAGE_LEVEL_SET	0x7U
 #define SCMI_MSG_VOLTAGE_LEVEL_GET	0x8U
 
+/* Helper macro on version of a SCMI protocol */
+#define SCMI_GET_VER_MAJOR(ver)		(((ver) >> 16) & GENMASK_32(15, 0))
+#define SCMI_GET_VER_MINOR(ver)		((ver) & GENMASK_32(15, 0))
 
-/* Helper macro to create an SCMI message header given protocol, message id and token.  */
-#define SCMI_MSG_CREATE(_protocol, _msg_id, _token)					\
-	((((_protocol) << SCMI_HEADER_PROTOCOL_SHIFT)  & SCMI_HEADER_PROTOCOL_MASK) |	\
-	 (((_msg_id) << SCMI_HEADER_MSG_ID_SHIFT) & SCMI_HEADER_MSG_ID_MASK) |		\
-	 (((_token) << SCMI_HEADER_TOKEN_SHIFT) & SCMI_HEADER_TOKEN_MASK))
+#define SCMI_VERSION(maj, min)								\
+	((((maj) & GENMASK_32(15, 0)) << 16) | ((min) & GENMASK_32(15, 0)))
+
+/* Expected SCMI protocol version for this driver */
+#define SCMI_PROTO_VER_VOLTAGE		SCMI_VERSION(1, 0)
+
+/* Check that the driver's version is same or higher than the reported SCMI version. */
+#define is_scmi_version_compatible(drv, scmi)						\
+	((SCMI_GET_VER_MAJOR(drv) > SCMI_GET_VER_MAJOR(scmi)) ||			\
+	 ((SCMI_GET_VER_MAJOR(drv) == SCMI_GET_VER_MAJOR(scmi)) &&			\
+	  (SCMI_GET_VER_MINOR(drv) <= SCMI_GET_VER_MINOR(scmi))))
 
 /* SMT Channel */
 #define SCMI_CHANNEL_FLAGS_POLL		0
@@ -109,25 +119,79 @@ bool scmi_channel_error(void)
 }
 
 /**
- * @brief Get the SCMI voltage domain protocol version.
- *
- * @param The protocol version.
- * @return The status of the operation.
+ * @brief Verify SCMI availlability
  *
  */
-int32_t scmi_voltd_protocol_version(uint32_t *version)
+static int32_t scmi_channel_check(void)
 {
-	uint64_t timeout_ref;
+	uint64_t timeout_ref = timeout_init_us(TIMEOUT_10MS_IN_US);
+
+	while (scmi_channel_busy()) {
+		if (scmi_channel_error() || timeout_elapsed(timeout_ref)) {
+			/* Could not get a free channel */
+			scmi_channel_clear();
+			ERROR("%s: Couldn't get SCMI free channel\n", __func__);
+			return SCMI_ST_TIMEOUT;
+		}
+		udelay(10);
+	}
+
+	return SCMI_SUCCESS;
+}
+
+/**
+ * @brief Verify SCMI availlability
+ *
+ */
+static int32_t scmi_channel_prepare(uint32_t protocol_id, uint32_t msg_id, uint32_t size)
+{
+	int32_t ret = scmi_channel_check();
+
+	if (ret != SCMI_SUCCESS) {
+		return ret;
+	}
 
 	shmem->channel_status = 0U;
 	shmem->channel_flags = SCMI_CHANNEL_FLAGS_POLL;
-	shmem->length = sizeof(uint32_t);
-	shmem->message_header = SCMI_MSG_CREATE(SCMI_PROTOCOL_ID_VOLTAGE_DOMAIN,
-						SCMI_MSG_PROTOCOL_VERSION, 0U);
+	shmem->length = (1 + size) * sizeof(uint32_t); /* heaader and payload */
+	shmem->message_header =
+		(((protocol_id) << SCMI_HEADER_PROTOCOL_SHIFT)  & SCMI_HEADER_PROTOCOL_MASK) |
+		(((msg_id) << SCMI_HEADER_MSG_ID_SHIFT) & SCMI_HEADER_MSG_ID_MASK) |
+		(((0U) << SCMI_HEADER_TOKEN_SHIFT) & SCMI_HEADER_TOKEN_MASK);
 
-	scmi_ring_doorbell();
+	return SCMI_SUCCESS;
+}
 
-	timeout_ref = timeout_init_us(TIMEOUT_10MS_IN_US);
+/**
+ * @brief Check the SCMI answer
+ *
+ */
+static int32_t scmi_rsp_check(uint32_t size)
+{
+	scmi_channel_clear();
+
+	if (shmem->length == 2 * sizeof(uint32_t)) {
+		/* Return the first paylod value = status. For example, NOT SUPPORTED */
+		return (int32_t)shmem->payload[0];
+	} else if (shmem->length != ((1 + size) * sizeof(uint32_t))) {
+		INFO("SCMI 0x%x msg %u: size %u, expected %lu\n",
+		     SCMI_MSG_GET_PROTOCOL(shmem->message_header),
+		     SCMI_MSG_GET_MSG_ID(shmem->message_header),
+		     shmem->length, (size + 1) * sizeof(uint32_t));
+		return SCMI_COMMS_ERROR;
+	}
+
+	return SCMI_SUCCESS;
+}
+
+/**
+ * @brief Wait the SCMI answer with expected size
+ *
+ */
+static int32_t scmi_rsp_wait(uint32_t timeout_us, uint32_t size)
+{
+	uint64_t timeout_ref = timeout_init_us(timeout_us);
+
 	while (scmi_channel_busy() && !scmi_channel_error())
 	{
 		if (timeout_elapsed(timeout_ref)) {
@@ -141,14 +205,61 @@ int32_t scmi_voltd_protocol_version(uint32_t *version)
 		return SCMI_COMMS_ERROR;
 	}
 
-	scmi_channel_clear();
+	return scmi_rsp_check(size);
+}
 
-	if (shmem->length != (3U * sizeof(uint32_t))) {
-		return SCMI_COMMS_ERROR;
+/* Query the protocol message attributes for a SCMI protocol */
+static int32_t scmi_proto_version(uint32_t proto_id, uint32_t *version)
+{
+	int32_t ret = scmi_channel_prepare(proto_id, SCMI_MSG_PROTOCOL_VERSION, 0U);
+
+	if (ret != SCMI_SUCCESS) {
+		return ret;
 	}
 
+	scmi_ring_doorbell();
+
+	ret = scmi_rsp_wait(TIMEOUT_10MS_IN_US, 2U);
+	if (ret != SCMI_SUCCESS) {
+		return ret;
+	}
 	*version = shmem->payload[1];
+
 	return (int32_t)shmem->payload[0]; /* status */
+}
+
+static int32_t smci_proto_version_check(uint32_t proto_id, uint32_t expected)
+{
+	uint32_t version;
+	int32_t ret;
+
+	ret = scmi_proto_version(proto_id, &version);
+	if (ret == SCMI_SUCCESS) {
+		if (!is_scmi_version_compatible(version, expected)) {
+			WARN("SCMI protocol 0x%x version 0x%x, expected 0x%x\n",
+			     proto_id, version, expected);
+			return SCMI_OUT_OF_RANGE;
+		}
+	} else if (ret == SCMI_NOT_SUPPORTED) {
+		/* Not supported is a valid error */
+		ret = SCMI_SUCCESS;
+	} else {
+		ERROR("SCMI protocol 0x%x: init error %d\n", proto_id, ret);
+	}
+
+	return ret;
+}
+
+/**
+ * @brief Get the SCMI voltage domain protocol version.
+ *
+ * @param The protocol version.
+ * @return The status of the operation.
+ *
+ */
+int32_t scmi_voltd_protocol_version(uint32_t *version)
+{
+	return scmi_proto_version(SCMI_PROTOCOL_ID_VOLTAGE_DOMAIN, version);
 }
 
 /**
@@ -157,15 +268,19 @@ int32_t scmi_voltd_protocol_version(uint32_t *version)
  * @param domain_id The ID of the voltage domain.
  *
  */
-void scmi_voltd_level_get_snd(uint32_t domain_id)
+int32_t scmi_voltd_level_get_snd(uint32_t domain_id)
 {
-	shmem->channel_status = 0U;
-	shmem->channel_flags = SCMI_CHANNEL_FLAGS_POLL;
-	shmem->length = 2U * sizeof(uint32_t);
-	shmem->message_header = SCMI_MSG_CREATE(SCMI_PROTOCOL_ID_VOLTAGE_DOMAIN,
-						SCMI_MSG_VOLTAGE_LEVEL_GET, 0U);
+	int32_t ret = scmi_channel_prepare(SCMI_PROTOCOL_ID_VOLTAGE_DOMAIN,
+					   SCMI_MSG_VOLTAGE_LEVEL_GET, 1U);
+	if (ret != SCMI_SUCCESS) {
+		return ret;
+	}
+
 	shmem->payload[0] = domain_id;
+
 	scmi_ring_doorbell();
+
+	return SCMI_SUCCESS;
 }
 
 /**
@@ -177,10 +292,10 @@ void scmi_voltd_level_get_snd(uint32_t domain_id)
  */
 int32_t scmi_voltd_level_get_rcv(int32_t *voltage_level)
 {
-	scmi_channel_clear();
+	int32_t ret = scmi_rsp_check(2U);
 
-	if (shmem->length != (3U * sizeof(uint32_t))) {
-		return SCMI_COMMS_ERROR;
+	if (ret != SCMI_SUCCESS) {
+		return ret;
 	}
 
 	*voltage_level = shmem->payload[1];
@@ -195,19 +310,21 @@ int32_t scmi_voltd_level_get_rcv(int32_t *voltage_level)
  * @param voltage_level The voltage level to set.
  *
  */
-void scmi_voltd_level_set_snd(uint32_t domain_id, uint32_t flags,
-			      int32_t voltage_level)
+int32_t scmi_voltd_level_set_snd(uint32_t domain_id, uint32_t flags, int32_t voltage_level)
 {
-	shmem->channel_status = 0U;
-	shmem->channel_flags = SCMI_CHANNEL_FLAGS_POLL;
-	shmem->length = 4U * sizeof(uint32_t);
-	shmem->message_header = SCMI_MSG_CREATE(SCMI_PROTOCOL_ID_VOLTAGE_DOMAIN,
-						SCMI_MSG_VOLTAGE_LEVEL_GET, 0U);
+	int32_t ret = scmi_channel_prepare(SCMI_PROTOCOL_ID_VOLTAGE_DOMAIN,
+					   SCMI_MSG_VOLTAGE_LEVEL_SET, 3U);
+	if (ret != SCMI_SUCCESS) {
+		return ret;
+	}
+
 	shmem->payload[0] = domain_id;
 	shmem->payload[1] = flags;
 	shmem->payload[2] = (uint32_t)voltage_level;
 
 	scmi_ring_doorbell();
+
+	return SCMI_SUCCESS;
 }
 
 /**
@@ -218,11 +335,23 @@ void scmi_voltd_level_set_snd(uint32_t domain_id, uint32_t flags,
  */
 int32_t scmi_voltd_level_set_rcv()
 {
-	scmi_channel_clear();
+	int32_t ret = scmi_rsp_check(1U);
 
-	if (shmem->length != (2U * sizeof(uint32_t))) {
-		return SCMI_COMMS_ERROR;
+	if (ret != SCMI_SUCCESS) {
+		return ret;
 	}
 
 	return (int32_t)shmem->payload[0]; /* status */
+}
+
+int32_t scmi_init(void)
+{
+	int32_t ret;
+
+	/* Initialize channel */
+	scmi_channel_clear();
+
+	ret = smci_proto_version_check(SCMI_PROTOCOL_ID_VOLTAGE_DOMAIN, SCMI_PROTO_VER_VOLTAGE);
+
+	return ret;
 }
