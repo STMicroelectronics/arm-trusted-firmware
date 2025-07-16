@@ -81,6 +81,8 @@ struct scmi_shmem_layout {
 
 static struct scmi_shmem_layout *shmem = (struct scmi_shmem_layout *)STM32MP_SCMI_SEC_SHMEM_BASE;
 
+unsigned int scmi_msg_token;
+
 /**
  * @brief Ring the SCMI doorbell to notify the remote processor.
  *
@@ -157,7 +159,7 @@ static int32_t scmi_channel_prepare(uint32_t protocol_id, uint32_t msg_id, uint3
 	shmem->message_header =
 		(((protocol_id) << SCMI_HEADER_PROTOCOL_SHIFT)  & SCMI_HEADER_PROTOCOL_MASK) |
 		(((msg_id) << SCMI_HEADER_MSG_ID_SHIFT) & SCMI_HEADER_MSG_ID_MASK) |
-		(((0U) << SCMI_HEADER_TOKEN_SHIFT) & SCMI_HEADER_TOKEN_MASK);
+		(((++scmi_msg_token) << SCMI_HEADER_TOKEN_SHIFT) & SCMI_HEADER_TOKEN_MASK);
 
 	return SCMI_SUCCESS;
 }
@@ -170,6 +172,15 @@ static int32_t scmi_rsp_check(uint32_t size)
 {
 	scmi_channel_clear();
 
+	if ((scmi_msg_token & (SCMI_HEADER_TOKEN_MASK >> SCMI_HEADER_TOKEN_SHIFT)) !=
+	     SCMI_MSG_GET_TOKEN(shmem->message_header)) {
+		INFO("SCMI 0x%x msg %u: token %x, expected %x\n",
+		     SCMI_MSG_GET_PROTOCOL(shmem->message_header),
+		     SCMI_MSG_GET_MSG_ID(shmem->message_header),
+		     SCMI_MSG_GET_TOKEN(shmem->message_header),
+		     scmi_msg_token);
+		return SCMI_COMMS_ERROR;
+	}
 	if (shmem->length == 2 * sizeof(uint32_t)) {
 		/* Return the first paylod value = status. For example, NOT SUPPORTED */
 		return (int32_t)shmem->payload[0];
