@@ -13,6 +13,36 @@
 #include <rse_platform_api.h>
 
 psa_status_t
+rse_platform_ioctl(rse_platform_ioctl_req_t request,
+		   psa_invec *input, psa_outvec *output)
+{
+	rse_platform_ioctl_req_t req = request;
+	struct psa_invec in_vec[2] = { {0} };
+	size_t inlen, outlen;
+
+	in_vec[0].base = &req;
+	in_vec[0].len = sizeof(req);
+	if (input != NULL) {
+		in_vec[1].base = input->base;
+		in_vec[1].len = input->len;
+		inlen = 2;
+	} else {
+		inlen = 1;
+	}
+
+	if (output != NULL) {
+		outlen = 1;
+	} else {
+		outlen = 0;
+	}
+
+	return psa_call(RSE_PLATFORM_SERVICE_HANDLE,
+			RSE_PLATFORM_API_ID_IOCTL,
+			in_vec, inlen,
+			output, outlen);
+}
+
+psa_status_t
 rse_platform_nv_counter_increment(uint32_t counter_id)
 {
 	struct psa_invec in_vec[1];

@@ -10,13 +10,17 @@
 
 #include <stdint.h>
 
+#include <psa/client.h>
 #include "psa/error.h"
 #if CRYPTO_SUPPORT
 #include <rse_crypto_defs.h>
 #endif
 
+typedef int32_t rse_platform_ioctl_req_t;
+
 #define RSE_PLATFORM_API_ID_NV_READ       (1010)
 #define RSE_PLATFORM_API_ID_NV_INCREMENT  (1011)
+#define RSE_PLATFORM_API_ID_IOCTL         (1013)
 
 /*
  * Increments the given non-volatile (NV) counter by one
@@ -43,6 +47,19 @@ rse_platform_nv_counter_increment(uint32_t counter_id);
 psa_status_t
 rse_platform_nv_counter_read(uint32_t counter_id,
 		uint32_t size, uint8_t *val);
+
+/*
+ * RSE IOCTL standard api.
+ *
+ * request	The ioctl request id, platform dependant.
+ * input	Array of input psa_invec structures.
+ * output	Array of output psa_outvec structures.
+ *
+ * PSA_SUCCESS if sucessful. Otherwise, it returns a PSA_ERROR.
+ */
+psa_status_t
+rse_platform_ioctl(rse_platform_ioctl_req_t request,
+		   psa_invec *input, psa_outvec *output);
 
 #if CRYPTO_SUPPORT
 /*
