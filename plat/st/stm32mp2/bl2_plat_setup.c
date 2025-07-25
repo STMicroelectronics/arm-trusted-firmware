@@ -41,6 +41,9 @@
 #include <stm32mp_common.h>
 #include <stm32mp_dt.h>
 #include <stm32mp2_context.h>
+#if STM32MP_M33_TDCID
+#include <stm32_rse_comms.h>
+#endif
 
 #define BOOT_CTX_ADDR	0x0e000020UL
 
@@ -837,6 +840,12 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 void bl2_el3_plat_prepare_exit(void)
 {
 #if STM32MP_M33_TDCID
+#if TRUSTED_BOARD_BOOT
+	if (rse_platform_stm32_share_key_stop(0) != PSA_SUCCESS) {
+		panic();
+	}
+#endif
+
 	if (stm32_rifsc_semaphore_exit() != 0) {
 		panic();
 	}

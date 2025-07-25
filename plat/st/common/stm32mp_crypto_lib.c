@@ -14,7 +14,10 @@
 #include <drivers/st/stm32_hash.h>
 #include <drivers/st/stm32_pka.h>
 #include <drivers/st/stm32_rng.h>
+#include <drivers/arm/rse_comms.h>
+#include <drivers/st/rse_shm.h>
 #include <drivers/st/stm32_saes.h>
+#include <drivers/st/stm32_cryp.h>
 #include <lib/utils.h>
 #include <lib/xlat_tables/xlat_tables_v2.h>
 #include <mbedtls/asn1.h>
@@ -30,6 +33,9 @@
 #include <tools_share/firmware_encrypted.h>
 
 #include <platform_def.h>
+#if STM32MP_M33_TDCID
+#include <stm32_rse_comms.h>
+#endif
 
 #define CRYPTO_HASH_MAX_SIZE	32U
 #define CRYPTO_SIGN_MAX_SIZE	64U
@@ -48,9 +54,13 @@ struct stm32mp_auth_ops {
 static struct stm32mp_auth_ops auth_ops;
 #endif
 
-#if STM32MP_CRYPTO_USE_SW
+#if STM32MP_M33_TDCID
 static void crypto_lib_init(void)
 {
+	if (stm32_cryp_driver_init() != 0) {
+		panic();
+	}
+
 	NOTICE("TRUSTED_BOARD_BOOT support enabled (M33TD)\n");
 }
 #else
@@ -619,6 +629,90 @@ static int crypto_verify_hash(void *data_ptr, unsigned int data_len,
 }
 
 #if !defined(DECRYPTION_SUPPORT_none)
+#if STM32MP_M33_TDCID
+int plat_get_enc_key_info(enum fw_enc_status_t fw_enc_status, uint8_t *key,
+			  size_t *key_len, unsigned int *flags,
+			  const uint8_t *img_id, size_t img_id_len)
+{
+	psa_status_t status;
+	static bool sharing = false;
+
+	assert(*key_len >= 32U);
+	assert(ENC_MAX_KEY_SIZE % sizeof(uint32_t) == 0);
+
+	if (fw_enc_status == FW_ENC_WITH_BSSK) {
+		return -EINVAL;
+	}
+
+	*key = 0U; /* unused as key is shared through key bus */
+	*key_len = 32U;
+	/*
+	 * Variable 'key' don't store a real key but TF-A doesn't have to know
+	 * that as key sharing is handled by cryp driver.
+	 */
+	*flags = 0U;
+
+	/* Ask to TF-M to enable key sharing (only once) */
+	if (sharing == false) {
+		status = rse_platform_stm32_share_key_start(0);
+		if (status != PSA_SUCCESS) {
+			ERROR("PSA key sharing failed: %d\n", status);
+			return -EINVAL;
+		}
+		sharing = true;
+	}
+
+	return 0;
+}
+
+static int stm32_decrypt_aes_gcm(void *data, size_t data_len,
+				 const void *key, unsigned int key_len,
+				 unsigned int key_flags,
+				 const void *iv, unsigned int iv_len,
+				 const void *tag, unsigned int tag_len)
+{
+	int ret;
+	struct stm32_cryp_context ctx;
+	unsigned char tag_buf[CRYPTO_MAX_TAG_SIZE];
+	unsigned int diff = 0U;
+	unsigned int i;
+
+	/* key adress is nul due to key sharing */
+	ret = stm32_cryp_init(&ctx, true, STM32_CRYP_MODE_AES_GCM, NULL, key_len,
+			      iv, iv_len);
+	if (ret != 0) {
+		return CRYPTO_ERR_INIT;
+	}
+
+	stm32_cryp_key_sharing_enable(&ctx, true);
+
+	ret = stm32_cryp_update_assodata(&ctx, NULL, 0U);
+	if (ret != 0) {
+		return CRYPTO_ERR_DECRYPTION;
+	}
+
+	ret = stm32_cryp_update_load(&ctx, data, data, data_len);
+	if (ret != 0) {
+		return CRYPTO_ERR_DECRYPTION;
+	}
+
+	ret = stm32_cryp_final(&ctx, tag_buf, sizeof(tag_buf));
+	if (ret != 0) {
+		return CRYPTO_ERR_DECRYPTION;
+	}
+
+	/* Check tag in "constant-time" */
+	for (i = 0U; i < tag_len; i++) {
+		diff |= ((const unsigned char *)tag)[i] ^ tag_buf[i];
+	}
+
+	if (diff != 0U) {
+		return CRYPTO_ERR_DECRYPTION;
+	}
+
+	return CRYPTO_SUCCESS;
+}
+#else
 static int derive_key(uint8_t *key, size_t *key_len, size_t len,
 		      unsigned int *flags, const uint8_t *img_id, size_t img_id_len)
 {
@@ -752,6 +846,7 @@ static int stm32_decrypt_aes_gcm(void *data, size_t data_len,
 
 	return CRYPTO_SUCCESS;
 }
+#endif
 
 /*
  * Authenticated decryption of an image

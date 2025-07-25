@@ -343,7 +343,8 @@ BL2_SOURCES			+=	drivers/st/crypto/stm32_pka.c
 ifeq ($(STM32MP_M33_TDCID),0)
 BL2_SOURCES			+=	drivers/st/crypto/stm32_saes.c
 else
-BL2_SOURCES			+=	drivers/st/crypto/stm32_cryp.c
+BL2_SOURCES			+=	drivers/st/crypto/stm32_cryp.c			\
+					lib/psa/rse_platform.c
 endif
 endif
 
