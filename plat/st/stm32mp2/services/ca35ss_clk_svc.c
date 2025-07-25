@@ -440,11 +440,6 @@ uint32_t ca35ss_clk_svc_setup(void)
 		}
 	}
 
-	if (scmi_init() != 0) {
-		ERROR("%s: couldn't get SCMI voltd protocol\n", __func__);
-		return STM32_SMC_FAILED;
-	}
-
 	/* Verify SCMI voltage domain availability */
 	if (scmi_voltd_protocol_version(&voltd_version) != SCMI_SUCCESS) {
 		ERROR("%s: couldn't get SCMI voltd protocol\n", __func__);

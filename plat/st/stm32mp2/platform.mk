@@ -288,6 +288,7 @@ TF_CFLAGS			+=	-mbranch-protection=none
 
 # Include paths and source files
 PLAT_INCLUDES			+=	-Iplat/st/stm32mp2/include/
+PLAT_INCLUDES			+=	-Iplat/st/stm32mp2/scmi/
 PLAT_INCLUDES			+=	-Idrivers/st/ddr/phy/phyinit/include/
 PLAT_INCLUDES			+=	-Idrivers/st/ddr/phy/firmware/include/
 
@@ -447,7 +448,7 @@ BL31_SOURCES			+=	plat/st/common/stm32mp_svc_setup.c			\
 BL31_SOURCES			+=	services/arm_arch_svc/arm_arch_svc_setup.c
 
 ifeq (${STM32MP_M33_TDCID},1)
-BL31_SOURCES			+=	plat/st/stm32mp2/services/scmi_common.c
+BL31_SOURCES			+=	plat/st/stm32mp2/scmi/scmi_common.c
 endif
 
 ifeq (${STM32MP_SIP_CA33SS_CLK},1)

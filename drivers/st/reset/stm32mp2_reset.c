@@ -63,19 +63,21 @@ int stm32mp_reset_deassert(uint32_t id, unsigned int to_us)
 	return reset_toggle(id, to_us, false);
 }
 
+#if !STM32MP_M33_TDCID
 void __dead2 stm32mp_system_reset(void)
 {
-#if STM32MP_M33_TDCID
-	INFO("BL31: System reset, waiting watchdog\n");
-	/* TODO: use SCMI channel to request C1 reset to cortex M33 */
-#else
 	uintptr_t rcc_base = stm32mp_rcc_base();
 
 	mmio_setbits_32(rcc_base + RCC_GRSTCSETR, RCC_GRSTCSETR_SYSRST);
-#endif
 
 	/* Loop in case system reset is not immediately caught */
 	while (true) {
 		wfi();
 	}
 }
+
+void __dead2 stm32mp_system_cold_reset(void)
+{
+	stm32mp_system_reset();
+}
+#endif

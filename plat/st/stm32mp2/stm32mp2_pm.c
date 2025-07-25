@@ -32,6 +32,7 @@
 #include <stm32mp2_private.h>
 
 #include "../../../lib/psci/psci_private.h"
+#include "scmi_private.h"
 
 /* Default value for STM32MP25 with STPMIC25, defined in AN5727 */
 #define DEFAULT_POPL_D1		3U
@@ -474,6 +475,13 @@ static void print_mode_verbose(const char *mode)
 	VERBOSE("Entering %s low power mode\n", mode);
 }
 
+static void stm32_set_scmi_sys_pwr(uint32_t system_state)
+{
+#if STM32MP_M33_TDCID
+	scmi_sys_pwr_state_set(SCMI_SYS_PWR_GRACEFUL_REQ, system_state);
+#endif
+}
+
 static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 {
 	uintptr_t pwr_base = stm32mp_pwr_base();
@@ -593,6 +601,7 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 		stm32mp_gic_cpuif_disable();
 		stm32mp_gic_save();
 		stm32mp2_pll1_disable();
+		stm32_set_scmi_sys_pwr(SCMI_SYS_PWR_SUSPEND);
 		break;
 
 #if !STM32MP_M33_TDCID
@@ -635,6 +644,7 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 		stm32mp_gic_save();
 #endif
 		stm32mp2_pll1_disable();
+		stm32_set_scmi_sys_pwr(SCMI_SYS_PWR_SUSPEND);
 		break;
 
 	default:
@@ -1015,7 +1025,7 @@ static void stm32_system_off(void)
 	/* Disable STATE_RUNNING state for this core */
 	stm32mp_state_set(core_id, STATE_RUNNING, false);
 
-	VERBOSE("BL31: power off\n");
+	INFO("BL31: power off\n");
 
 	dsb();
 	isb();
@@ -1023,7 +1033,22 @@ static void stm32_system_off(void)
 
 static void __dead2 stm32_system_reset(void)
 {
+	INFO("BL31: System cold reset\n");
+	stm32mp_system_cold_reset();
+}
+
+static int stm32_system_reset2(int is_vendor, int reset_type, u_register_t cookie)
+{
+	if (is_vendor || (reset_type != PSCI_RESET2_SYSTEM_WARM_RESET))
+		return PSCI_E_INVALID_PARAMS;
+
+	INFO("BL31: System reset\n");
 	stm32mp_system_reset();
+
+	/* This shouldn't be reached */
+	panic();
+
+	return 0;
 }
 
 /**
@@ -1242,6 +1267,7 @@ static const plat_psci_ops_t stm32_psci_ops = {
 	.pwr_domain_pwr_down = stm32_pwr_domain_pwr_down_wfi,
 	.system_off = stm32_system_off,
 	.system_reset = stm32_system_reset,
+	.system_reset2 = stm32_system_reset2,
 	.validate_power_state = stm32_validate_power_state,
 	.validate_ns_entrypoint = stm32_validate_ns_entrypoint,
 	.get_sys_suspend_power_state = stm32_get_sys_suspend_power_state,
@@ -1425,6 +1451,8 @@ static void stm32_pm_init(void *fdt)
 
 #if !STM32MP_M33_TDCID
 	stm32_pm_tdcid_init(fdt);
+#else
+	scmi_init();
 #endif
 }
 

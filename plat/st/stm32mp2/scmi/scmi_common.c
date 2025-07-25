@@ -39,6 +39,13 @@
 #define SCMI_MSG_PROTOCOL_VERSION	0x0U
 #define SCMI_MSG_PROTOCOL_MSG_ATTR	0x2U
 
+/* SCMI Discovery base messages (based on drivers/scmi-msg/base.h) */
+#define SCMI_BASE_DISCOVER_VENDOR			0x03U
+#define SCMI_BASE_DISCOVER_SUB_VENDOR			0x04U
+#define SCMI_BASE_DISCOVER_IMPLEMENTATION_VERSION	0x05U
+#define SCMI_BASE_DISCOVER_LIST_PROTOCOLS		0x06U
+#define SCMI_BASE_DISCOVER_AGENT			0x07U
+
 /* SCMI voltage domain protocol message IDs */
 #define SCMI_MSG_VOLTAGE_LEVEL_SET	0x7U
 #define SCMI_MSG_VOLTAGE_LEVEL_GET	0x8U
@@ -73,6 +80,8 @@
 #define SCMI_SHMEM_PAYLOAD_OFFSET	(7 * sizeof(uint32_t))
 #define SCMI_MAX_MESSAGE_PAYLOAD_SIZE	((SMT_BUF_SLOT_SIZE - SCMI_SHMEM_PAYLOAD_OFFSET) \
 					/ sizeof(uint32_t))
+
+#define SIZE_NO_CHECK			((uint32_t)-1)
 
 struct scmi_shmem_layout {
 	uint32_t reserved0;
@@ -192,7 +201,8 @@ static int32_t scmi_rsp_check(uint32_t size)
 	if (shmem->length == 2 * sizeof(uint32_t)) {
 		/* Return the first paylod value = status. For example, NOT SUPPORTED */
 		return (int32_t)shmem->payload[0];
-	} else if (shmem->length != ((1 + size) * sizeof(uint32_t))) {
+	} else if (size != SIZE_NO_CHECK &&
+		   shmem->length != ((1 + size) * sizeof(uint32_t))) {
 		INFO("SCMI 0x%x msg %u: size %u, expected %lu\n",
 		     SCMI_MSG_GET_PROTOCOL(shmem->message_header),
 		     SCMI_MSG_GET_MSG_ID(shmem->message_header),
@@ -259,9 +269,6 @@ static int32_t smci_proto_version_check(uint32_t proto_id, uint32_t expected)
 			     proto_id, version, expected);
 			return SCMI_OUT_OF_RANGE;
 		}
-	} else if (ret == SCMI_NOT_SUPPORTED) {
-		/* Not supported is a valid error */
-		ret = SCMI_SUCCESS;
 	} else {
 		ERROR("SCMI protocol 0x%x: init error %d\n", proto_id, ret);
 	}
@@ -415,6 +422,36 @@ int32_t scmi_sys_pwr_state_set(uint32_t flags, uint32_t system_state)
 	return (int32_t)shmem->payload[0]; /* status */
 }
 
+/*
+ * API to set the SCMI protocl list with BASE_DISCOVER_LIST_PROTOCOLS
+ */
+int32_t scmi_base_discover_list_proto(uint32_t *num, uint8_t *protocols, uint8_t size)
+{
+	int32_t ret;
+
+	ret = scmi_channel_prepare(SCMI_PROTOCOL_ID_BASE, SCMI_BASE_DISCOVER_LIST_PROTOCOLS, 1U);
+	if (ret != SCMI_SUCCESS) {
+		return ret;
+	}
+
+	shmem->payload[0] = 0U; /* skip */
+
+	scmi_ring_doorbell();
+
+	ret = scmi_rsp_wait(TIMEOUT_10MS_IN_US, SIZE_NO_CHECK);
+	if (ret != SCMI_SUCCESS) {
+		return ret;
+	}
+
+	*num = shmem->payload[1];
+	if (*num > size) {
+		*num = size;
+	}
+	memcpy(protocols, &shmem->payload[2], *num);
+
+	return (int32_t)shmem->payload[0]; /* status */
+}
+
 /* Check if the message SCMI SYSTEM_POWER_STATE_SET is supported */
 static void scmi_check_sys_pwr_state_set(void)
 {
@@ -424,30 +461,71 @@ static void scmi_check_sys_pwr_state_set(void)
 	ret = scmi_proto_msg_attr(SCMI_PROTOCOL_ID_SYS_POWER, SCMI_MSG_SYS_PWR_STATE_SET, &attr);
 	if (ret == SCMI_SUCCESS) {
 		scmi_sys_pwr_state_set_supported = true;
-	} else {
-		scmi_sys_pwr_state_set_supported = false;
-		INFO("SCMI SYSTEM_POWER_STATE_SET not supported (%d)\n", ret);
 	}
 }
 
 int32_t scmi_init(void)
 {
 	int32_t ret;
+	uint8_t proto[8];
+	uint32_t nb_proto;
+	uint32_t i;
 
 	scmi_sys_pwr_state_set_supported = false;
 
 	/* Initialize channel */
 	scmi_channel_clear();
 
-	/* Check supported protocol and messages */
-	ret = smci_proto_version_check(SCMI_PROTOCOL_ID_SYS_POWER, SCMI_PROTO_VER_SYS_PWR);
+	/* Get Liste of supported ptotocols */
+	ret = scmi_base_discover_list_proto(&nb_proto, proto, sizeof(proto));
 	if (ret != SCMI_SUCCESS) {
+		INFO("SCMI init failed(%d)\n", ret);
 		goto err;
 	}
-	scmi_check_sys_pwr_state_set();
+
+	/* Check supported protocol and messages */
+	for (i = 0U; i < nb_proto; i++) {
+		if (proto[i] != SCMI_PROTOCOL_ID_SYS_POWER) {
+			continue;
+		}
+		ret = smci_proto_version_check(SCMI_PROTOCOL_ID_SYS_POWER, SCMI_PROTO_VER_SYS_PWR);
+		if (ret != SCMI_SUCCESS) {
+			goto err;
+		}
+		scmi_check_sys_pwr_state_set();
+		break;
+	}
 
 	ret = smci_proto_version_check(SCMI_PROTOCOL_ID_VOLTAGE_DOMAIN, SCMI_PROTO_VER_VOLTAGE);
 
 err:
 	return ret;
+}
+
+void __dead2 stm32mp_system_reset(void)
+{
+	int ret = scmi_sys_pwr_state_set(SCMI_SYS_PWR_GRACEFUL_REQ, SCMI_SYS_PWR_WARM_RESET);
+
+	if (ret != SCMI_SUCCESS) {
+		INFO("SCMI SYSTEM_POWER_STATE_SET error (%d), waiting watchdog\n", ret);
+	}
+
+	/* Loop in case system reset is not immediately caught */
+	for ( ; ; ) {
+		;
+	}
+}
+
+void __dead2 stm32mp_system_cold_reset(void)
+{
+	int ret = scmi_sys_pwr_state_set(SCMI_SYS_PWR_GRACEFUL_REQ, SCMI_SYS_PWR_COLD_RESET);
+
+	if (ret != SCMI_SUCCESS) {
+		INFO("SCMI SYSTEM_POWER_STATE_SET error (%d), waiting watchdog\n", ret);
+	}
+
+	/* Loop in case system reset is not immediately caught */
+	for ( ; ; ) {
+		;
+	}
 }

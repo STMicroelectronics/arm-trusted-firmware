@@ -51,5 +51,6 @@ static inline void stm32mp_reset_release(uint32_t reset_id)
  * Manage system reset control
  */
 void __dead2 stm32mp_system_reset(void);
+void __dead2 stm32mp_system_cold_reset(void);
 
 #endif /* STM32MP_RESET_H */
