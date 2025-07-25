@@ -508,6 +508,14 @@ void bl2_el3_plat_arch_setup(void)
 	if (boot_context->boot_interface_selected == BOOT_API_CTX_BOOT_INTERFACE_SEL_FLASH_EMMC) {
 		boot_context->boot_interface_instance = 2U;
 	}
+
+	if (stm32_rifsc_check_peripheral_access() != 0) {
+		panic();
+	}
+
+	if (stm32_rifsc_semaphore_init() != 0) {
+		panic();
+	}
 #endif
 
 	if (stm32_save_boot_info(boot_context) != 0) {
@@ -828,6 +836,12 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 
 void bl2_el3_plat_prepare_exit(void)
 {
+#if STM32MP_M33_TDCID
+	if (stm32_rifsc_semaphore_exit() != 0) {
+		panic();
+	}
+#endif
+
 	flush_dcache_range(BSS_START, BSS_END - BSS_START);
 	flush_dcache_range(DATA_START, DATA_END - DATA_START);
 
