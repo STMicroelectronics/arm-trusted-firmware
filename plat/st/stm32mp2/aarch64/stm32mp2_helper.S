@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2023-2025, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -105,12 +105,14 @@ func plat_crash_console_init
 	ldr	w0, [x1]
 	tst	w0, #DEBUG_UART_RST_BIT
 	bne	2b
+#if !STM32MP_M33_TDCID
 	/* Enable GPIOs for UART TX */
 	mov_imm	x1, (RCC_BASE + DEBUG_UART_TX_GPIO_BANK_CLK_REG)
 	ldr	w2, [x1]
 	/* Configure GPIO */
 	orr	w2, w2, #DEBUG_UART_TX_GPIO_BANK_CLK_EN
 	str	w2, [x1]
+#endif
 	mov_imm	x1, DEBUG_UART_TX_GPIO_BANK_ADDRESS
 	/* Set GPIO mode alternate */
 	ldr	w2, [x1, #GPIO_MODE_OFFSET]
@@ -139,6 +141,7 @@ func plat_crash_console_init
 	orr	w2, w2, #(DEBUG_UART_TX_GPIO_ALTERNATE << (DEBUG_UART_TX_GPIO_PORT << 2))
 	str	w2, [x1, #GPIO_AFRL_OFFSET]
 #endif
+#if !STM32MP_M33_TDCID
 	/* Clear UART clock flexgen divisors, keep enable bit */
 	mov_imm	x1, (RCC_BASE + DEBUG_UART_PREDIV_CFGR)
 	mov	x2, #0
@@ -150,6 +153,7 @@ func plat_crash_console_init
 	mov_imm	x1, (RCC_BASE + DEBUG_UART_TX_CLKSRC_REG)
 	mov_imm	w2, (DEBUG_UART_TX_CLKSRC | RCC_XBARxCFGR_XBARxEN)
 	str	w2, [x1]
+#endif
 	mov_imm	x1, (RCC_BASE + DEBUG_UART_TX_EN_REG)
 	ldr	w2, [x1]
 	orr	w2, w2, #DEBUG_UART_TX_EN
