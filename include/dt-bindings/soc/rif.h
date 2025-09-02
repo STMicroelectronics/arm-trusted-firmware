@@ -19,7 +19,7 @@
 #define RIF_CID_MAX		0x8
 
 /* RIFSC semaphore list */
-#define EMPTY_SEMWL		0x0
+#define EMPTY_SEMWL		0x0U
 #define RIF_CID0_BF		BIT_32(RIF_CID0)
 #define RIF_CID1_BF		BIT_32(RIF_CID1)
 #define RIF_CID2_BF		BIT_32(RIF_CID2)
@@ -30,71 +30,71 @@
 #define RIF_CID7_BF		BIT_32(RIF_CID7)
 
 /* RIFSC secure levels */
-#define RIF_NSEC		0x0
-#define RIF_SEC			0x1
+#define RIF_NSEC		0x0U
+#define RIF_SEC			0x1U
 
 /* RIFSC privilege levels */
-#define RIF_NPRIV		0x0
-#define RIF_PRIV		0x1
+#define RIF_NPRIV		0x0U
+#define RIF_PRIV		0x1U
 
 /* RIFSC semaphore modes */
-#define RIF_SEM_DIS		0x0
-#define RIF_SEM_EN		0x1
+#define RIF_SEM_DIS		0x0U
+#define RIF_SEM_EN		0x1U
 
 /* RIFSC CID filtering modes */
-#define RIF_CFDIS		0x0
-#define RIF_CFEN		0x1
+#define RIF_CFDIS		0x0U
+#define RIF_CFEN		0x1U
 
 /* RIFSC lock states */
-#define RIF_UNLOCK		0x0
-#define RIF_LOCK		0x1
+#define RIF_UNLOCK		0x0U
+#define RIF_LOCK		0x1U
 
 /* Used when a field in a macro has no impact */
-#define RIF_UNUSED		0x0
+#define RIF_UNUSED		0x0U
 
 #define RIFPROT(rifid, sem_list, sec, priv, scid, sem_en, cfen) \
-	(((rifid) << 24) | ((sem_list) << 16) | ((priv) << 9) | ((sec) << 8) | ((scid) << 4) | \
-	 ((sem_en) << 1) | (cfen))
+	(((rifid) << 24U) | ((sem_list) << 16U) | ((priv) << 9U) | ((sec) << 8U) | ((scid) << 4U) | \
+	 ((sem_en) << 1U) | (cfen))
 
 /* Masters IDs */
 #define RIMU_ID(idx)		(idx)
 
 /* Master configuration modes */
-#define RIF_CIDSEL_P		0x0 /* Config from RISUP */
-#define RIF_CIDSEL_M		0x1 /* Config from RIMU */
+#define RIF_CIDSEL_P		0x0U /* Config from RISUP */
+#define RIF_CIDSEL_M		0x1U /* Config from RIMU */
 
 #define RIMUPROT(rimuid, scid, sec, priv, mode) \
-	(((rimuid) << 16) | ((priv) << 9) | ((sec) << 8) | ((scid) << 4) | ((mode) << 2))
+	(((rimuid) << 16U) | ((priv) << 9U) | ((sec) << 8U) | ((scid) << 4U) | ((mode) << 2U))
 
 /* RISAF region IDs */
 #define RISAF_REG_ID(idx)	(idx)
 
 /* RISAF base region enable modes */
-#define RIF_BREN_DIS		0x0
-#define RIF_BREN_EN		0x1
+#define RIF_BREN_DIS		0x0U
+#define RIF_BREN_EN		0x1U
 
 /* RISAF encryption modes */
-#define RIF_ENC_DIS		0x0
+#define RIF_ENC_DIS		0x0U
 #if STM32MP21
-#define RIF_ENC_MCE_EN		0x1 /* Side-channel attack protection */
+#define RIF_ENC_MCE_EN		0x1U /* Side-channel attack protection */
 #endif
-#define RIF_ENC_EN		0x2
+#define RIF_ENC_EN		0x2U
 
 #define RISAFPROT(risaf_region, cid_read_list, cid_write_list, cid_priv_list, sec, enc, enabled) \
-	(((cid_write_list) << 24) | ((cid_read_list) << 16) | ((cid_priv_list) << 8) | \
-	 ((enc) << 6) | ((sec) << 5) | ((enabled) << 4) | (risaf_region))
+	(((cid_write_list) << 24U) | ((cid_read_list) << 16U) | ((cid_priv_list) << 8U) | \
+	 ((enc) << 6U) | ((sec) << 5U) | ((enabled) << 4U) | (risaf_region))
 
 /* RISAB page IDs */
 #define RISAB_PAGE_ID(idx)	(idx)
 
 /* RISAB control modes */
-#define RIF_DDCID_DIS		0x0
-#define RIF_DDCID_EN		0x1
+#define RIF_DDCID_DIS		0x0U
+#define RIF_DDCID_EN		0x1U
 
 #define RISABPROT(risab_page, delegate_en, delegate_cid, sec, default_priv, cid_read_list, \
 		  cid_write_list, cid_priv_list, enabled) \
-	(((risab_page) << 24) | ((default_priv) << 9) | ((sec) << 8) | ((delegate_cid) << 4) | \
-	 ((delegate_en) << 2) | (enabled)) \
-	((cid_write_list) << 16 | (cid_read_list) << 8 | (cid_priv_list))
+	(((risab_page) << 24U) | ((default_priv) << 9U) | ((sec) << 8U) | ((delegate_cid) << 4U) | \
+	 ((delegate_en) << 2U) | (enabled)) \
+	((cid_write_list) << 16U | (cid_read_list) << 8U | (cid_priv_list))
 
 #endif /* _DT_BINDINGS_RIF_H */
