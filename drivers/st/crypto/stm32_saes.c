@@ -23,14 +23,7 @@
 
 #include <platform_def.h>
 
-#define UINT8_BIT			8U
-#define AES_BLOCK_SIZE_BIT		128U
-#define AES_BLOCK_SIZE			(AES_BLOCK_SIZE_BIT / UINT8_BIT)
-
-#define AES_KEYSIZE_128			16U
-#define AES_KEYSIZE_192			24U
-#define AES_KEYSIZE_256			32U
-#define AES_IVSIZE			16U
+#include "stm32_crypto_common.h"
 
 #define SAES_TIMEOUT_US			100000U
 #define TIMEOUT_US_1MS			1000U
