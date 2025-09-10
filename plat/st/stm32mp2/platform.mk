@@ -406,7 +406,8 @@ BL2_SOURCES			+=	drivers/st/ddr/phy/phyinit/src/ddrphy_phyinit_d_loadimem.c				\
 					drivers/st/ddr/phy/phyinit/usercustom/ddrphy_phyinit_usercustom_g_waitfwdone.c
 else
 # rse drivers
-BL2_SOURCES			+=	drivers/st/rse_shm/rse_comms_shm.c
+BL2_SOURCES			+=	drivers/st/rse_shm/rse_comms_shm.c				\
+					plat/st/stm32mp2/stm32_rse_comms.c
 PLAT_MHU			:=	NO_MHU
 include drivers/arm/rse/rse_comms.mk
 BL2_SOURCES			+=	${RSE_COMMS_SOURCES}
