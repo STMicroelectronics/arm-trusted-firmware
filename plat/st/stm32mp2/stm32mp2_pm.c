@@ -34,6 +34,10 @@
 #include "../../../lib/psci/psci_private.h"
 #include "scmi_private.h"
 
+#ifndef STM32MP_PWRDOWN_SGI
+#define STM32MP_PWRDOWN_SGI ARM_IRQ_SEC_SGI_7
+#endif
+
 /* Default value for STM32MP25 with STPMIC25, defined in AN5727 */
 #define DEFAULT_POPL_D1		3U
 #define DEFAULT_PODH_D2		1U
@@ -889,6 +893,75 @@ static void stm32_pwr_domain_pwr_down_wfi(const psci_power_state_t *target_state
 	isb();
 }
 
+#if !STM32MP21
+/*
+ * For a shutdown, each CA35 core in the system should do their power down
+ * sequence.
+ * On a PSCI shutdown/reboot request, only one core gets an
+ * opportunity to do the powerdown sequence, to achieve Standby entry sequence,
+ * this CPU raise a power down SGI to rest of the core  which are online and
+ * add in its handler managed the core power down sequence (remove core in
+ * coherency) to allow WFI for the cluster, including the L2 cache.
+ */
+static uint64_t stm32_pwrdwn_sgi_handler(uint32_t id, uint32_t flags, void *handle, void *cookie)
+{
+	u_register_t mpidr = read_mpidr();
+	unsigned int core_id = MPIDR_AFFLVL0_VAL(mpidr);
+
+	INFO("Power down core %u\n", core_id);
+
+	/* Deactivate SGI */
+	plat_ic_end_of_interrupt(STM32MP_PWRDOWN_SGI);
+
+	/* Disable GIC CPU interface to prevent waking up from WFI. */
+	stm32mp_gic_cpuif_disable();
+
+	/* Prepare power off, set SMPEN=0 on this core to allow Standby */
+	psci_pwrdown_cpu_start(PLAT_MAX_PWR_LVL);
+
+	/* Core is no more running */
+	stm32mp_state_set(STM32MP_SECONDARY_CPU, STATE_RUNNING, false);
+	sev();
+
+	psci_pwrdown_cpu_end_terminal();
+
+	return 0;
+}
+
+/*
+ * Setup the SGI interrupt that will be used trigger the execution of power
+ * down sequence for all the secondary cores. This interrupt is setup to be
+ * handled in EL3 context at a priority defined by the platform.
+ */
+static void stm32_setup_cpu_pwrdown_sgi(void)
+{
+	u_register_t flags;
+	int ret = 0;
+
+	plat_ic_set_interrupt_type(STM32MP_PWRDOWN_SGI, INTR_TYPE_S_EL1);
+	plat_ic_set_interrupt_priority(STM32MP_PWRDOWN_SGI, GIC_HIGHEST_SEC_PRIORITY);
+
+	flags = 0;
+	set_interrupt_rm_flag(flags, NON_SECURE);
+	ret = register_interrupt_type_handler(INTR_TYPE_S_EL1, stm32_pwrdwn_sgi_handler, flags);
+	if (ret != 0) {
+		ERROR("Register interrupt failed %d\n", ret);
+		panic();
+	}
+
+	plat_ic_enable_interrupt(STM32MP_PWRDOWN_SGI);
+}
+
+/*
+ * Callback function to raise a SGI designated to trigger the CPU power down
+ * sequence on the secondary core.
+ */
+static void stm32_raise_pwrdown_sgi(u_register_t mpidr)
+{
+	plat_ic_raise_s_el1_sgi(STM32MP_PWRDOWN_SGI, mpidr);
+}
+#endif
+
 static void stm32_system_off(void)
 {
 	uintptr_t pwr_base = stm32mp_pwr_base();
@@ -909,22 +982,21 @@ static void stm32_system_off(void)
 
 #if !STM32MP21
 	if (!stm32_freeze_other_core(core_id)) {
+		int ret;
+
 		VERBOSE("PSCI system off with other core running.\n");
-
-		/* Core is no more running */
-		stm32mp_state_set(STM32MP_SECONDARY_CPU, STATE_RUNNING, false);
-
-		/* Program secondary CPU entry points */
-		stm32mp_ca35_set_vbar(stm32_sec_entrypoint);
-
-		/* After reset, the core is stopped, waiting in WFI loop */
-		stm32mp_state_set(STM32MP_SECONDARY_CPU, STATE_START, false);
-
-		/* Reset the secondary core */
-		mmio_write_32(RCC_BASE + RCC_C1P1RSTCSETR, RCC_C1P1RSTCSETR_C1P1PORRST);
-
-		/* Forbid access to DDR */
+		/* Forbid access on DDR in stm32_cpu_standby() */
 		stm32mp_state_set(STM32MP_PRIMARY_CPU, STATE_DDR, false);
+		/* Send powerdown request to online secondary core(s) */
+		stm32_setup_cpu_pwrdown_sgi();
+		ret = psci_stop_other_cores(plat_my_core_pos(), 0, stm32_raise_pwrdown_sgi);
+		if (ret != PSCI_E_SUCCESS) {
+			ERROR("Failed to powerdown the secondary core\n");
+			panic();
+		}
+		while (stm32mp_state_check(STM32MP_SECONDARY_CPU, STATE_RUNNING)) {
+			wfe();
+		}
 	}
 #endif /* !STM32MP21 */
 
@@ -960,7 +1032,7 @@ static void stm32_system_off(void)
 		}
 	}
 #endif
-
+	/* Flush and invalidate data cache before DDR deactivation */
 	dcsw_op_all(DCCISW);
 
 #if !STM32MP_M33_TDCID
@@ -995,7 +1067,6 @@ static void stm32_system_off(void)
 	/* Do not maintain RETRAM memory content in Standby or Vbat */
 	mmio_write_32(pwr_base + PWR_CR10, PWR_CR10_RETRBSEN_DISABLE);
 #endif
-
 	/* Clear PM context in BKPSRAM: cold boot at next wake-up */
 	stm32_pm_context_clear();
 
@@ -1028,6 +1099,9 @@ static void stm32_system_off(void)
 	stm32mp_state_set(core_id, STATE_RUNNING, false);
 
 	INFO("BL31: power off\n");
+	console_flush();
+
+	stm32mp_ca35_lpi_isolate();
 
 	dsb();
 	isb();
