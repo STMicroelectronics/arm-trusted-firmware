@@ -11,9 +11,11 @@
 #include <drivers/clk.h>
 #include <drivers/st/stm32mp1_ddr_regs.h>
 #include <dt-bindings/clock/stm32mp1-clks.h>
+#include <lib/utils.h>
 
 #include <platform_def.h>
 #include <stm32mp1_context.h>
+#include <stm32mp1_critic_power.h>
 
 #define TRAINING_AREA_SIZE		64U
 
@@ -61,6 +63,68 @@ struct backup_data_s {
 	uint32_t bl2_code_end;
 	uint32_t bl2_end;
 };
+
+uint32_t stm32_pm_get_optee_ep(void)
+{
+	struct backup_data_s *backup_data;
+	uint32_t ep;
+
+#if STM32MP15
+	clk_enable(BKPSRAM);
+#endif
+
+	/* Context & Data to be saved at the beginning of Backup SRAM */
+	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
+
+	switch (MAGIC_ID(backup_data->magic)) {
+	case MAILBOX_MAGIC_V1:
+	case MAILBOX_MAGIC_V2:
+	case MAILBOX_MAGIC_V3:
+		if (MAGIC_AREA_SIZE(backup_data->magic) != TRAINING_AREA_SIZE) {
+			panic();
+		}
+		break;
+	default:
+		ERROR("PM context: bad magic\n");
+		panic();
+	}
+
+	ep = backup_data->core0_resume_hint;
+
+#if STM32MP15
+	clk_disable(BKPSRAM);
+#endif
+
+	return ep;
+}
+
+void stm32_clean_context(void)
+{
+	clk_enable(BKPSRAM);
+
+	zeromem((void *)STM32MP_BACKUP_RAM_BASE, sizeof(struct backup_data_s));
+
+	clk_disable(BKPSRAM);
+}
+
+#if defined(IMAGE_BL2)
+void stm32_context_save_bl2_param(void)
+{
+	struct backup_data_s *backup_data;
+
+	clk_enable(BKPSRAM);
+
+	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
+
+	backup_data->low_power_ep = (uint32_t)&stm32_pwr_down_wfi_wrapper;
+	backup_data->bl2_code_base = BL_CODE_BASE;
+	backup_data->bl2_code_end = BL_CODE_END;
+	backup_data->bl2_end = BL2_END;
+	backup_data->magic = MAILBOX_MAGIC_V3;
+
+	clk_disable(BKPSRAM);
+}
+#endif
 
 uint32_t stm32_get_zdata_from_context(void)
 {

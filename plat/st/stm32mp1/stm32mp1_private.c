@@ -672,6 +672,7 @@ bool stm32mp1_addr_inside_backupsram(uintptr_t addr)
 
 bool stm32mp_is_wakeup_from_standby(void)
 {
+#if STM32MP_SUPPORT_PM
 	uint32_t rstsr = mmio_read_32(stm32mp_rcc_base() + RCC_MP_RSTSCLRR);
 #if STM32MP15
 	uintptr_t bkpr_core1_addr = tamp_bkpr(BOOT_API_CORE1_BRANCH_ADDRESS_TAMP_BCK_REG_IDX);
@@ -697,6 +698,9 @@ bool stm32mp_is_wakeup_from_standby(void)
 #endif
 
 	return true;
+#else /* STM32MP_SUPPORT_PM */
+	return false;
+#endif /* STM32MP_SUPPORT_PM */
 }
 
 uintptr_t stm32_get_bkpr_boot_mode_addr(void)
