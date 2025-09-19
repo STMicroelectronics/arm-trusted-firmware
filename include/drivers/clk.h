@@ -9,6 +9,10 @@
 
 #include <stdbool.h>
 
+#define CLK_PHANDLE_MASK	GENMASK_32(31, 16)
+#define CLK_BINDING_ID_MASK	GENMASK_32(15, 0)
+#define CLK_PHANDLE_SHIFT	16U
+
 struct clk_ops {
 	int (*enable)(unsigned long id);
 	void (*disable)(unsigned long id);
@@ -29,5 +33,8 @@ int clk_get_parent(unsigned long id);
 int clk_set_parent(unsigned long id, unsigned long parent_id);
 
 void clk_register(const struct clk_ops *ops);
+
+void clk_add_provider(uint32_t phandle, const struct clk_ops *ops);
+void clk_add_default_provider(uint32_t phandle, const struct clk_ops *ops);
 
 #endif /* CLK_H */
