@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2025-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -12,7 +12,7 @@
 
 #include "scmi_private.h"
 
-#define TIMEOUT_10MS_IN_US		10000U
+#define SCMI_TIMEOUT_IN_US		500000U /* 500ms */
 
 /* IPCC chanel used for ringbell for SCMI mailbox */
 #define IPCC_CHANNEL15			14U
@@ -151,7 +151,7 @@ bool scmi_channel_error(void)
  */
 static int32_t scmi_channel_check(void)
 {
-	uint64_t timeout_ref = timeout_init_us(TIMEOUT_10MS_IN_US);
+	uint64_t timeout_ref = timeout_init_us(SCMI_TIMEOUT_IN_US);
 
 	while (scmi_channel_busy()) {
 		if (scmi_channel_error() || timeout_elapsed(timeout_ref)) {
@@ -256,7 +256,7 @@ static int32_t scmi_proto_version(uint32_t proto_id, uint32_t *version)
 
 	scmi_ring_doorbell();
 
-	ret = scmi_rsp_wait(TIMEOUT_10MS_IN_US, 2U);
+	ret = scmi_rsp_wait(SCMI_TIMEOUT_IN_US, 2U);
 	if (ret != SCMI_SUCCESS) {
 		return ret;
 	}
@@ -297,7 +297,7 @@ static int32_t scmi_proto_msg_attr(uint32_t proto_id, uint32_t command_id, uint3
 
 	scmi_ring_doorbell();
 
-	ret = scmi_rsp_wait(TIMEOUT_10MS_IN_US, 2U);
+	ret = scmi_rsp_wait(SCMI_TIMEOUT_IN_US, 2U);
 	if (ret != SCMI_SUCCESS) {
 		return ret;
 	}
@@ -422,7 +422,7 @@ int32_t scmi_sys_pwr_state_set(uint32_t flags, uint32_t system_state)
 
 	scmi_ring_doorbell();
 
-	ret = scmi_rsp_wait(TIMEOUT_10MS_IN_US, 1U);
+	ret = scmi_rsp_wait(SCMI_TIMEOUT_IN_US, 1U);
 	if (ret != SCMI_SUCCESS) {
 		return ret;
 	}
@@ -446,7 +446,7 @@ int32_t scmi_base_discover_list_proto(uint32_t *num, uint8_t *protocols, uint8_t
 
 	scmi_ring_doorbell();
 
-	ret = scmi_rsp_wait(TIMEOUT_10MS_IN_US, SIZE_NO_CHECK);
+	ret = scmi_rsp_wait(SCMI_TIMEOUT_IN_US, SIZE_NO_CHECK);
 	if (ret != SCMI_SUCCESS) {
 		return ret;
 	}
