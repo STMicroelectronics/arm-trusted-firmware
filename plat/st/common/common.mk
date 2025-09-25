@@ -189,6 +189,7 @@ include lib/xlat_tables_v2/xlat_tables.mk
 PLAT_BL_COMMON_SOURCES		+=	${XLAT_TABLES_LIB_SRCS}
 
 PLAT_BL_COMMON_SOURCES		+=	drivers/clk/clk.c				\
+					drivers/clk/clk-fixed.c		\
 					drivers/delay_timer/delay_timer.c		\
 					drivers/delay_timer/generic_delay_timer.c	\
 					drivers/st/clk/stm32mp_clkfunc.c		\
