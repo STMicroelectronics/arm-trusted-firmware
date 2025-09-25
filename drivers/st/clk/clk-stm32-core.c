@@ -650,7 +650,19 @@ void clk_stm32_enable_critical_clocks(void)
 
 static void stm32_clk_register(void)
 {
-	clk_register(&stm32mp_clk_ops);
+	int node_rcc = -1;
+	void *fdt = NULL;
+
+	if (fdt_get_address(&fdt) == 0) {
+		panic();
+	}
+
+	node_rcc = fdt_node_offset_by_compatible(fdt, -1, DT_RCC_CLK_COMPAT);
+	if (node_rcc < 0) {
+		panic();
+	}
+
+	clk_add_default_provider(node_rcc, &stm32mp_clk_ops);
 }
 
 uint32_t clk_stm32_div_get_value(struct stm32_clk_priv *priv, int div_id)
