@@ -10,6 +10,7 @@
 #include <bl31/bl31.h>
 #include <common/bl_common.h>
 #include <common/runtime_svc.h>
+#include <drivers/clk-fixed.h>
 #include <drivers/generic_delay_timer.h>
 #include <drivers/st/stm32_console.h>
 #include <drivers/st/stm32mp_reset.h>
@@ -27,6 +28,7 @@ void bl31_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 {
 	bl_params_t *params_from_bl2;
 	int ret;
+	void *fdt = NULL;
 
 	/*
 	 * Invalidate remaining data from second half of SYSRAM (used by BL2) as this area will
@@ -60,7 +62,13 @@ void bl31_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 		panic();
 	}
 
-	ret = stm32mp2_clk_init();
+	if (fdt_get_address(&fdt) == 0) {
+		panic();
+	}
+
+	clk_fixed_register(fdt);
+
+	ret = stm32mp2_clk_init(fdt);
 	if (ret < 0) {
 		EARLY_ERROR("%s: failed init clocks (%d)\n", __func__, ret);
 		panic();

@@ -2729,15 +2729,10 @@ static int stm32_clk_parse_fdt_all_pll(void *fdt, int node, struct stm32_clk_pla
 	return 0;
 }
 
-static int stm32_clk_parse_fdt(struct stm32_clk_platdata *pdata)
+static int stm32_clk_parse_fdt(void *fdt, struct stm32_clk_platdata *pdata)
 {
-	void *fdt = NULL;
 	int node;
 	int err;
-
-	if (fdt_get_address(&fdt) == 0) {
-		return -ENOENT;
-	}
 
 	node = fdt_node_offset_by_compatible(fdt, -1, DT_RCC_CLK_COMPAT);
 	if (node < 0) {
@@ -2824,13 +2819,13 @@ static struct stm32_clk_priv stm32mp2_clock_data = {
 	.ops_array	= ops_array_mp2,
 };
 
-int stm32mp2_clk_init(void)
+int stm32mp2_clk_init(void *fdt)
 {
 	uintptr_t base = RCC_BASE;
 	int ret;
 
 #ifdef IMAGE_BL2
-	ret = stm32_clk_parse_fdt(&stm32mp2_pdata);
+	ret = stm32_clk_parse_fdt(fdt, &stm32mp2_pdata);
 	if (ret != 0) {
 		return ret;
 	}

@@ -12,7 +12,7 @@
 #include <common/debug.h>
 #include <common/desc_image_load.h>
 #include <drivers/arm/rse_comms.h>
-#include <drivers/clk.h>
+#include <drivers/clk-fixed.h>
 #include <drivers/mmc.h>
 #include <drivers/st/regulator_fixed.h>
 #include <drivers/st/rse_shm.h>
@@ -439,6 +439,7 @@ void bl2_el3_plat_arch_setup(void)
 				 BOOT_API_CTX_BOOT_INTERFACE_SEL_SERIAL_UART);
 	uintptr_t uart_prog_addr __unused;
 	bool lse_tamper_occured = false;
+	void *fdt = NULL;
 
 	if (stm32_otp_probe() != 0U) {
 		EARLY_ERROR("OTP probe failed\n");
@@ -467,7 +468,13 @@ void bl2_el3_plat_arch_setup(void)
 	ddr_sub_system_clk_init();
 #endif
 
-	if (stm32mp2_clk_init() < 0) {
+	if (fdt_get_address(&fdt) == 0) {
+		panic();
+	}
+
+	clk_fixed_register(fdt);
+
+	if (stm32mp2_clk_init(fdt) < 0) {
 		panic();
 	}
 
