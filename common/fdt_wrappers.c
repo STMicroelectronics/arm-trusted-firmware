@@ -672,3 +672,49 @@ int fdtw_find_or_add_subnode(void *fdt, int parentoffset, const char *name)
 
 	return offset;
 }
+
+/* Parse a phandle with arguments from a property of a device tree node */
+int fdt_get_phandle_with_args(void *fdt, int node, const char *list_name,
+			      const char *cells_name, int index,
+			      struct fdt_phandle_args *out_args)
+{
+	const fdt32_t *cuint;
+	uint32_t phandle;
+	uint32_t cells;
+	int entry_size;
+	int prop_len;
+	int i = 0;
+
+	cuint = fdt_getprop(fdt, node, list_name, &prop_len);
+	if (!cuint || prop_len <= 0) {
+		return -FDT_ERR_NOTFOUND;
+	}
+
+	while (prop_len > 0) {
+
+		phandle = fdt_node_offset_by_phandle(fdt, fdt32_to_cpu(*cuint));
+
+		if (fdt_read_uint32(fdt, phandle, cells_name, &cells) < 0) {
+			return -FDT_ERR_NOTFOUND;
+		}
+
+		entry_size = (1 + cells) * sizeof(fdt32_t);
+		if (prop_len < entry_size) {
+			return -FDT_ERR_BADVALUE;
+		}
+
+		if (i == index) {
+			out_args->phandle = phandle;
+			out_args->args_count = cells;
+			out_args->args[0] = (unsigned long)fdt32_to_cpu(*(cuint + 1));
+
+			return 0;
+		}
+
+		cuint += 1 + cells;
+		prop_len -= entry_size;
+		i++;
+	}
+
+	return -FDT_ERR_NOTFOUND;
+}

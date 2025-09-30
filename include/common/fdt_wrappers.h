@@ -16,6 +16,14 @@
 /* Number of cells, given total length in bytes. Each cell is 4 bytes long */
 #define NCELLS(len) ((len) / 4U)
 
+#define MAX_PHANDLE_ARGS 16
+
+struct fdt_phandle_args {
+	uint32_t phandle;
+	int args_count;
+	uint32_t args[MAX_PHANDLE_ARGS];
+};
+
 int fdt_read_uint32(const void *dtb, int node, const char *prop_name,
 		    uint32_t *value);
 uint32_t fdt_read_uint32_default(const void *dtb, int node,
@@ -81,5 +89,9 @@ static inline bool fdt_node_is_enabled(const void *fdt, int node)
 for (node = fdt_node_offset_by_compatible(dtb, -1, compatible_str);   \
      node >= 0;                                                       \
      node = fdt_node_offset_by_compatible(dtb, node, compatible_str))
+
+int fdt_get_phandle_with_args(void *fdt, int node, const char *list_name,
+			      const char *cells_name, int index,
+			      struct fdt_phandle_args *out_args);
 
 #endif /* FDT_WRAPPERS_H */
