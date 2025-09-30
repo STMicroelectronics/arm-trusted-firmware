@@ -43,5 +43,6 @@ const char *dt_get_board_model(void);
 int dt_find_otp_name(const char *name, uint32_t *otp, uint32_t *otp_len);
 int dt_get_otp_by_phandle(const uint32_t phandle, uint32_t *otp_id, uint32_t *otp_len);
 int fdt_get_gpio_bank_pin_count(unsigned int bank);
+int dt_get_clk_by_index(void *_fdt, int node, int clk_idx, unsigned long *id);
 
 #endif /* STM32MP_DT_H */

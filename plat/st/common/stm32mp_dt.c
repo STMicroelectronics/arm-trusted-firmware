@@ -9,6 +9,7 @@
 
 #include <common/debug.h>
 #include <common/fdt_wrappers.h>
+#include <drivers/clk.h>
 #include <drivers/st/regulator.h>
 #include <drivers/st/stm32_gpio.h>
 #include <libfdt.h>
@@ -126,14 +127,44 @@ int dt_set_stdout_pinctrl(void)
 	return dt_set_pinctrl_config(node);
 }
 
+int dt_get_clk_by_index(void *_fdt, int node, int index, unsigned long *id)
+{
+	int ret;
+	struct fdt_phandle_args args;
+
+	ret = fdt_get_phandle_with_args(_fdt, node, "clocks", "#clock-cells",
+					index, &args);
+	if (ret < 0) {
+		return ret;
+	}
+
+	assert(args.phandle <= CLK_PHANDLE_MASK);
+
+	if (args.args_count > 1) {
+		ERROR("%s: too many clock arguments (%d)\n", __func__,
+		      args.args_count);
+		panic();
+	}
+
+	*id = (args.phandle << CLK_PHANDLE_SHIFT) & CLK_PHANDLE_MASK;
+
+	if (args.args_count == 0) {
+		*id |= args.phandle;
+	} else {
+		assert (args.args[0] <= CLK_BINDING_ID_MASK);
+		*id |= args.args[0];
+	}
+
+	return 0;
+}
+
 /*******************************************************************************
  * This function fills the generic information from a given node.
  ******************************************************************************/
 void dt_fill_device_info(struct dt_node_info *info, int node)
 {
 	const fdt32_t *cuint;
-
-	assert(fdt_get_node_parent_address_cells(node) == 1);
+	unsigned long clock_id;
 
 	cuint = fdt_getprop(fdt, node, "reg", NULL);
 	if (cuint != NULL) {
@@ -142,12 +173,10 @@ void dt_fill_device_info(struct dt_node_info *info, int node)
 		info->base = 0;
 	}
 
-	cuint = fdt_getprop(fdt, node, "clocks", NULL);
-	if (cuint != NULL) {
-		cuint++;
-		info->clock = (int)fdt32_to_cpu(*cuint);
-	} else {
+	if (dt_get_clk_by_index(fdt, node, 0, &clock_id) < 0) {
 		info->clock = -1;
+	} else {
+		info->clock = clock_id;
 	}
 
 	cuint = fdt_getprop(fdt, node, "resets", NULL);
