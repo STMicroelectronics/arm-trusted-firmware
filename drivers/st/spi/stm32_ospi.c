@@ -1353,13 +1353,10 @@ int stm32_ospi_init(void)
 				     mm_base : mm_base + mm_size - stm32_ospi.mm_size;
 		stm32_ospi.bank = bank;
 
-		cuint = fdt_getprop(fdt, ospi_node, "clocks", NULL);
-		if (cuint == NULL) {
-			return -FDT_ERR_BADVALUE;
+		ret = dt_get_clk_by_index(fdt, ospi_node, 0, &stm32_ospi.clock_id);
+		if (ret != 0) {
+			return ret;
 		}
-
-		cuint++;
-		stm32_ospi.clock_id = (unsigned long)fdt32_to_cpu(*cuint);
 	}
 
 	clk_enable(stm32_ospi.clock_id);
