@@ -106,6 +106,14 @@ bool scmi_sys_pwr_state_set_supported;
  */
 static void scmi_ring_doorbell(void)
 {
+
+	/*
+	 * Ensure that any write to the SCMI payload area is seen by SCP before
+	 * we write to the doorbell register. If these writes were reordered
+	 * by the CPU then SCP would read stale payload data
+	 */
+	dmbst();
+
 	mmio_write_32(IPCC1_C1SCR, BIT_32(IPCC_CHANNEL + 16U));
 }
 
@@ -125,7 +133,7 @@ void scmi_channel_clear(void)
  */
 bool scmi_channel_busy(void)
 {
-	return (shmem->channel_status & SCMI_CHANNEL_STATUS_FREE) == 0;
+	return (mmio_read_32((uintptr_t)&shmem->channel_status) & SCMI_CHANNEL_STATUS_FREE) == 0;
 }
 
 /**
@@ -134,7 +142,7 @@ bool scmi_channel_busy(void)
  */
 bool scmi_channel_error(void)
 {
-	return (shmem->channel_status & SCMI_CHANNEL_STATUS_ERROR) != 0;
+	return (mmio_read_32((uintptr_t)&shmem->channel_status) & SCMI_CHANNEL_STATUS_ERROR) != 0;
 }
 
 /**
