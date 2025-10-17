@@ -482,7 +482,7 @@ static void print_mode_verbose(const char *mode)
 static void stm32_set_scmi_sys_pwr(uint32_t system_state)
 {
 #if STM32MP_M33_TDCID
-	scmi_sys_pwr_state_set(SCMI_SYS_PWR_GRACEFUL_REQ, system_state);
+	scmi_sys_pwr_state_set(SCMI_SYS_PWR_FORCEFUL_REQ, system_state);
 #endif
 }
 

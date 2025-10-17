@@ -512,7 +512,7 @@ err:
 
 void __dead2 stm32mp_system_reset(void)
 {
-	int ret = scmi_sys_pwr_state_set(SCMI_SYS_PWR_GRACEFUL_REQ, SCMI_SYS_PWR_WARM_RESET);
+	int ret = scmi_sys_pwr_state_set(SCMI_SYS_PWR_FORCEFUL_REQ, SCMI_SYS_PWR_WARM_RESET);
 
 	if (ret != SCMI_SUCCESS) {
 		INFO("SCMI SYSTEM_POWER_STATE_SET error (%d), waiting watchdog\n", ret);
@@ -526,7 +526,7 @@ void __dead2 stm32mp_system_reset(void)
 
 void __dead2 stm32mp_system_cold_reset(void)
 {
-	int ret = scmi_sys_pwr_state_set(SCMI_SYS_PWR_GRACEFUL_REQ, SCMI_SYS_PWR_COLD_RESET);
+	int ret = scmi_sys_pwr_state_set(SCMI_SYS_PWR_FORCEFUL_REQ, SCMI_SYS_PWR_COLD_RESET);
 
 	if (ret != SCMI_SUCCESS) {
 		INFO("SCMI SYSTEM_POWER_STATE_SET error (%d), waiting watchdog\n", ret);
