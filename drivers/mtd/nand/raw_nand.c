@@ -282,6 +282,7 @@ static int nand_read_param_page(void)
 	struct nand_param_page page;
 	uint8_t addr = 0U;
 	int ret;
+	int i;
 
 	ret = nand_send_cmd(NAND_CMD_READ_PARAM_PAGE, 0U);
 	if (ret != 0) {
@@ -298,19 +299,24 @@ static int nand_read_param_page(void)
 		return ret;
 	}
 
-	ret = nand_read_data((uint8_t *)&page, sizeof(page), true);
-	if (ret != 0) {
-		return ret;
+	for (i = 0; i < 3; i++) {
+		ret = nand_read_data((uint8_t *)&page, sizeof(page), true);
+		if (ret != 0) {
+			return ret;
+		}
+
+		if (nand_check_crc(CRC_INIT_VALUE, (uint8_t *)&page, 254U) == page.crc16) {
+			break;
+		}
+	}
+
+	if (i == 3) {
+		WARN("Error reading param\n");
+		return -EINVAL;
 	}
 
 	if (strncmp((char *)&page.page_sig, "ONFI", 4) != 0) {
 		WARN("Error ONFI detection\n");
-		return -EINVAL;
-	}
-
-	if (nand_check_crc(CRC_INIT_VALUE, (uint8_t *)&page, 254U) !=
-	    page.crc16) {
-		WARN("Error reading param\n");
 		return -EINVAL;
 	}
 
