@@ -21,6 +21,7 @@
 #define HW_IDLE_PERIOD			0x3U
 
 static enum stm32mp2_ddr_sr_mode saved_ddr_sr_mode;
+static uint32_t saved_sem_mutex;
 
 #pragma weak stm32_ddrdbg_get_base
 uintptr_t stm32_ddrdbg_get_base(void)
@@ -236,10 +237,20 @@ bool is_ddr_cid_filtering_enabled(void)
 void ddr_enable_cid_filtering(void)
 {
 	mmio_setbits_32(stm32mp_rcc_base() + RCC_R104CIDCFGR, RCC_R104CIDCFGR_CFEN);
+	if (saved_sem_mutex != 0U) {
+		mmio_setbits_32(stm32mp_rcc_base() + RCC_R104SEMCR, RCC_R104SEMCR_SEM_MUTEX);
+	}
 }
 
 void ddr_disable_cid_filtering(void)
 {
+	/*
+	 * Save the current mutex state to restore it later,
+	 * since disabling CID filtering automatically releases the
+	 * semaphore.
+	 */
+	saved_sem_mutex = mmio_read_32(stm32mp_rcc_base() + RCC_R104SEMCR) &
+			  RCC_R104SEMCR_SEM_MUTEX;
 	mmio_clrbits_32(stm32mp_rcc_base() + RCC_R104CIDCFGR, RCC_R104CIDCFGR_CFEN);
 }
 
