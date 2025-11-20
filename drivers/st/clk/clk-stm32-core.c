@@ -17,7 +17,7 @@
 #include <lib/spinlock.h>
 
 #define TIMEOUT_US_200MS	U(200000)
-#define TIMEOUT_US_1S		U(1000000)
+#define TIMEOUT_US_2S		U(2000000)
 #define CLKSRC_TIMEOUT		TIMEOUT_US_200MS
 
 static struct spinlock reg_lock;
@@ -726,7 +726,7 @@ int _clk_stm32_gate_wait_ready(struct stm32_clk_priv *priv, uint16_t gate_id,
 		mask_test = 0U;
 	}
 
-	timeout = timeout_init_us(TIMEOUT_US_1S);
+	timeout = timeout_init_us(TIMEOUT_US_2S);
 
 	while ((mmio_read_32(address) & mask_rdy) != mask_test) {
 		if (timeout_elapsed(timeout)) {
