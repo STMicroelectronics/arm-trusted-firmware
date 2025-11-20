@@ -96,13 +96,13 @@ static int clk_stm32_init(struct stm32_clk_priv *priv, uintptr_t base)
 #define USB_PHY_48_MHZ		48000000
 
 #define TIMEOUT_US_200MS	U(200000)
-#define TIMEOUT_US_1S		U(1000000)
+#define TIMEOUT_US_2S		U(2000000)
 
 #define PLLRDY_TIMEOUT		TIMEOUT_US_200MS
 #define CLKSRC_TIMEOUT		TIMEOUT_US_200MS
 #define CLKDIV_TIMEOUT		TIMEOUT_US_200MS
 #define HSIDIV_TIMEOUT		TIMEOUT_US_200MS
-#define OSCRDY_TIMEOUT		TIMEOUT_US_1S
+#define OSCRDY_TIMEOUT		TIMEOUT_US_2S
 
 struct mux_cfg {
 	uint16_t offset;
