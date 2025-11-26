@@ -12,6 +12,8 @@
 #include <drivers/st/stm32_gpio.h>
 #include <smccc_helpers.h>
 
+#define STM32_HALF_STACK_SIZE	((PLATFORM_STACK_SIZE) >> 1)
+
 	.global	stm32_pwr_down_wfi_load
 	.global	stm32_pwr_cstop_critic_exit
 	.global	stm32_pwr_down_wfi_wrapper
@@ -25,31 +27,39 @@
 
 .section .data
 	.balign 4
-saved_sp:		.word	0x00000000
-saved_vbar:		.word	0x00000000
-saved_mvbar:		.word	0x00000000
+saved_sp:		.word 0x00000000, 0x00000000
+saved_vbar:		.word 0x00000000, 0x00000000
+saved_mvbar:		.word 0x00000000, 0x00000000
 
 .section .text
 	.align	5
 
 func stm32_pwr_down_wfi_wrapper
-	push	{r4,r5,r6,lr}
+	push	{r4,r5,lr}
 
-	# Save r0 and r1 in  r2 and r3, as they are used in disable_mmu_secure
+	# Save r0 and r1 in r4 and r5
+	mov	r4, r0
+	mov	r5, r1
+
+	# Load CPU_ID in r2 and WORD_SIZE in r3
+	bl	plat_my_core_pos
 	mov	r2, r0
-	mov	r3, r1
+	mov	r3, #4
 
 	# Save current sp in sp1
 	ldr	r1, =saved_sp
+	mla	r1, r2, r3, r1
 	str	sp, [r1]
 
 	# Save current VBAR in vbar1
 	ldr	r1, =saved_vbar
+	mla	r1, r2, r3, r1
 	ldcopr	r0, VBAR
 	str	r0, [r1]
 
 	# Save current MVBAR in mvbar1
 	ldr	r1, =saved_mvbar
+	mla	r1, r2, r3, r1
 	ldcopr	r0, MVBAR
 	str	r0, [r1]
 
@@ -59,24 +69,34 @@ func stm32_pwr_down_wfi_wrapper
 	stcopr	r1, MVBAR
 
 	# Set sp to BL2 STACK (as BL2 is not using it anymore)
-	ldr	sp, =__STACKS_END__
+	ldr	r1, =__STACKS_END__
+	mov	r3, #STM32_HALF_STACK_SIZE
+	mls	sp, r2, r3, r1
 
-	mov	r0, r2
-	mov	r1, r3
+	mov	r0, r4
+	mov	r1, r5
 
 	bl	stm32_pwr_down_wfi_load
 
+	# Load CPU_ID in r2 and WORD_SIZE in r3
+	bl	plat_my_core_pos
+	mov	r2, r0
+	mov	r3, #4
+
 	# Restore stack
 	ldr	r1, =saved_sp
+	mla	r1, r2, r3, r1
 	ldr	sp, [r1]
 
 	# Restore VBAR
 	ldr	r1, =saved_vbar
+	mla	r1, r2, r3, r1
 	ldr	r0, [r1]
 	stcopr	r0, VBAR
 
 	# Restore MVBAR
 	ldr	r1, =saved_mvbar
+	mla	r1, r2, r3, r1
 	ldr	r0, [r1]
 	stcopr	r0, MVBAR
 
@@ -85,7 +105,7 @@ func stm32_pwr_down_wfi_wrapper
 	dsb
 	isb
 
-	pop	{r4,r5,r6,pc}
+	pop	{r4,r5,pc}
 endfunc stm32_pwr_down_wfi_wrapper
 
 #if STM32MP13
