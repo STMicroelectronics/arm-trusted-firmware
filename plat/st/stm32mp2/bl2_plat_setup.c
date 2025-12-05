@@ -45,14 +45,14 @@ IMPORT_SYM(uintptr_t, __DATA_END__, DATA_END);
 #define IAC_EXCEPT_LSB_BIT(x) ((x) * 32U)
 #define IAC_EXCEPT_MSB_BIT(x) (IAC_EXCEPT_LSB_BIT(x) + 31U)
 
-#if DEBUG
+#if DEBUG && !STM32MP_M33_TDCID
 /* Save all IAC ISR registers + the number of IAC found on last u32 */
 static uint32_t iac_list[IAC_NB + 1U];
 #endif
 
 static void iac_dump(void)
 {
-#if DEBUG
+#if DEBUG && !STM32MP_M33_TDCID
 	uint32_t i;
 
 	for (i = 0U; i < IAC_NB; i++) {
@@ -72,7 +72,7 @@ static void iac_dump(void)
 
 static void iac_display(void)
 {
-#if DEBUG
+#if DEBUG && !STM32MP_M33_TDCID
 	unsigned int i;
 	unsigned int bit;
 
