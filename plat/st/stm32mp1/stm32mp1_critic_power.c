@@ -6,6 +6,7 @@
 
 #include <arch_helpers.h>
 #include <common/debug.h>
+#include <drivers/arm/gic_common.h>
 #include <drivers/arm/gicv2.h>
 #include <drivers/generic_delay_timer.h>
 #include <drivers/st/stm32_iwdg.h>
@@ -113,6 +114,7 @@ static void stm32mp1_power_unlock(void) {
 
 static void stm32_cpu_standby(void) {
 	unsigned int pos = plat_my_core_pos();
+	unsigned int other_pos = stm32_get_pos_other();
 
 	stm32mp1_power_lock();
 	cstop_cpux_state[pos] = STATE_AUTO_CSTOP_ENTRY;
@@ -130,6 +132,10 @@ static void stm32_cpu_standby(void) {
 	} while (!read_isr());
 
 	stm32mp1_power_lock();
+
+	/* Use SGI_6 to wake up the other core, the ack will be done in OP-TEE */
+	if (cstop_enter == STATE_AUTO_CSTOP_ENTRY)
+		gicv2_raise_sgi(ARM_IRQ_SEC_SGI_6, false, other_pos);
 
 	cstop_cpux_state[pos] = STATE_NONE;
 

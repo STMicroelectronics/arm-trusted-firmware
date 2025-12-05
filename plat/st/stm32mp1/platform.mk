@@ -137,6 +137,12 @@ $(error Cannot find $(patsubst %.dtb,%.dts,$(DTB_FILE_NAME)) file)
 endif
 endif
 
+# Generic GIC v2
+include drivers/arm/gic/v2/gicv2.mk
+BL2_SOURCES		+=	${GICV2_SOURCES}
+BL2_SOURCES		+=	plat/common/plat_gicv2.c
+BL2_SOURCES		+=	plat/st/common/stm32mp_gic.c
+
 # Macros and rules to build TF binary
 STM32_TF_STM32		:=	$(addprefix ${BUILD_PLAT}/tf-a-, $(patsubst %.dtb,%.stm32,$(DTB_FILE_NAME)))
 STM32_LD_FILE		:=	plat/st/stm32mp1/stm32mp1.ld.S

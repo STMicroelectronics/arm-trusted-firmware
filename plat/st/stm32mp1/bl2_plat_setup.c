@@ -497,6 +497,10 @@ skip_console_init:
 
 	print_reset_reason();
 
+#if !STM32MP1_OPTEE_IN_SYSRAM
+	stm32mp_gic_init();
+#endif
+
 #if STM32MP15
 	if (stm32mp_check_closed_device() == STM32MP_CHIP_SEC_CLOSED) {
 		update_monotonic_counter();
