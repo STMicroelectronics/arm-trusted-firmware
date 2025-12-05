@@ -204,6 +204,7 @@ void bl2_platform_setup(void)
 #endif
 }
 
+#if !STM32MP_M33_TDCID
 static void handle_potential_tamper(uint32_t bit_off)
 {
 	/* Fixme: Add implementation specific logic here */
@@ -253,7 +254,6 @@ static bool lse_tamper_detection(void)
 
 static void reset_backup_domain(void)
 {
-#if !STM32MP_M33_TDCID
 	uintptr_t pwr_base = stm32mp_pwr_base();
 	uintptr_t rcc_base = stm32mp_rcc_base();
 
@@ -286,11 +286,12 @@ static void reset_backup_domain(void)
 
 		mmio_clrbits_32(rcc_base + RCC_BDCR, RCC_BDCR_VSWRST);
 	}
-#endif /* !STM32MP_M33_TDCID */
 }
+#endif /* !STM32MP_M33_TDCID */
 
 static void check_tamper_event(bool lse_tamper_occured)
 {
+#if !STM32MP_M33_TDCID
 	uint32_t sr;
 
 	/*
@@ -343,6 +344,7 @@ static void check_tamper_event(bool lse_tamper_occured)
 		}
 		ERROR("\n");
 	}
+#endif
 }
 
 static void authentication_check(boot_api_context_t *boot_context)
@@ -400,11 +402,11 @@ void bl2_el3_plat_arch_setup(void)
 		panic();
 	}
 
+#if !STM32MP_M33_TDCID
 	lse_tamper_occured = lse_tamper_detection();
 
 	reset_backup_domain();
 
-#if !STM32MP_M33_TDCID
 	/*
 	 * Initialize DDR sub-system clock. This needs to be done before enabling DDR PLL (PLL2),
 	 * and so before stm32mp2_clk_init().
