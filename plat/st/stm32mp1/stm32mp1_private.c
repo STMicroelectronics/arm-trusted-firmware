@@ -71,9 +71,7 @@ static const mmap_region_t stm32mp1_mmap[] = {
 	MAP_SRAM_ALL,
 #endif
 	MAP_DEVICE1,
-#if STM32MP_RAW_NAND
 	MAP_DEVICE2,
-#endif
 	{0}
 };
 #endif
