@@ -18,6 +18,8 @@
 #include <stm32mp1_context.h>
 #include <stm32mp1_critic_power.h>
 
+#define STM32_PM_SOC_MODE_MASK			GENMASK_32(7, 0)
+
 static void cstop_critic_enter(uint32_t mode)
 {
 	/* Init generic timer that is needed for udelay used in ddr driver */
@@ -72,7 +74,9 @@ void stm32_pwr_cstop_critic_exit(void)
 
 void stm32_pwr_down_wfi_load(bool is_cstop, uint32_t mode)
 {
-	if (mode == (uint32_t)STM32_PM_CSTOP_ALLOW_LPLV_STOP2) {
+	uint32_t soc_mode = mode & STM32_PM_SOC_MODE_MASK;
+
+	if (soc_mode == (uint32_t)STM32_PM_CSTOP_ALLOW_LPLV_STOP2) {
 #if STM32MP15
 		ERROR("LPLV-Stop2 mode not supported\n");
 		panic();
@@ -84,15 +88,15 @@ void stm32_pwr_down_wfi_load(bool is_cstop, uint32_t mode)
 #endif
 	}
 
-	if (mode != (uint32_t)STM32_PM_CSLEEP_RUN) {
+	if (soc_mode != (uint32_t)STM32_PM_CSLEEP_RUN) {
 		dcsw_op_all(DC_OP_CISW);
 	}
 
 	if (is_cstop) {
-		cstop_critic_enter(mode);
+		cstop_critic_enter(soc_mode);
 	}
 
-	if (mode == (uint32_t)STM32_PM_SHUTDOWN) {
+	if (soc_mode == (uint32_t)STM32_PM_SHUTDOWN) {
 		shutdown_critic_enter();
 	}
 
