@@ -78,6 +78,8 @@ func stm32_pwr_down_wfi_wrapper
 
 	bl	stm32_pwr_down_wfi_load
 
+	mov	r4, r0
+
 	# Load CPU_ID in r2 and WORD_SIZE in r3
 	bl	plat_my_core_pos
 	mov	r2, r0
@@ -99,6 +101,8 @@ func stm32_pwr_down_wfi_wrapper
 	mla	r1, r2, r3, r1
 	ldr	r0, [r1]
 	stcopr	r0, MVBAR
+
+	mov	r0, r4
 
 	# Synchronize on memory access and instruction
 	# after resetting stack/IT handler
