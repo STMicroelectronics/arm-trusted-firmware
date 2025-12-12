@@ -160,7 +160,7 @@ static void print_reset_reason(void)
 		}
 	}
 
-	INFO("Reset reason: %s (0x%x)\n", reason_str, rstsr);
+	NOTICE("Reset reason: %s (0x%x)\n", reason_str, rstsr);
 }
 
 #if STM32MP_M33_TDCID
