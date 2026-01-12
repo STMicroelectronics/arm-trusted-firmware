@@ -48,6 +48,8 @@ int load_partition_table(unsigned int image_id);
 const partition_entry_t *get_partition_entry(const char *name);
 const partition_entry_t *get_partition_entry_by_type(
 	const struct efi_guid *type_guid);
+const partition_entry_t *get_partition_entry_by_type_and_guid(
+	const struct efi_guid *type_guid, const struct efi_guid *part_guid);
 const partition_entry_t *get_partition_entry_by_guid(
 	const struct efi_guid *part_guid);
 const partition_entry_list_t *get_partition_entry_list(void);

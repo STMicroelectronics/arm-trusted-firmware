@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2025, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2016-2026, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -493,6 +493,25 @@ const partition_entry_t *get_partition_entry_by_guid(
 
 	for (i = 0U; i < list.entry_count; i++) {
 		if (guidcmp(part_guid, &list.list[i].part_guid) == 0) {
+			return &list.list[i];
+		}
+	}
+
+	return NULL;
+}
+
+/*
+ * Try retrieving a partition table entry based on the partition type and part
+ * GUID.
+ */
+const partition_entry_t *get_partition_entry_by_type_and_guid(
+	const struct efi_guid *type_guid, const struct efi_guid *part_guid)
+{
+	unsigned int i;
+
+	for (i = 0U; i < list.entry_count; i++) {
+		if (guidcmp(type_guid, &list.list[i].type_guid) == 0 &&
+		    guidcmp(part_guid, &list.list[i].part_guid) == 0) {
 			return &list.list[i];
 		}
 	}
