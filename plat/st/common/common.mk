@@ -51,6 +51,10 @@ ifeq (${PSA_FWU_SUPPORT},1)
 $(info Disable PSA_FWU_SUPPORT flag for serial device)
 override PSA_FWU_SUPPORT	:=	0
 endif
+# Stub Power Management functions for serial boot
+STM32MP_SUPPORT_PM		:=	0
+else
+STM32MP_SUPPORT_PM		:=	1
 endif
 
 # Number of TF-A copies in the device
@@ -120,6 +124,7 @@ $(eval $(call assert_booleans,\
 		STM32MP_SDMMC \
 		STM32MP_SPI_NAND \
 		STM32MP_SPI_NOR \
+		STM32MP_SUPPORT_PM \
 		STM32MP_UART_PROGRAMMER \
 		STM32MP_USB_PROGRAMMER \
 )))
@@ -141,6 +146,7 @@ $(eval $(call add_defines,\
 		STM32MP_SDMMC \
 		STM32MP_SPI_NAND \
 		STM32MP_SPI_NOR \
+		STM32MP_SUPPORT_PM \
 		STM32MP_UART_BAUDRATE \
 		STM32MP_UART_PROGRAMMER \
 		STM32MP_USB_PROGRAMMER \
