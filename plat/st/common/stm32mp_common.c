@@ -600,6 +600,25 @@ int stm32_get_fwu_info_cell(struct nvmem_cell *fwu_info)
 	return 0;
 }
 
+int stm32_get_cm_fwu_info_cell(struct nvmem_cell *fwu_info)
+{
+	static bool initialized;
+	static struct nvmem_cell cm_fwu_info = { 0 };
+
+	if (!initialized) {
+		int ret = stm32_get_bootinfo_cell("cm-fwu-info", &cm_fwu_info);
+
+		if (ret != 0) {
+			return ret;
+		}
+		initialized = true;
+	}
+
+	(void)memcpy(fwu_info, &cm_fwu_info, sizeof(*fwu_info));
+
+	return 0;
+}
+
 int stm32_get_boot_mode_cell(struct nvmem_cell *boot_mode)
 {
 	static bool initialized = false;

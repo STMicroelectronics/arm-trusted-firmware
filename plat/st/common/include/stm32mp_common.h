@@ -163,6 +163,7 @@ int stm32_tamp_nvram_init(void);
 int stm32_tamp_nvram_update_rights(void);
 
 int stm32_get_fwu_info_cell(struct nvmem_cell *fwu_info);
+int stm32_get_cm_fwu_info_cell(struct nvmem_cell *fwu_info);
 int stm32_get_boot_mode_cell(struct nvmem_cell *boot_mode);
 
 #if STM32MP15
