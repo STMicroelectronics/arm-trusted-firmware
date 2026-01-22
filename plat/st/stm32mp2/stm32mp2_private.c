@@ -143,6 +143,39 @@ int stm32mp_unmap_retram(void)
 					   RETRAM_SIZE);
 }
 
+#if PSA_FWU_SUPPORT
+#if STM32MP_M33_TDCID
+int stm32_fwu_copro_status_is_failed(bool *status)
+{
+	struct nvmem_cell cm_fwu_info_cell = {};
+	uint32_t m33_fwu_info = 0;
+	int ret = 0;
+
+	ret = stm32_get_cm_fwu_info_cell(&cm_fwu_info_cell);
+	if (ret != 0) {
+		return -EIO;
+	}
+
+	ret = nvmem_cell_read(&cm_fwu_info_cell, (uint8_t *)&m33_fwu_info,
+			      sizeof(m33_fwu_info), NULL);
+	if (ret != 0) {
+		return -EIO;
+	}
+
+	*status = ((m33_fwu_info & FWU_M33_INFO_STATUS) == FWU_M33_INFO_STATUS);
+
+	return 0;
+}
+#else
+int stm32_fwu_copro_status_is_failed(bool *status)
+{
+	*status = false;
+
+	return 0;
+}
+#endif
+#endif /* PSA_FWU_SUPPORT */
+
 uintptr_t stm32_get_gpio_bank_base(unsigned int bank)
 {
 	if (bank == GPIO_BANK_Z) {

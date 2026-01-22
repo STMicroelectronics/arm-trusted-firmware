@@ -93,6 +93,15 @@ void configure_mmu(void)
 	enable_mmu_svc_mon(0);
 }
 
+#if PSA_FWU_SUPPORT
+int stm32_fwu_copro_status_is_failed(bool *status)
+{
+	*status = false;
+
+	return 0;
+}
+#endif
+
 uintptr_t stm32_get_gpio_bank_base(unsigned int bank)
 {
 #if STM32MP13

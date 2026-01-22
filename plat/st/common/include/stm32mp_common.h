@@ -27,6 +27,9 @@
 /* Needed by STM32CubeProgrammer support */
 #define DWL_BUFFER_SIZE			U(0x01000000)
 
+/* Layout for firmware update M33 information. */
+#define FWU_M33_INFO_STATUS		BIT_32(31)
+
 /* Functions to save and get boot context address given by ROM code */
 void stm32mp_save_boot_ctx_address(uintptr_t address);
 uintptr_t stm32mp_get_boot_ctx_address(void);
@@ -177,6 +180,7 @@ int stm32_get_stop2_entrypoint_cell(struct nvmem_cell *stop2_entrypoint);
 
 #if PSA_FWU_SUPPORT
 int stm32_fwu_set_boot_idx(void);
+int stm32_fwu_copro_status_is_failed(bool *status);
 int stm32_get_and_dec_fwu_trial_boot_cnt(uint32_t *cnt);
 int stm32_set_max_fwu_trial_boot_cnt(void);
 int stm32_clear_fwu_trial_boot_cnt(void);
