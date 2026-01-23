@@ -372,7 +372,8 @@ enum ddr_type {
 
 #define EXTI1_C1IMR3_CPU2_SEV			BIT_32(64 - 64)
 
-/* EXTI1 software interrupt event register  */
+/* EXTI1 software interrupt event register */
+#define EXTI1_RTSR3				U(0x40)
 #define EXTI1_SWIER3				U(0x48)
 #define EXTI1_RPR3				U(0x4C)
 

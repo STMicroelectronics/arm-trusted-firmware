@@ -15,6 +15,7 @@
 #include <drivers/arm/gicv2.h>
 #include <drivers/clk.h>
 #include <drivers/console.h>
+#include <drivers/delay_timer.h>
 #include <drivers/generic_delay_timer.h>
 #include <drivers/st/bsec3_reg.h>
 #include <drivers/st/stm32mp_clkfunc.h>
@@ -50,6 +51,7 @@
 #define SRAMHWERDIS		BIT(12)
 
 /* GIC interrupt number */
+#define CPU2_SEV_IRQn		252
 #define RCC_WAKEUP_IRQn		254
 
 /* Value with 64 MHz HSI period */
@@ -374,6 +376,56 @@ static void stm32mp2_disable_rcc_wakeup_irq(uintptr_t rcc_base)
 	mmio_clrbits_32(rcc_base + RCC_C1CIESETR, RCC_C1CIESETR_WKUPIE);
 }
 
+#if STM32MP_M33_TDCID
+static void stm32mp2_setup_cpu2_sev_irq(void)
+{
+	plat_ic_set_interrupt_type(CPU2_SEV_IRQn, INTR_TYPE_S_EL1);
+	plat_ic_set_interrupt_priority(CPU2_SEV_IRQn, GIC_HIGHEST_SEC_PRIORITY);
+}
+
+static void stm32mp2_enable_cpu2_sev_irq(void)
+{
+	/* Clear CPU2 SEV event to cpu1 (exti 64)*/
+	mmio_write_32(STM32MP_EXTI1_BASE + EXTI1_RPR3, EXTI1_C2SEV);
+
+	/* unmask C1 C1SEV (64) */
+	mmio_setbits_32(STM32MP_EXTI1_BASE + EXTI1_C1IMR3, EXTI1_C2SEV);
+	mmio_setbits_32(STM32MP_EXTI1_BASE + EXTI1_RTSR3, EXTI1_C2SEV);
+
+	/* Enable C2SEV interruption for cpu1 wake-up by CM33 */
+	plat_ic_set_spi_routing(CPU2_SEV_IRQn, INTR_ROUTING_MODE_ANY, 0x0U);
+	plat_ic_enable_interrupt(CPU2_SEV_IRQn);
+}
+
+static void stm32mp2_wait_cpu2_sev_irq(void)
+{
+	/* Send CPU1 SEV event to cpu2 (exti 65): force wake-up if not already done */
+	mmio_setbits_32(STM32MP_EXTI1_BASE + EXTI1_RTSR3, EXTI1_C1SEV);
+	mmio_write_32(STM32MP_EXTI1_BASE + EXTI1_SWIER3, EXTI1_C1SEV);
+
+	/*
+	 * Wait notification after low power request, sent by CPU2 when DDR
+	 * is no more in self refresh and the SCMI stack are ready
+	 */
+	for ( ; ; ) {
+		if ((mmio_read_32(STM32MP_EXTI1_BASE + EXTI1_RPR3) & EXTI1_C2SEV) != 0U) {
+			break;
+		}
+		/* Send CPU1 SEV event to cpu2 (exti 65): force wake-up if not already done */
+		if ((mmio_read_32(STM32MP_EXTI1_BASE + EXTI1_RPR3) & EXTI1_C1SEV) == 0U) {
+			udelay(100);
+			mmio_write_32(STM32MP_EXTI1_BASE + EXTI1_SWIER3, EXTI1_C1SEV);
+		}
+	}
+	/* Clear CPU2 SEV event to cpu1 (exti 64)*/
+	mmio_write_32(STM32MP_EXTI1_BASE + EXTI1_RPR3, EXTI1_C2SEV);
+	plat_ic_disable_interrupt(CPU2_SEV_IRQn);
+
+	/* Clear CPU1 SEV */
+	mmio_clrbits_32(STM32MP_EXTI1_BASE + EXTI1_RTSR3, EXTI1_C1SEV);
+}
+#endif
+
 /*
  * Core synchronization to protect DDR access for running cores
  * Handshake by using the state 'DDR' and 'RUNNING' to safely block
@@ -601,7 +653,9 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 	case PWRSTATE_STOP2:
 		print_mode_info("Stop2");
 		mmio_write_32(pwr_base + PWR_CPU1CR, PWR_CPU1CR_PDDS_D1);
-#if !STM32MP_M33_TDCID
+#if STM32MP_M33_TDCID
+		stm32mp2_enable_cpu2_sev_irq();
+#else
 		if (!cpu2_running) {
 			mmio_write_32(pwr_base + PWR_CPU2CR, 0U);
 		}
@@ -648,7 +702,9 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 		print_mode_info("Standby1");
 		lpsram_autonomous_mode_set(rcc_base);
 		mmio_write_32(pwr_base + PWR_CPU1CR, PWR_CPU1CR_PDDS_D1 | PWR_CPU1CR_PDDS_D2);
-#if !STM32MP_M33_TDCID
+#if STM32MP_M33_TDCID
+		stm32mp2_enable_cpu2_sev_irq();
+#else
 		if (!cpu2_running) {
 			mmio_write_32(pwr_base + PWR_CPU2CR, PWR_CPU2CR_PDDS_D2);
 		}
@@ -792,7 +848,9 @@ static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
 		/* restore PLL1 configuration for CA35 */
 		stm32mp2_pll1_enable();
 
-#if !STM32MP_M33_TDCID
+#if STM32MP_M33_TDCID
+		stm32mp2_wait_cpu2_sev_irq();
+#else
 		/* Exit DDR self refresh mode after STOP mode */
 		ddr_sr_exit();
 		ddr_restore_sr_mode();
@@ -1561,6 +1619,7 @@ static void stm32_pm_init(void *fdt)
 	mmio_write_32(rcc_base + RCC_C1SREQCLRR, RCC_C1SREQSETR_STPREQ_MASK);
 
 #if STM32MP_M33_TDCID
+	stm32mp2_setup_cpu2_sev_irq();
 	scmi_init();
 #else
 	stm32_pm_tdcid_init(fdt);
