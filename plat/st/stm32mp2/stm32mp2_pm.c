@@ -1560,10 +1560,10 @@ static void stm32_pm_init(void *fdt)
 	/* Clear CSleep and Stop request for CPU1 */
 	mmio_write_32(rcc_base + RCC_C1SREQCLRR, RCC_C1SREQSETR_STPREQ_MASK);
 
-#if !STM32MP_M33_TDCID
-	stm32_pm_tdcid_init(fdt);
-#else
+#if STM32MP_M33_TDCID
 	scmi_init();
+#else
+	stm32_pm_tdcid_init(fdt);
 #endif
 }
 
