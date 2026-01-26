@@ -860,13 +860,6 @@ static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
 
 #if !STM32MP21
 			stm32mp_ca35_set_vbar(stm32_sec_entrypoint);
-			/* Start the secondary core if it was running before Standby */
-			if ((core_id == STM32MP_PRIMARY_CPU) &&
-			    stm32mp_state_check(STM32MP_SECONDARY_CPU, STATE_START)) {
-				/* Reset the secondary core to execute warm boot */
-				mmio_write_32(RCC_BASE + RCC_C1P1RSTCSETR,
-					      RCC_C1P1RSTCSETR_C1P1PORRST);
-			}
 #endif /* !STM32MP21 */
 		}
 #else
@@ -904,13 +897,6 @@ static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
 #if !STM32MP21
 		/* Restore register in CA35SS */
 		stm32mp_ca35_set_vbar(stm32_sec_entrypoint);
-
-		/* Start the secondary core if it was running before STOP */
-		if ((core_id == STM32MP_PRIMARY_CPU) &&
-		    stm32mp_state_check(STM32MP_SECONDARY_CPU, STATE_START)) {
-			/* Reset the secondary core to execute warm boot */
-			mmio_write_32(RCC_BASE + RCC_C1P1RSTCSETR, RCC_C1P1RSTCSETR_C1P1PORRST);
-		}
 #endif /* !STM32MP21 */
 		break;
 	case PWRSTATE_STOP1:
