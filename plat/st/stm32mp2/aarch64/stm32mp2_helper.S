@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2023-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -116,8 +116,10 @@ func plat_crash_console_init
 	mov_imm	x1, DEBUG_UART_TX_GPIO_BANK_ADDRESS
 	/* Set GPIO mode alternate */
 	ldr	w2, [x1, #GPIO_MODE_OFFSET]
-	bic	w2, w2, #(GPIO_MODE_MASK << GPIO_TX_SHIFT)
-	orr	w2, w2, #(GPIO_MODE_ALTERNATE << GPIO_TX_SHIFT)
+	mov_imm w0, (GPIO_MODE_MASK << GPIO_TX_SHIFT)
+	bic	w2, w2, w0
+	mov_imm w0, (GPIO_MODE_ALTERNATE << GPIO_TX_SHIFT)
+	orr	w2, w2, w0
 	str	w2, [x1, #GPIO_MODE_OFFSET]
 	/* Set GPIO speed low */
 	ldr	w2, [x1, #GPIO_SPEED_OFFSET]
@@ -130,15 +132,19 @@ func plat_crash_console_init
 	/* Set alternate */
 #if DEBUG_UART_TX_GPIO_PORT >= GPIO_ALT_LOWER_LIMIT
 	ldr	w2, [x1, #GPIO_AFRH_OFFSET]
-	bic	w2, w2, #(GPIO_ALTERNATE_MASK << \
+	mov_imm w0, (GPIO_ALTERNATE_MASK << \
 				((DEBUG_UART_TX_GPIO_PORT - GPIO_ALT_LOWER_LIMIT) << 2))
-	orr	w2, w2, #(DEBUG_UART_TX_GPIO_ALTERNATE << \
+	bic	w2, w2, w0
+	mov_imm w0, (DEBUG_UART_TX_GPIO_ALTERNATE << \
 				((DEBUG_UART_TX_GPIO_PORT - GPIO_ALT_LOWER_LIMIT) << 2))
+	orr	w2, w2, w0
 	str	w2, [x1, #GPIO_AFRH_OFFSET]
 #else
 	ldr	w2, [x1, #GPIO_AFRL_OFFSET]
-	bic	w2, w2, #(GPIO_ALTERNATE_MASK << (DEBUG_UART_TX_GPIO_PORT << 2))
-	orr	w2, w2, #(DEBUG_UART_TX_GPIO_ALTERNATE << (DEBUG_UART_TX_GPIO_PORT << 2))
+	mov_imm w0, (GPIO_ALTERNATE_MASK << (DEBUG_UART_TX_GPIO_PORT << 2))
+	bic	w2, w2, w0
+	mov_imm w0, (DEBUG_UART_TX_GPIO_ALTERNATE << (DEBUG_UART_TX_GPIO_PORT << 2))
+	orr	w2, w2, w0
 	str	w2, [x1, #GPIO_AFRL_OFFSET]
 #endif
 #if !STM32MP_M33_TDCID
