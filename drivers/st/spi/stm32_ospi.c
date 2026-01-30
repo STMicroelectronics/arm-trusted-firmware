@@ -955,7 +955,7 @@ static int stm32_ospi_readid(void)
 
 static int stm32_ospi_str_calibration(void)
 {
-	uint32_t dlyb_cr;
+	uint32_t dlyb_cr = 0U;
 	uint8_t window_len_tcr0 = 0U;
 	uint8_t window_len_tcr1 = 0U;
 	int ret;
