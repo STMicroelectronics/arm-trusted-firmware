@@ -42,7 +42,7 @@ static int ddr_power_init(void *fdt, int node)
 	struct ddr3_supply supply;
 
 	ddr3_supply_read(fdt, node, &supply);
-	if ((supply.vdd == NULL) || (supply.vref == NULL) || (supply.vtt == NULL)) {
+	if (supply.vdd == NULL) {
 		return -ENOENT;
 	}
 
@@ -55,14 +55,18 @@ static int ddr_power_init(void *fdt, int node)
 		return status;
 	}
 
-	status = regulator_enable(supply.vref);
-	if (status != 0) {
-		return status;
+	if (supply.vref != NULL) {
+		status = regulator_enable(supply.vref);
+		if (status != 0) {
+			return status;
+		}
 	}
 
-	status = regulator_enable(supply.vtt);
-	if (status != 0) {
-		return status;
+	if (supply.vtt != NULL) {
+		status = regulator_enable(supply.vtt);
+		if (status != 0) {
+			return status;
+		}
 	}
 
 	return regulator_enable(supply.vdd);
@@ -113,8 +117,7 @@ static int ddr_power_init(void *fdt, int node)
 	struct ddr4_supply supply;
 
 	ddr4_supply_read(fdt, node, &supply);
-	if ((supply.vpp == NULL) || (supply.vdd == NULL) || (supply.vref == NULL) ||
-	    (supply.vtt == NULL)) {
+	if ((supply.vpp == NULL) || (supply.vdd == NULL)) {
 		return -ENOENT;
 	}
 
@@ -137,14 +140,18 @@ static int ddr_power_init(void *fdt, int node)
 		return status;
 	}
 
-	status = regulator_enable(supply.vref);
-	if (status != 0) {
-		return status;
+	if (supply.vref != NULL) {
+		status = regulator_enable(supply.vref);
+		if (status != 0) {
+			return status;
+		}
 	}
 
-	status = regulator_enable(supply.vtt);
-	if (status != 0) {
-		return status;
+	if (supply.vtt != NULL) {
+		status = regulator_enable(supply.vtt);
+		if (status != 0) {
+			return status;
+		}
 	}
 
 	return regulator_enable(supply.vdd);
