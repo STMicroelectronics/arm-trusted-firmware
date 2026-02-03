@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2018-2026, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -26,7 +26,7 @@
 static const struct mmc_ops *ops;
 static unsigned int mmc_ocr_value;
 static struct mmc_csd_emmc mmc_csd;
-static struct sd_switch_status sd_switch_func_status;
+static struct sd_switch_status sd_switch_func_status __aligned(16);
 static unsigned char mmc_ext_csd[512] __aligned(16);
 static unsigned int mmc_flags;
 static struct mmc_device_info *mmc_dev_info;
