@@ -264,10 +264,13 @@ static int stm32image_create_header_file(char *srcname, char *destname,
 					 uint32_t version, uint32_t major,
 					 uint32_t minor, uint32_t binary_type)
 {
-	int src_fd, dest_fd, header_size;
+	int src_fd = -1, dest_fd = -1;
 	struct stat sbuf;
-	unsigned char *ptr;
+	unsigned char *ptr = NULL;
 	void *stm32image_header;
+	size_t map_size = 0, header_size = 0;
+	ssize_t wr;
+	int ret = -1;
 
 	dest_fd = open(destname, O_RDWR | O_CREAT | O_TRUNC | O_APPEND, 0666);
 	if (dest_fd == -1) {
@@ -280,82 +283,129 @@ static int stm32image_create_header_file(char *srcname, char *destname,
 	if (src_fd == -1) {
 		fprintf(stderr, "Can't open %s: %s\n", srcname,
 			strerror(errno));
-		return -1;
+		goto out;
 	}
 
+	/* Source file section */
 	if (fstat(src_fd, &sbuf) < 0) {
-		return -1;
+		goto out;
 	}
 
-	ptr = mmap(NULL, sbuf.st_size, PROT_READ, MAP_SHARED, src_fd, 0);
+	if (sbuf.st_size < 0) {
+		fprintf(stderr, "Invalid file size for %s\n", srcname);
+		goto out;
+	}
+
+	map_size = (size_t)sbuf.st_size;
+
+	ptr = mmap(NULL, map_size, PROT_READ, MAP_SHARED, src_fd, 0);
 	if (ptr == MAP_FAILED) {
 		fprintf(stderr, "Can't read %s\n", srcname);
-		return -1;
+		ptr = NULL;
+		map_size = 0;
+		goto out;
 	}
 
 	if (minor == HEADER_SUBVERSION_VX_3) {
-		stm32image_header = malloc(sizeof(struct stm32_header_v23));
 		header_size = sizeof(struct stm32_header_v23);
+		stm32image_header = malloc(header_size);
 	} else {
 		switch (major) {
 		case HEADER_VERSION_V1:
-			stm32image_header = malloc(sizeof(struct stm32_header_v1));
 			header_size = sizeof(struct stm32_header_v1);
+			stm32image_header = malloc(header_size);
 			break;
 
 		case HEADER_VERSION_V2:
-			stm32image_header = malloc(sizeof(struct stm32_header_v2));
 			header_size = sizeof(struct stm32_header_v2);
+			stm32image_header = malloc(header_size);
 			break;
 
 		default:
-			return -1;
+			fprintf(stderr, "Unsupported header version (major=%u, minor=%u)\n",
+				major, minor);
+			goto out;
 		}
 	}
 
+	if (!stm32image_header) {
+		fprintf(stderr, "malloc failed for header\n");
+		goto out;
+	}
+
 	memset(stm32image_header, 0, header_size);
-	if (write(dest_fd, stm32image_header, header_size) !=
-	    header_size) {
-		fprintf(stderr, "Write error %s: %s\n", destname,
-			strerror(errno));
+
+	wr = write(dest_fd, stm32image_header, header_size);
+	if (wr < 0 || (size_t)wr != header_size) {
+		fprintf(stderr, "Write error %s (header): %s\n",
+			destname, strerror(errno));
 		free(stm32image_header);
-		return -1;
+		goto out;
 	}
 
 	free(stm32image_header);
 
-	if (write(dest_fd, ptr, sbuf.st_size) != sbuf.st_size) {
-		fprintf(stderr, "Write error on %s: %s\n", destname,
-			strerror(errno));
-		return -1;
+	wr = write(dest_fd, ptr, map_size);
+	if (wr < 0 || (size_t)wr != map_size) {
+		fprintf(stderr, "Write error %s (payload): %s\n",
+			destname, strerror(errno));
+		goto out;
 	}
 
-	munmap((void *)ptr, sbuf.st_size);
-	close(src_fd);
+	if (ptr && map_size > 0) {
+		munmap(ptr, map_size);
+		ptr = NULL;
+		map_size = 0;
+	}
 
+	if (src_fd >= 0) {
+		close(src_fd);
+		src_fd = -1;
+	}
+
+	/* Dest file section */
 	if (fstat(dest_fd, &sbuf) < 0) {
-		return -1;
+		goto out;
 	}
 
-	ptr = mmap(0, sbuf.st_size, PROT_READ | PROT_WRITE, MAP_SHARED,
-		   dest_fd, 0);
+	if (sbuf.st_size < 0) {
+		fprintf(stderr, "Invalid dest file size for %s\n", destname);
+		goto out;
+	}
 
+	map_size = (size_t)sbuf.st_size;
+
+	ptr = mmap(0, map_size, PROT_READ | PROT_WRITE, MAP_SHARED,
+		   dest_fd, 0);
 	if (ptr == MAP_FAILED) {
 		fprintf(stderr, "Can't write %s\n", destname);
-		return -1;
+		ptr = NULL;
+		map_size = 0;
+		goto out;
 	}
 
 	if (stm32image_set_header(ptr, &sbuf, dest_fd, loadaddr,
 				  entry, version, major, minor,
 				  binary_type, header_size) != 0) {
-		return -1;
+		fprintf(stderr, "stm32image_set_header failed\n");
+		goto out;
 	}
 
 	stm32image_print_header(ptr);
+	ret = 0;
 
-	munmap((void *)ptr, sbuf.st_size);
-	close(dest_fd);
-	return 0;
+out:
+	if (ptr && map_size > 0) {
+		munmap(ptr, map_size);
+	}
+	if (src_fd >= 0) {
+		close(src_fd);
+	}
+	if (dest_fd >= 0) {
+		close(dest_fd);
+	}
+
+	return ret;
 }
 
 int main(int argc, char *argv[])
