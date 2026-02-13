@@ -575,6 +575,9 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 	/* Request STOP for both cores */
 	mmio_write_32(rcc_base + RCC_C1SREQSETR, RCC_C1SREQSETR_STPREQ_MASK);
 
+	/* Flush and invalidate data cache before DDR deactivation */
+	dcsw_op_all(DCCISW);
+
 #if !STM32MP_M33_TDCID
 	/*
 	 * No PWR_LP delay by default, because VTT_DRR is not stopped (for Stop1)
@@ -587,8 +590,6 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 	if (stateid == PWRSTATE_STANDBY) {
 		standby = true;
 	}
-
-	dcsw_op_all(DCCISW);
 	ddr_save_sr_mode();
 	ddr_set_sr_mode(DDR_SSR_MODE);
 	if (ddr_sr_entry(standby) != 0) {
