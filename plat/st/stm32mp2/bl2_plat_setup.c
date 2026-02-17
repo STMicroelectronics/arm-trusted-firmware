@@ -120,7 +120,9 @@ static void clean_iac(void)
 
 static void print_reset_reason(void)
 {
-	uint32_t rstsr = mmio_read_32(stm32mp_rcc_base() + RCC_C1BOOTRSTSCLRR);
+	uintptr_t rcc_base = stm32mp_rcc_base();
+	uint32_t rstsr = mmio_read_32(rcc_base + RCC_C1BOOTRSTSCLRR);
+	const char *boot_str = "";
 	const char *reason_str = "Unidentified";
 
 #if !STM32MP21
@@ -128,6 +130,14 @@ static void print_reset_reason(void)
 		INFO("CA35 processor core 1 reset\n");
 	}
 #endif /* !STM32MP21 */
+
+#if !STM32MP_M33_TDCID
+	if (((mmio_read_32(rcc_base + RCC_BDCR) & RCC_BDCR_RTCCKEN) == 0U)) {
+		boot_str = " Cold boot.";
+	} else {
+		boot_str = " Warm boot.";
+	}
+#endif
 
 	if ((rstsr & RCC_C1BOOTRSTSCLRR_PADRSTF) == 0U) {
 		if ((rstsr & RCC_C1BOOTRSTSCLRR_STBYC1RSTF) != 0U) {
@@ -160,7 +170,8 @@ static void print_reset_reason(void)
 		}
 	}
 
-	NOTICE("Reset reason: %s (0x%x)\n", reason_str, rstsr);
+	NOTICE("Reset reason: %s (0x%x).%s\n",
+	       reason_str, rstsr, boot_str);
 }
 
 #if STM32MP_M33_TDCID
