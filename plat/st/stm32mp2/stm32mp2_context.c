@@ -113,7 +113,9 @@ bool stm32_pm_context_is_valid(void)
 	} else {
 #if STM32MP_CONTEXT_VERSION
 		if ((ST_CTX_VER_GET_MAJOR(backup_data->version) != ST_CTX_VER_MAJOR) ||
+#if ST_CTX_VER_MINOR > 0
 		    (ST_CTX_VER_GET_MINOR(backup_data->version) < ST_CTX_VER_MINOR) ||
+#endif
 		    (backup_data->size < sizeof(*backup_data))) {
 			ret = false;
 		} else {
