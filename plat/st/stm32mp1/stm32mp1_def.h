@@ -692,8 +692,6 @@ enum ddr_type {
 #define PLAT_NB_RDEVS			U(19)
 /* 2 FIXED */
 #define PLAT_NB_FIXED_REGUS		U(2)
-/* No GPIO regu */
-#define PLAT_NB_GPIO_REGUS		U(0)
 /* TAMP BACKUP REGISTER */
 #define PLAT_NB_NVMEM_DEVS		U(1)
 #define MAX_TAMP_BACKUP_REGS_ZONES	U(3)

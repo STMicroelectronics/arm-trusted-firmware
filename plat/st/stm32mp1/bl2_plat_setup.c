@@ -18,7 +18,6 @@
 #include <drivers/st/bsec.h>
 #include <drivers/st/nvmem.h>
 #include <drivers/st/regulator_fixed.h>
-#include <drivers/st/regulator_gpio.h>
 #include <drivers/st/stm32_iwdg.h>
 #if STM32MP13
 #include <drivers/st/stm32_mce.h>
@@ -457,12 +456,6 @@ skip_console_init:
 	if (fixed_regulator_register() != 0) {
 		panic();
 	}
-
-#if (PLAT_NB_GPIO_REGUS > 0)
-	if (gpio_regulator_register() != 0) {
-		panic();
-	}
-#endif
 
 	if (dt_pmic_status() > 0) {
 		initialize_pmic();
