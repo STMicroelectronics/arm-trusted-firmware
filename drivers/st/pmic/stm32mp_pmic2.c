@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025, STMicroelectronics - All Rights Reserved
+ * Copyright (C) 2024-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -486,6 +486,10 @@ static int register_pmic2(void)
 			bool high;
 
 			ret = stpmic2_is_buck1_high_voltage(pmic2, &high);
+			if (ret != 0) {
+				ERROR("Failed to get buck1 info\n");
+				return ret;
+			}
 			if (high) {
 				reg_name = "buck1h";
 			}
