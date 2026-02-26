@@ -191,7 +191,7 @@ int psci_system_suspend(uintptr_t entrypoint, u_register_t context_id)
 	 * (System level)
 	 */
 	pwrlvl = psci_find_target_suspend_lvl(&state_info);
-	if (pwrlvl < min_pwrlvl) {
+	if ((pwrlvl == PSCI_INVALID_PWR_LVL) || (pwrlvl < min_pwrlvl)) {
 		return PSCI_E_DENIED;
 	}
 	/* Ensure that the psci_power_state makes sense */
