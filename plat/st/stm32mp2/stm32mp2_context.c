@@ -32,7 +32,7 @@
 /* VERSION to check compatibility of pm backup data between bl2 and bl31 */
 #define ST_CTX_VER_MAJOR		1U
 #define ST_CTX_VER_MINOR		0U
-#define ST_CTX_VERSION			((ST_CTX_VER_MAJOR << 8U) | ST_CTX_VER_MINOR)
+#define ST_CTX_VERSION			(((uint16_t)ST_CTX_VER_MAJOR << 8U) | ST_CTX_VER_MINOR)
 #define ST_CTX_VER_GET_MAJOR(version)	(((version) & GENMASK_32(15, 8)) >> 8U)
 #define ST_CTX_VER_GET_MINOR(version)	((version) & GENMASK_32(7, 0))
 
