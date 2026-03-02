@@ -47,6 +47,8 @@
 
 #define BOOT_CTX_ADDR	0x0e000020UL
 
+#define TIMEOUT_US_1MS	1000U
+
 IMPORT_SYM(uintptr_t, __BSS_START__, BSS_START);
 IMPORT_SYM(uintptr_t, __BSS_END__, BSS_END);
 IMPORT_SYM(uintptr_t, __DATA_START__, DATA_START);
@@ -497,6 +499,16 @@ void bl2_el3_plat_arch_setup(void)
 	if (stm32mp2_clk_init(fdt) < 0) {
 		panic();
 	}
+
+#if STM32MP_UART_PROGRAMMER
+	/* Reset USB sub-system to avoid all spurious transactions */
+#if STM32MP21
+	stm32mp_reset_assert(OTG_R, TIMEOUT_US_1MS);
+#else /* !STM32MP21 */
+	stm32mp_reset_assert(USB3DR_R, TIMEOUT_US_1MS);
+#endif /* STM32MP21 */
+	stm32mp_reset_assert(USB2PHY2_R, TIMEOUT_US_1MS);
+#endif /* STM32MP_UART_PROGRAMMER */
 
 #if STM32MP_DDR_FIP_IO_STORAGE || TRUSTED_BOARD_BOOT
 #if !STM32MP_M33_TDCID
