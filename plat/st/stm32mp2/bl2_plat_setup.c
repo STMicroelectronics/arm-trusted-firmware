@@ -479,6 +479,15 @@ void bl2_el3_plat_arch_setup(void)
 	ddr_sub_system_clk_init();
 #endif
 
+#if STM32MP_UART_PROGRAMMER
+	uart_prog_addr = get_uart_address(boot_context->boot_interface_instance);
+
+	/* Disable programmer UART before changing clock tree */
+	if (serial_uart_interface) {
+		stm32_uart_stop(uart_prog_addr);
+	}
+#endif
+
 	if (fdt_get_address(&fdt) == 0) {
 		panic();
 	}
@@ -505,15 +514,6 @@ void bl2_el3_plat_arch_setup(void)
 	if (stm32_tamp_nvram_init() < 0) {
 		panic();
 	}
-
-#if STM32MP_UART_PROGRAMMER
-	uart_prog_addr = get_uart_address(boot_context->boot_interface_instance);
-
-	/* Disable programmer UART before changing clock tree */
-	if (serial_uart_interface) {
-		stm32_uart_stop(uart_prog_addr);
-	}
-#endif
 
 	if (stm32_iwdg_init() < 0) {
 		panic();
