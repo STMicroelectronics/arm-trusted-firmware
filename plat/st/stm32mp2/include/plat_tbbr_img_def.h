@@ -42,12 +42,16 @@
 
 #if STM32MP_DDR_FIP_IO_STORAGE
 #define DDR_FW_ID			U(26)
+#define FWU_BOOTFS_ID			U(27)
+#define FWU_ROOTFS_ID			U(28)
 /* Increase the MAX_NUMBER_IDS to match the authentication pool required */
-#define MAX_NUMBER_IDS			U(27)
+#define MAX_NUMBER_IDS			U(29)
 
 #else
 /* Increase the MAX_NUMBER_IDS to match the authentication pool required */
-#define MAX_NUMBER_IDS			U(26)
+#define FWU_BOOTFS_ID			U(26)
+#define FWU_ROOTFS_ID			U(27)
+#define MAX_NUMBER_IDS			U(28)
 
 #endif
 
