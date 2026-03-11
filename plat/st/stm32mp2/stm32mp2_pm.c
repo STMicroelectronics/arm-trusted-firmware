@@ -1540,7 +1540,7 @@ static int stm32_parse_domain_idle_state(void *fdt)
 
 	/* Add each supported power state with same order than stm32mp_pm_idle_states */
 	for (j = 0U; stm32mp_pm_idle_states[j] != 0U; j++) {
-		for (i = 0U; i < PM_IDLE_STATES_SIZE && domain_idle_states[i] != 0U ; i++) {
+		for (i = 0U; (i < PM_IDLE_STATES_SIZE) && (domain_idle_states[i] != 0U); i++) {
 			if (domain_idle_states[i] == stm32mp_pm_idle_states[j]) {
 				stm32mp_supported_pwr_states[nb_states++] = domain_idle_states[i];
 				break;
@@ -1549,7 +1549,7 @@ static int stm32_parse_domain_idle_state(void *fdt)
 	}
 
 	/* Add STANDBY at the end of the list if supported */
-	for (i = 0U; i < PM_IDLE_STATES_SIZE && domain_idle_states[i] != 0U ; i++) {
+	for (i = 0U; (i < PM_IDLE_STATES_SIZE) && (domain_idle_states[i] != 0U); i++) {
 		if (domain_idle_states[i] == PWRSTATE_STANDBY) {
 			stm32mp_supported_pwr_states[nb_states++] = PWRSTATE_STANDBY;
 			break;
