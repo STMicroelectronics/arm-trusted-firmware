@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2023-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -78,6 +78,9 @@ int nvmem_get_cell_by_index(const void *fdt, int nodeoffset, unsigned int index,
 
 	phandle = fdt32_to_cpu(nvmem_cells_prop[index]);
 	nvmem_cell_node = fdt_node_offset_by_phandle(fdt, phandle);
+	if (nvmem_cell_node < 0) {
+		return nvmem_cell_node;
+	}
 
 	nvmem_cell_reg_prop = fdt_getprop(fdt, nvmem_cell_node, "reg", &len);
 
