@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2024, STMicroelectronics - All Rights Reserved
+ * Copyright (C) 2018-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: GPL-2.0+ OR BSD-3-Clause
  */
@@ -2768,7 +2768,7 @@ static int stm32_clk_parse_fdt_all_pll(void *fdt, int node, struct stm32_clk_pla
 		snprintf(name, sizeof(name), "st,pll@%u", i);
 
 		subnode = fdt_subnode_offset(fdt, node, name);
-		if (!fdt_check_node(subnode)) {
+		if ((subnode < 0) || !fdt_check_node(subnode)) {
 			continue;
 		}
 
