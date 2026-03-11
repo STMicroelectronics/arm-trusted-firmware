@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2025-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -606,7 +606,7 @@ static int risaf_parse_fwconfig(uintptr_t config)
 {
 	struct stm32mp2_risaf_platdata *pdata = &stm32mp2_risaf;
 	unsigned int i;
-	int node = -1;
+	int node;
 	int subnode;
 	const void *fdt = (const void *)config;
 	const char *compatible_str = "st,stm32mp2-mem-firewall";
