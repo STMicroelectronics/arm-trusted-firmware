@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2024, STMicroelectronics - All Rights Reserved
+ * Copyright (C) 2022-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: GPL-2.0+ OR BSD-3-Clause
  */
@@ -133,18 +133,18 @@ int _clk_stm32_gate_enable(struct stm32_clk_priv *priv, uint16_t gate_id)
 
 const struct clk_stm32 *_clk_get(struct stm32_clk_priv *priv, int id)
 {
-	if ((unsigned int)id < priv->num) {
-		return &priv->clks[id];
+	if ((unsigned int)id >= priv->num) {
+		panic();
 	}
 
-	return NULL;
+	return &priv->clks[id];
 }
 
 static const struct stm32_clk_ops *_clk_get_ops(struct stm32_clk_priv *priv, int id)
 {
 	const struct clk_stm32 *clk = _clk_get(priv, id);
 
-	assert(clk->ops != NO_OPS);
+	assert(clk->ops != (uint8_t)NO_OPS);
 
 	return priv->ops_array[clk->ops];
 }
