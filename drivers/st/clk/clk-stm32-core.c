@@ -653,7 +653,7 @@ void clk_stm32_enable_critical_clocks(void)
 
 static void stm32_clk_register(void)
 {
-	int node_rcc = -1;
+	int node_rcc;
 	void *fdt = NULL;
 
 	if (fdt_get_address(&fdt) == 0) {

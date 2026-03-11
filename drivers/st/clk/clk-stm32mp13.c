@@ -2532,8 +2532,8 @@ static int stm32_clk_parse_fdt_all_pll(void *fdt, int node, struct stm32_clk_pla
 	for (i = _PLL2; i < pdata->npll; i++) {
 		struct stm32_pll_dt_cfg *pll = &pdata->pll[i];
 		char name[RCC_PLL_NAME_SIZE];
-		int subnode = 0;
-		int err = 0;
+		int subnode;
+		int err;
 
 		snprintf(name, sizeof(name), "st,pll@%u", i);
 
