@@ -51,7 +51,9 @@ uintptr_t stm32mp_ddr_test_rw_access(void)
 		return STM32MP_DDR_BASE;
 	}
 
-	mmio_write_pattern(STM32MP_DDR_BASE, saved_value);
+	if (saved_value != DDR_PATTERN) {
+		mmio_write_pattern(STM32MP_DDR_BASE, saved_value);
+	}
 
 	return 0UL;
 }

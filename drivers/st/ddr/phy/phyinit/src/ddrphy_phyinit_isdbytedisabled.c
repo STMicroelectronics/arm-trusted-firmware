@@ -22,8 +22,6 @@ int ddrphy_phyinit_isdbytedisabled(struct stm32mp_ddr_config *config,
 	uint32_t nad0 __maybe_unused;
 	uint32_t nad1 __maybe_unused;
 
-	disabledbyte = 0; /* Default assume Dbyte is Enabled */
-
 #if STM32MP_DDR3_TYPE || STM32MP_DDR4_TYPE
 	disabledbyte = (dbytenumber > (config->uib.numactivedbytedfi0 - 1U)) ? 1 : 0;
 #else /* STM32MP_LPDDR4_TYPE */
