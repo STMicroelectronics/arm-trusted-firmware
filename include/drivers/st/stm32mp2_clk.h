@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024, STMicroelectronics - All Rights Reserved
+ * Copyright (C) 2024-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -7,7 +7,7 @@
 #ifndef STM32MP2_CLK_H
 #define STM32MP2_CLK_H
 
-#include <platform_def.h>
+#include <stdint.h>
 
 enum stm32mp_osc_id {
 	_HSI,
