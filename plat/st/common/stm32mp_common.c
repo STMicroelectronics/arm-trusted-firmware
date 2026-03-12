@@ -201,7 +201,7 @@ int stm32_get_otp_value(const char *otp_name, uint32_t *otp_val)
 
 int stm32_get_otp_value_from_idx(const uint32_t otp_idx, uint32_t *otp_val)
 {
-	uint32_t ret = BSEC_NOT_SUPPORTED;
+	uint32_t ret;
 
 	assert(otp_val != NULL);
 
@@ -487,10 +487,16 @@ int stm32_save_boot_info(boot_api_context_t *boot_context)
 	if (ret != 0) {
 		return ret;
 	}
-	nvmem_cell_read(&boot_mode, (uint8_t *)&reg_val, sizeof(reg_val), NULL);
+	ret = nvmem_cell_read(&boot_mode, (uint8_t *)&reg_val, sizeof(reg_val), NULL);
+	if (ret != 0) {
+		return ret;
+	}
 	reg_val &= ~clear;
 	reg_val |= set;
-	nvmem_cell_write(&boot_mode, (uint8_t *)&reg_val, sizeof(reg_val));
+	ret = nvmem_cell_write(&boot_mode, (uint8_t *)&reg_val, sizeof(reg_val));
+	if (ret != 0) {
+		return ret;
+	}
 
 	return 0;
 }
