@@ -781,6 +781,38 @@ static void stm32_pwr_domain_on_finish(const psci_power_state_t *target_state)
 	mmio_write_32(rcc_base + RCC_C1SREQCLRR, RCC_C1SREQCLRR_STPREQ_MASK);
 }
 
+#if STM32MP_M33_TDCID
+#if CONFIG_STM32MP23X_REVY || CONFIG_STM32MP25X_REVY
+#include <drivers/st/stm32mp_rifsc_regs.h>
+#include "stm32mp2_def.h"
+
+/* Workaround for ROM code issue in revY: clear RIF RNG semaphore when it is not done */
+static void rng_rif_semaphore_init(void)
+{
+#if CONFIG_STM32MP23X_REVY
+	unsigned long rifsc_id = STM32MP23_RIFSC_RNG_ID;
+#endif
+#if CONFIG_STM32MP25X_REVY
+	unsigned long rifsc_id = STM32MP25_RIFSC_RNG_ID;
+#endif
+	uint32_t semcfgr_addr = RIFSC_BASE + _RIFSC_RISC_PERy_SEMCR(rifsc_id);
+	uint32_t semcfgr = 0;
+
+	/* Workaround only for STM32MP23/25 REVY */
+	if (stm32mp_get_chip_version() != STM32MP2_REV_Y)
+		return;
+
+	semcfgr = mmio_read_32(semcfgr_addr);
+	if (((semcfgr & _RIFSC_SEMCR_SEM_MUTEX) == 0U) ||
+	    ((semcfgr & _RIFSC_SEMCR_SEMCID_MASK) >> _RIFSC_SEMCR_SEMCID_SHIFT) != RIF_CID1) {
+		return;
+	}
+
+	mmio_write_32(semcfgr_addr, 0U);
+}
+#endif /* CONFIG_STM32MP23X_REVY || CONFIG_STM32MP25X_REVY */
+#endif /* STM32MP_M33_TDCID */
+
 /*******************************************************************************
  * STM32MP2 handler called when a power domain has just been powered on after
  * having been suspended earlier. The target_state encodes the low power state
@@ -816,6 +848,9 @@ static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
 		     RCC_C1BOOTRSTSCLRR_STBYC1RSTF) == 0U) {
 			stm32mp_stgen_config(clk_get_rate(CK_KER_STGEN));
 			stm32mp2_pll1_enable();
+#if CONFIG_STM32MP23X_REVY || CONFIG_STM32MP25X_REVY
+			rng_rif_semaphore_init();
+#endif /* CONFIG_STM32MP23X_REVY || CONFIG_STM32MP25X_REVY */
 			stm32mp_gic_resume();
 			stm32mp_gic_cpuif_enable();
 
@@ -849,6 +884,9 @@ static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
 		stm32mp2_pll1_enable();
 
 #if STM32MP_M33_TDCID
+#if CONFIG_STM32MP23X_REVY || CONFIG_STM32MP25X_REVY
+		rng_rif_semaphore_init();
+#endif /* CONFIG_STM32MP23X_REVY || CONFIG_STM32MP25X_REVY */
 		stm32mp2_wait_cpu2_sev_irq();
 #else
 		/* Exit DDR self refresh mode after STOP mode */
