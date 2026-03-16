@@ -1361,6 +1361,7 @@ static bool clock_is_always_on(unsigned long id)
 	case CK_MPU:
 	case CK_MCU:
 	case RTC:
+	case RTCAPB:
 		return true;
 	default:
 		return false;
