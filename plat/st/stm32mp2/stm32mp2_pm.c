@@ -107,15 +107,15 @@ static struct nvmem_cell stop2_entrypoint_cell;
 #define LVL_D2_LPLV		U(4)
 
 #define stm32_make_pwrstate(lvl4, lvl3, lvl2, lvl1, lvl0, type) \
-	(((STM32MP_LOCAL_STATE_ ## lvl4) << (PLAT_LOCAL_PSTATE_WIDTH * 4)) | \
-	 ((STM32MP_LOCAL_STATE_ ## lvl3) << (PLAT_LOCAL_PSTATE_WIDTH * 3)) | \
-	 ((STM32MP_LOCAL_STATE_ ## lvl2) << (PLAT_LOCAL_PSTATE_WIDTH * 2)) | \
-	 ((STM32MP_LOCAL_STATE_ ## lvl1) << (PLAT_LOCAL_PSTATE_WIDTH * 1)) | \
-	 ((STM32MP_LOCAL_STATE_ ## lvl0) << (PLAT_LOCAL_PSTATE_WIDTH * 0)) | \
-	 ((type) << PSTATE_TYPE_SHIFT))
+	(((uint32_t)(STM32MP_LOCAL_STATE_ ## lvl4) << (PLAT_LOCAL_PSTATE_WIDTH * 4)) | \
+	 ((uint32_t)(STM32MP_LOCAL_STATE_ ## lvl3) << (PLAT_LOCAL_PSTATE_WIDTH * 3)) | \
+	 ((uint32_t)(STM32MP_LOCAL_STATE_ ## lvl2) << (PLAT_LOCAL_PSTATE_WIDTH * 2)) | \
+	 ((uint32_t)(STM32MP_LOCAL_STATE_ ## lvl1) << (PLAT_LOCAL_PSTATE_WIDTH * 1)) | \
+	 ((uint32_t)(STM32MP_LOCAL_STATE_ ## lvl0) << (PLAT_LOCAL_PSTATE_WIDTH * 0)) | \
+	 ((uint32_t)(type) << PSTATE_TYPE_SHIFT))
 
 #define stm32_get_stateid_lvl(pwr_domain_state, lvl) \
-	(pwr_domain_state[(lvl)] << (PLAT_LOCAL_PSTATE_WIDTH * (lvl)))
+	((uint32_t)pwr_domain_state[(lvl)] << (PLAT_LOCAL_PSTATE_WIDTH * (lvl)))
 
 #define stm32_get_stateid(pwr_domain_state) \
 	(stm32_get_stateid_lvl(pwr_domain_state, LVL_CORE) | \
@@ -123,8 +123,8 @@ static struct nvmem_cell stop2_entrypoint_cell;
 	 stm32_get_stateid_lvl(pwr_domain_state, LVL_D1_LPLV) | \
 	 stm32_get_stateid_lvl(pwr_domain_state, LVL_D2) | \
 	 stm32_get_stateid_lvl(pwr_domain_state, LVL_D2_LPLV) | \
-	 ((pwr_domain_state[LVL_D1_LPLV] == STM32MP_LOCAL_STATE_OFF ? PSTATE_TYPE_POWERDOWN : 0) \
-		<< PSTATE_TYPE_SHIFT))
+	 ((uint32_t)((pwr_domain_state[LVL_D1_LPLV] == STM32MP_LOCAL_STATE_OFF) ? \
+		     PSTATE_TYPE_POWERDOWN : 0) << PSTATE_TYPE_SHIFT))
 
 /* State-id - 0x00000001 */
 #define PWRSTATE_RUN \
