@@ -211,7 +211,7 @@ stm32_tamp_nvram_read(struct stm32_tamp_nvram_drv_data *drv_data, size_t offset,
 				ERROR("BKPreg %zu is not allowed to be read\n", reg_idx);
 				byte = 0;
 			}
-			buf_u8[i] = byte;
+			buf_u8[i - offset] = byte;
 			i++;
 		}
 	}
