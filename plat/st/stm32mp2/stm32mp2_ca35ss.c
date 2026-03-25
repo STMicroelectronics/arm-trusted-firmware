@@ -74,7 +74,7 @@ void stm32mp_ca35_lpi_isolate(void)
 	uint32_t counter = UINT32_MAX;
 
 	/* Isolate TSGEN for debug only if associated clock is enabled */
-	if (clk_is_enabled(CK_SYSDBG)) {
+	if (clk_is_enabled(CK_KER_TSDBG)) {
 		mmio_write_32(A35SSC_BASE + CA35SS_SSC_LPI_TSGEN_NTS(WC1),
 			      CA35SS_SSC_LPI_TSGEN_CSYSREQ);
 		timeout = timeout_init_us(TIMEOUT_US);
