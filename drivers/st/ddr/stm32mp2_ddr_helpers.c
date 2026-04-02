@@ -320,8 +320,13 @@ static int sr_ssr_entry(bool standby)
 		udelay(DDR_DELAY_1US);
 	}
 
-	mmio_clrsetbits_32(rcc_base + RCC_DDRCPCFGR, RCC_DDRCPCFGR_DDRCPLPEN,
-			   RCC_DDRCPCFGR_DDRCPEN);
+	/* Disable DDRSS bus clocks */
+	mmio_clrbits_32(rcc_base + RCC_DDRCPCFGR, RCC_DDRCPCFGR_DDRCPEN);
+	mmio_clrbits_32(rcc_base + RCC_DDRCFGR,  RCC_DDRCFGR_DDRCFGEN);
+	mmio_clrbits_32(rcc_base + RCC_DDRCAPBCFGR, RCC_DDRCAPBCFGR_DDRCAPBEN);
+	mmio_clrbits_32(rcc_base + RCC_DDRPHYCAPBCFGR, RCC_DDRPHYCAPBCFGR_DDRPHYCAPBEN);
+
+	/* Configure DDRSS kernel clocks for low power */
 	mmio_setbits_32(rcc_base + RCC_DDRPHYCCFGR, RCC_DDRPHYCCFGR_DDRPHYCEN);
 	mmio_setbits_32(rcc_base + RCC_DDRITFCFGR, RCC_DDRITFCFGR_DDRPHYDLP);
 
@@ -333,8 +338,13 @@ static int sr_ssr_exit(void)
 	uintptr_t ddrctrl_base = stm32mp_ddrctrl_base();
 	uintptr_t rcc_base = stm32mp_rcc_base();
 
-	mmio_setbits_32(rcc_base + RCC_DDRCPCFGR,
-			RCC_DDRCPCFGR_DDRCPLPEN | RCC_DDRCPCFGR_DDRCPEN);
+	/* Enable DDRSS bus clocks */
+	mmio_setbits_32(rcc_base + RCC_DDRCPCFGR, RCC_DDRCPCFGR_DDRCPEN);
+	mmio_setbits_32(rcc_base + RCC_DDRCFGR,  RCC_DDRCFGR_DDRCFGEN);
+	mmio_setbits_32(rcc_base + RCC_DDRCAPBCFGR, RCC_DDRCAPBCFGR_DDRCAPBEN);
+	mmio_setbits_32(rcc_base + RCC_DDRPHYCAPBCFGR, RCC_DDRPHYCAPBCFGR_DDRPHYCAPBEN);
+
+	/* Restore DDRSS kernel clocks */
 	mmio_clrbits_32(rcc_base + RCC_DDRITFCFGR, RCC_DDRITFCFGR_DDRPHYDLP);
 	mmio_setbits_32(rcc_base + RCC_DDRPHYCCFGR, RCC_DDRPHYCCFGR_DDRPHYCEN);
 
@@ -556,7 +566,13 @@ void ddr_sub_system_clk_off(void)
 	mmio_write_32(rcc_base + RCC_DDRPHYCAPBCFGR, RCC_DDRPHYCAPBCFGR_DDRPHYCAPBRST);
 	mmio_write_32(rcc_base + RCC_DDRCAPBCFGR, RCC_DDRCAPBCFGR_DDRCAPBRST);
 
-	/* Deactivate clocks and PLL2 */
+	/* Deactivate kernel clocks and PLL2 */
 	mmio_clrbits_32(rcc_base + RCC_DDRPHYCCFGR, RCC_DDRPHYCCFGR_DDRPHYCEN);
 	mmio_clrbits_32(rcc_base + RCC_PLL2CFGR1, RCC_PLL2CFGR1_PLLEN);
+
+	/* Disable DDRSS bus clocks */
+	mmio_clrbits_32(rcc_base + RCC_DDRCPCFGR, RCC_DDRCPCFGR_DDRCPEN);
+	mmio_clrbits_32(rcc_base + RCC_DDRCFGR,  RCC_DDRCFGR_DDRCFGEN);
+	mmio_clrbits_32(rcc_base + RCC_DDRCAPBCFGR, RCC_DDRCAPBCFGR_DDRCAPBEN);
+	mmio_clrbits_32(rcc_base + RCC_DDRPHYCAPBCFGR, RCC_DDRPHYCAPBCFGR_DDRPHYCAPBEN);
 }
