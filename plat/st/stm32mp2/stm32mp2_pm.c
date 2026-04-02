@@ -600,9 +600,6 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 		panic();
 	}
 
-	/* Disable DDRSHR to avoid STANDBY/STOP exit issue */
-	mmio_clrbits_32(rcc_base + RCC_DDRITFCFGR, RCC_DDRITFCFGR_DDRSHR);
-
 	if (!cpu2_running) {
 		/* Filtering for CID1 = CA35 on PWR resource 3 = PWR_CPU2CR */
 		pwr_r3cidcfgr = mmio_read_32(pwr_base + PWR_R3CIDCFGR);
@@ -837,11 +834,6 @@ static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
 	stm32mp2_disable_rcc_wakeup_irq(rcc_base);
 
 	mmio_write_32(rcc_base + RCC_C1SREQCLRR, RCC_C1SREQCLRR_STPREQ_MASK);
-
-#if !STM32MP_M33_TDCID
-	/* Restore DDRSHR after STANDBY/STOP exit issue */
-	mmio_setbits_32(rcc_base + RCC_DDRITFCFGR, RCC_DDRITFCFGR_DDRSHR);
-#endif
 
 	/* Perform the common system specific operations */
 	switch (stateid) {
@@ -1147,9 +1139,6 @@ static void stm32_system_off(void)
 #if !STM32MP_M33_TDCID
 	/* Force DDR off */
 	stm32mp_board_ddr_power_off();
-
-	/* Disable DDRSHR */
-	mmio_clrbits_32(rcc_base + RCC_DDRITFCFGR, RCC_DDRITFCFGR_DDRSHR);
 #endif
 
 	/* Prevent interrupts from spuriously waking up this cpu */
