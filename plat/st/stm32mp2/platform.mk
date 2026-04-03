@@ -43,6 +43,14 @@ ifeq ($(STM32MP_BL33_EL1),1)
 INIT_UNUSED_NS_EL2		:=	1
 endif
 
+# Application firmware running at S-EL1
+STM32MP_SEC_APP_FW		?=	0
+ifeq ($(STM32MP_SEC_APP_FW),1)
+PSCI_CALLS_FROM_SECURE		:=	1
+NEED_BL32			:=	yes
+NEED_BL33			:=	no
+endif
+
 # Disable features unsupported in ARMv8.0
 ENABLE_SPE_FOR_NS		:=	0
 ENABLE_SVE_FOR_NS		:=	0
@@ -273,6 +281,7 @@ $(eval $(call assert_booleans,\
 		STM32MP2X \
 		STM32MP_SIP_CA33SS_CLK \
 		STM32MP_BL33_EL1 \
+		STM32MP_SEC_APP_FW \
 )))
 
 $(eval $(call assert_numerics,\
@@ -322,6 +331,7 @@ $(eval $(call add_defines,\
 		STM32MP25 \
 		STM32MP2X \
 		STM32MP_BL33_EL1 \
+		STM32MP_SEC_APP_FW \
 )))
 
 # STM32MP2x is based on Cortex-A35, which is Armv8.0, and does not support BTI

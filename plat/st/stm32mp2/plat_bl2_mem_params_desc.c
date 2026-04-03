@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2023-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -103,9 +103,14 @@ static bl_mem_params_node_t bl2_mem_params_descs[] = {
 				      VERSION_2, image_info_t,
 				      IMAGE_ATTRIB_SKIP_LOADING),
 
+#if STM32MP_SEC_APP_FW
+		.next_handoff_image_id = INVALID_IMAGE_ID,
+#else
 		.next_handoff_image_id = BL33_IMAGE_ID,
+#endif
 	},
 
+#if !STM32MP_SEC_APP_FW
 	/* Fill BL32 external 1 image related information */
 	{
 		.image_id = BL32_EXTRA1_IMAGE_ID,
@@ -152,6 +157,7 @@ static bl_mem_params_node_t bl2_mem_params_descs[] = {
 
 		.next_handoff_image_id = INVALID_IMAGE_ID,
 	}
+#endif
 };
 
 REGISTER_BL_IMAGE_DESCS(bl2_mem_params_descs)

@@ -21,7 +21,7 @@
 #include <stm32mp2_context.h>
 
 static entry_point_info_t bl32_image_ep_info;
-static entry_point_info_t bl33_image_ep_info;
+static entry_point_info_t bl33_image_ep_info __maybe_unused;
 
 void bl31_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 				u_register_t arg2, u_register_t arg3)
@@ -100,6 +100,7 @@ void bl31_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 	bl_params_node_t *bl_params = params_from_bl2->head;
 
 	while (bl_params != NULL) {
+#if !STM32MP_SEC_APP_FW
 		/*
 		 * Copy BL33 entry point information.
 		 * They are stored in Secure RAM, in BL2's address space.
@@ -116,6 +117,7 @@ void bl31_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 				bl33_image_ep_info.args.arg2 = 0U;
 			}
 		}
+#endif
 
 		if (bl_params->image_id == BL32_IMAGE_ID) {
 			bl32_image_ep_info = *bl_params->ep_info;
@@ -123,6 +125,12 @@ void bl31_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 			if (arg2 != 0U) {
 				bl32_image_ep_info.args.arg3 = arg2;
 			}
+
+#if STM32MP_SEC_APP_FW
+			bl31_set_next_image_type(SECURE);
+			bl32_image_ep_info.spsr = SPSR_64(MODE_EL1, MODE_SP_ELX,
+							  DISABLE_ALL_EXCEPTIONS);
+#endif
 		}
 
 		bl_params = bl_params->next_params_info;
@@ -181,9 +189,11 @@ entry_point_info_t *bl31_plat_get_next_image_ep_info(unsigned int type)
 	assert(sec_state_is_valid(type));
 
 	switch (type) {
+#if !STM32MP_SEC_APP_FW
 	case NON_SECURE:
 		next_image_info = &bl33_image_ep_info;
 		break;
+#endif
 
 	case SECURE:
 		next_image_info = &bl32_image_ep_info;

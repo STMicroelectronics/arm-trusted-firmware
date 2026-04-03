@@ -109,6 +109,8 @@ Dedicated STM32MP2 build flags:
   | Default: 1
 - | ``STM32MP_M33_TDCID``: Enable this flag if Cortex-A35 does not have the Trusted Domain Compartment ID (owned by Cortex-M33)
   | Default: 0
+- | ``STM32MP_SEC_APP_FW``: Load only a secure application firmware (at BL32), and no non-secure OS.
+  | Default: 0
 - | ``STM32MP21``: to select STM32MP21 variant configuration.
   | Default: 0
 - | ``STM32MP23``: to select STM32MP23 variant configuration.
@@ -242,4 +244,4 @@ __________________
 .. _STM32MP2 part number codification: https://wiki.st.com/stm32mpu/wiki/STM32MP25_microprocessor#Part_number_codification
 .. _STMicroelectronics DDR PHY github: https://github.com/STMicroelectronics/stm32-ddr-phy-binary
 
-*Copyright (c) 2023-2025, STMicroelectronics - All Rights Reserved*
+*Copyright (c) 2023-2026, STMicroelectronics - All Rights Reserved*

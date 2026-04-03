@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause)
 /*
- * Copyright (c) 2024-2025, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2024-2026, STMicroelectronics - All Rights Reserved
  */
 
 #include <common/tbbr/tbbr_img_def.h>
@@ -13,6 +13,7 @@
 	dtb-registry {
 		compatible = "fconf,dyn_cfg-dtb_registry";
 
+#if !STM32MP_SEC_APP_FW
 		hw-config {
 			load-address = <0x0 STM32MP_HW_CONFIG_BASE>;
 			max-size = <STM32MP_HW_CONFIG_MAX_SIZE>;
@@ -24,6 +25,7 @@
 			max-size = <STM32MP_BL33_MAX_SIZE>;
 			id = <BL33_IMAGE_ID>;
 		};
+#endif
 
 		soc_fw {
 			load-address = <0x0 STM32MP_SYSRAM_BASE>;

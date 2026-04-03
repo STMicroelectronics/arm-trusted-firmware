@@ -701,15 +701,17 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 {
 	int err = 0;
 	bl_mem_params_node_t *bl_mem_params = get_bl_mem_params_node(image_id);
-	bl_mem_params_node_t *pager_mem_params;
+	bl_mem_params_node_t *pager_mem_params __maybe_unused;
 	const struct dyn_cfg_dtb_info_t *config_info;
 	unsigned int i;
 	const unsigned int image_ids[] = {
 		BL31_IMAGE_ID,
 		SOC_FW_CONFIG_ID,
 		BL32_IMAGE_ID,
+#if !STM32MP_SEC_APP_FW
 		BL33_IMAGE_ID,
 		HW_CONFIG_ID,
+#endif
 	};
 	uint32_t otp_idx __maybe_unused;
 	uint32_t otp_len __maybe_unused;
@@ -774,6 +776,7 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 			case BL32_IMAGE_ID:
 				bl_mem_params->ep_info.pc = config_info->config_addr;
 
+#if !STM32MP_SEC_APP_FW
 				/* In case of OPTEE, initialize address space with tos_fw addr */
 				pager_mem_params = get_bl_mem_params_node(BL32_EXTRA1_IMAGE_ID);
 				if (pager_mem_params != NULL) {
@@ -782,13 +785,16 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 					pager_mem_params->image_info.image_max_size =
 						config_info->config_max_size;
 				}
+#endif
 				break;
 
+#if !STM32MP_SEC_APP_FW
 			case BL33_IMAGE_ID:
 				bl_mem_params->ep_info.pc = config_info->config_addr;
 				break;
 
 			case HW_CONFIG_ID:
+#endif
 			case SOC_FW_CONFIG_ID:
 				break;
 
@@ -821,6 +827,7 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 
 		break;
 
+#if !STM32MP_SEC_APP_FW
 	case BL32_IMAGE_ID:
 		if ((bl_mem_params->image_info.image_base != 0UL) &&
 		    (optee_header_is_valid(bl_mem_params->image_info.image_base))) {
@@ -857,6 +864,7 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 			panic();
 		}
 		break;
+#endif
 #endif
 	default:
 		/* Do nothing in default case */
