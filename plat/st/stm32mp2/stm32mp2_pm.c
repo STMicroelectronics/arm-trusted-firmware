@@ -202,6 +202,10 @@ static void stm32mp_state_set(unsigned int core_id, unsigned int state_id, bool 
 {
 	bool spin_lock_available = stm32mp_lock_available();
 
+	if (core_id >= PLATFORM_CORE_COUNT) {
+		panic();
+	}
+
 	if (spin_lock_available) {
 		spin_lock(&stm32mp_state_lock);
 	}
