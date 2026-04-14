@@ -1302,7 +1302,7 @@ int stm32_ospi_init(void)
 		}
 
 		for (i = 0U; i < _OMM_MAX_OSPI; i++) {
-			bank = fdt32_to_cpu(*cuint);
+			bank = (uint8_t)fdt32_to_cpu(*cuint);
 			if ((bank >= _OMM_MAX_OSPI) ||
 			    ((bank_assigned & BIT(bank)) != 0U)) {
 				return -FDT_ERR_BADVALUE;
@@ -1342,7 +1342,7 @@ int stm32_ospi_init(void)
 			return -FDT_ERR_BADVALUE;
 		}
 
-		bank = fdt32_to_cpu(*cuint);
+		bank = (uint8_t)fdt32_to_cpu(*cuint);
 		if (bank >= _OMM_MAX_OSPI) {
 			return -FDT_ERR_BADVALUE;
 		}
