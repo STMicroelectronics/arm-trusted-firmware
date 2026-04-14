@@ -336,7 +336,7 @@ static int stm32_ospi_mm(uint8_t *buf, uint32_t nbytes, size_t addr)
 static int stm32_ospi_dtr_calibrate(uint32_t prescaler, unsigned int bus_freq,
 				    int (*check_transfer)(void))
 {
-	uint16_t period_ps = 0U;
+	uint32_t period_ps = 0U;
 	uint8_t window_len = 0U;
 	int ret;
 	bool bypass_mode = false;

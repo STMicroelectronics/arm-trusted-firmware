@@ -442,33 +442,33 @@ static const uint16_t syscfg_dlybos_cmd_delay_ps[SYSCFG_DLYBOS_CMD_NB] = {
 28768U, 30400U, 32000U, 33600U, 35232U, 36832U, 38432U, 40032U
 };
 
-static uint32_t stm32mp_syscfg_find_byp_cmd(uint16_t period_ps)
+static uint32_t stm32mp_syscfg_find_byp_cmd(uint32_t period_ps)
 {
 	uint16_t half_period_ps = period_ps / 2U;
 	uint8_t max = SYSCFG_DLYBOS_CMD_NB - 1U;
 	uint8_t i, min = 0U;
 
 	/* Find closest value in syscfg_dlybos_delay_ps[] with half_period_ps */
-	if (half_period_ps < syscfg_dlybos_cmd_delay_ps[min]) {
+	if (half_period_ps < (uint32_t)syscfg_dlybos_cmd_delay_ps[min]) {
 		return (1U << SYSCFG_DLYBOS_BYP_CMD_SHIFT) &
 			SYSCFG_DLYBOS_BYP_CMD_MASK;
 	}
 
-	if (half_period_ps > syscfg_dlybos_cmd_delay_ps[max]) {
+	if (half_period_ps > (uint32_t)syscfg_dlybos_cmd_delay_ps[max]) {
 		return SYSCFG_DLYBOS_BYP_CMD_MASK;
 	}
 
 	while (max > (min + 1U)) {
 		i = div_round_up(min + max, 2U);
-		if (half_period_ps > syscfg_dlybos_cmd_delay_ps[i]) {
+		if (half_period_ps > (uint32_t)syscfg_dlybos_cmd_delay_ps[i]) {
 			min = i;
 		} else {
 			max = i;
 		}
 	}
 
-	if ((syscfg_dlybos_cmd_delay_ps[max] - half_period_ps) >
-	    (half_period_ps - syscfg_dlybos_cmd_delay_ps[min])) {
+	if (((uint32_t)syscfg_dlybos_cmd_delay_ps[max] - half_period_ps) >
+	    (half_period_ps - (uint32_t)syscfg_dlybos_cmd_delay_ps[min])) {
 		return ((min + 1U) << SYSCFG_DLYBOS_BYP_CMD_SHIFT) &
 			SYSCFG_DLYBOS_BYP_CMD_MASK;
 	} else {
@@ -477,8 +477,7 @@ static uint32_t stm32mp_syscfg_find_byp_cmd(uint16_t period_ps)
 	}
 }
 
-int stm32mp_syscfg_dlyb_init(uint8_t bank, bool bypass_mode,
-			      uint16_t period_ps)
+int stm32mp_syscfg_dlyb_init(uint8_t bank, bool bypass_mode, uint32_t period_ps)
 {
 	uint64_t timeout;
 	uintptr_t cr = SYSCFG_BASE + syscfg_dlybos_cr_offset[bank];
