@@ -264,7 +264,7 @@ static int stm32image_create_header_file(char *srcname, char *destname,
 					 uint32_t version, uint32_t major,
 					 uint32_t minor, uint32_t binary_type)
 {
-	int src_fd = -1, dest_fd = -1;
+	int src_fd, dest_fd;
 	struct stat sbuf;
 	unsigned char *ptr = NULL;
 	void *stm32image_header;
