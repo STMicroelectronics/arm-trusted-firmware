@@ -124,8 +124,8 @@ static void print_reset_reason(void)
 {
 	uintptr_t rcc_base = stm32mp_rcc_base();
 	uint32_t rstsr = mmio_read_32(rcc_base + RCC_C1BOOTRSTSCLRR);
-	const char *boot_str = "";
-	const char *reason_str = "Unidentified";
+	const char *boot_str;
+	const char *reason_str;
 
 #if !STM32MP21
 	if ((rstsr & RCC_C1BOOTRSTSCLRR_C1P1RSTF) != 0U) {
@@ -139,6 +139,8 @@ static void print_reset_reason(void)
 	} else {
 		boot_str = " Warm boot.";
 	}
+#else
+	boot_str = "";
 #endif
 
 	if ((rstsr & RCC_C1BOOTRSTSCLRR_PADRSTF) == 0U) {
@@ -165,10 +167,8 @@ static void print_reset_reason(void)
 			reason_str = "Clock failure on HSE";
 		} else if ((rstsr & RCC_C1BOOTRSTSCLRR_IWDGXSYSRSTF) != 0U) {
 			reason_str = "IWDG system reset (iwdgX_out_rst)";
-		} else if ((rstsr & RCC_C1BOOTRSTSCLRR_PADRSTF) != 0U) {
-			reason_str = "Pin reset from NRST";
 		} else {
-			reason_str = "Unidentified";
+			reason_str = "Pin reset from NRST";
 		}
 	}
 
