@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2025, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2013-2026, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -401,14 +401,14 @@ no_mpam:
 	stp	x26, x27, [x19, #CTX_PACDBKEY_LO]
 	stp	x28, x29, [x19, #CTX_PACGAKEY_LO]
 #if ENABLE_PAUTH
-#if IMAGE_BL31
+#ifdef IMAGE_BL31
 	/* tpidr_el3 contains the address of the cpu_data structure */
 	per_cpu_cur	percpu_data, x9, x10
 	/* Load APIAKey from cpu_data */
 	ldp	x10, x11, [x9, #CPU_DATA_APIAKEY]
 #endif /* IMAGE_BL31 */
 
-#if IMAGE_BL1
+#ifdef IMAGE_BL1
 	/* BL1 does not use cpu_data and has dedicated storage */
 	adr_l	x9, bl1_apiakey
 	ldp	x10, x11, [x9]
@@ -607,12 +607,12 @@ func el3_exit
 	ldp	x19, x20, [x9, #CTX_CPTR_EL3]
 	msr	cptr_el3, x19
 
-#if IMAGE_BL31
+#ifdef IMAGE_BL31
 	restore_mpam3_el3
 
 #endif /* IMAGE_BL31 */
 
-#if IMAGE_BL31 && DYNAMIC_WORKAROUND_CVE_2018_3639
+#if defined(IMAGE_BL31) && DYNAMIC_WORKAROUND_CVE_2018_3639
 	/* ----------------------------------------------------------
 	 * Restore mitigation state as it was on entry to EL3
 	 * ----------------------------------------------------------
@@ -623,7 +623,7 @@ func el3_exit
 1:
 #endif /* IMAGE_BL31 && DYNAMIC_WORKAROUND_CVE_2018_3639 */
 
-#if IMAGE_BL31
+#ifdef IMAGE_BL31
 	synchronize_errors
 #endif /* IMAGE_BL31 */
 

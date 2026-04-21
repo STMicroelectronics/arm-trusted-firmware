@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2026, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -17,7 +17,7 @@
  ******************************************************************************/
 
 /* Size of cacheable stack */
-#if IMAGE_BL31
+#ifdef IMAGE_BL31
 #define PLATFORM_STACK_SIZE		0x800
 #else
 #define PLATFORM_STACK_SIZE		0x1000

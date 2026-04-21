@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Arm Limited. All rights reserved.
+ * Copyright (c) 2025-2026, Arm Limited. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -140,9 +140,9 @@
 #define MAX_IO_DEVICES				U(3)
 #define MAX_IO_HANDLES				U(4)
 
-#if IMAGE_BL2
+#if defined(IMAGE_BL2)
 #define PLAT_ARM_MMAP_ENTRIES			U(9)
-#elif IMAGE_BL31
+#elif defined(IMAGE_BL31)
 #define PLAT_ARM_MMAP_ENTRIES			U(8)
 #endif
 #define MAX_XLAT_TABLES				U(9)

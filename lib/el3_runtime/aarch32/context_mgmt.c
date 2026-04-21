@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2025, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2016-2026, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -136,7 +136,7 @@ void cm_setup_context(cpu_context_t *ctx, const entry_point_info_t *ep)
  ******************************************************************************/
 static void enable_extensions_nonsecure(bool el2_unused)
 {
-#if IMAGE_BL32
+#ifdef IMAGE_BL32
 	if (is_feat_amu_supported()) {
 		amu_enable(el2_unused);
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2025, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2026, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -83,7 +83,7 @@ feat_sctlr2_not_supported\@:
 	 * ---------------------------------------------------------------------
 	 */
 	mov_imm	x0, SCR_RESET_VAL
-#if IMAGE_BL31 && defined(SPD_spmd) && SPMD_SPM_AT_SEL2
+#if defined(IMAGE_BL31) && defined(SPD_spmd) && SPMD_SPM_AT_SEL2
 	mrs	x1, id_aa64pfr0_el1
 	and	x1, x1, #(ID_AA64PFR0_SEL2_MASK << ID_AA64PFR0_SEL2_SHIFT)
 	cbz	x1, 1f

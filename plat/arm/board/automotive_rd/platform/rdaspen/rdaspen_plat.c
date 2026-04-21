@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Arm Limited. All rights reserved.
+ * Copyright (c) 2025-2026, Arm Limited. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -19,7 +19,7 @@ const mmap_region_t plat_arm_mmap[] = {
 #if PLAT_ARM_MEM_PROT_ADDR
 	RDASPEN_MAP_MEM_PROTECT,
 #endif
-#if IMAGE_BL2
+#ifdef IMAGE_BL2
 	RDASPEN_MAP_NS_DRAM1,
 	RDASPEN_MAP_NS_DRAM2,
 	RDASPEN_MAP_TRUSTED_NVCTR,

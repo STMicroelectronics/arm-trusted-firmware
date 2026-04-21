@@ -270,7 +270,7 @@ state of CPU across exception levels for a given security state are listed below
 	pauth_t pauth_ctx;
 	#endif
 
-	#if (CTX_INCLUDE_EL2_REGS && IMAGE_BL31)
+	#if (CTX_INCLUDE_EL2_REGS && defined(IMAGE_BL31))
 	el2_sysregs_t el2_sysregs_ctx;
 	#else
 	el1_sysregs_t el1_sysregs_ctx;
@@ -514,7 +514,7 @@ structure and is intended to manage specific EL3 registers.
 	typedef struct per_world_context {
 		uint64_t ctx_cptr_el3;
 		uint64_t ctx_mpam3_el3;
-	#if (ENABLE_FEAT_IDTE3 && IMAGE_BL31)
+	#if (ENABLE_FEAT_IDTE3 && defined(IMAGE_BL31))
 		perworld_idregs_t idregs;
 	#endif
 	} per_world_context_t;
@@ -581,7 +581,7 @@ EL3.
 EL3 execution context needs to setup at both boot time (cold and warm boot)
 entrypaths and at all the possible exception handlers routing to EL3 at runtime.
 
-*Copyright (c) 2024-2025, Arm Limited and Contributors. All rights reserved.*
+*Copyright (c) 2024-2026, Arm Limited and Contributors. All rights reserved.*
 
 .. |Context Memory Allocation| image:: ../resources/diagrams/context_memory_allocation.png
 .. |CPU Context Memory Configuration| image:: ../resources/diagrams/cpu_data_config_context_memory.png

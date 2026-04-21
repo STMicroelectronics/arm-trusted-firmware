@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2025, Arm Limited. All rights reserved.
+ * Copyright (c) 2019-2026, Arm Limited. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -87,7 +87,7 @@ static inline bool is_ ## name ## _supported(void)				\
  * }
  */
 
-#if (ENABLE_FEAT_IDTE3 && IMAGE_BL31)
+#if (ENABLE_FEAT_IDTE3 && defined(IMAGE_BL31))
 #define CREATE_IDREG_UPDATE(name, idreg, idfield, mask, guard, enabled_worlds)	\
 	__attribute__((always_inline))						\
 static inline void update_ ## name ## _idreg_field(size_t security_state)	\
@@ -325,7 +325,7 @@ static inline bool is_feat_pauth_present(void)
 CREATE_FEATURE_SUPPORTED(feat_pauth, is_feat_pauth_present, ENABLE_PAUTH)
 CREATE_FEATURE_SUPPORTED(ctx_pauth, is_feat_pauth_present, CTX_INCLUDE_PAUTH_REGS)
 
-#if (ENABLE_FEAT_IDTE3 && IMAGE_BL31)
+#if (ENABLE_FEAT_IDTE3 && defined(IMAGE_BL31))
 __attribute__((always_inline))
 static inline void update_feat_pauth_idreg_field(size_t security_state)
 {
@@ -573,7 +573,7 @@ static inline bool is_feat_mpam_present(void)
 CREATE_FEATURE_SUPPORTED(feat_mpam, is_feat_mpam_present, ENABLE_FEAT_MPAM)
 
 
-#if (ENABLE_FEAT_IDTE3 && IMAGE_BL31)
+#if (ENABLE_FEAT_IDTE3 && defined(IMAGE_BL31))
 __attribute__((always_inline))
 static inline void update_feat_mpam_idreg_field(size_t security_state)
 {
