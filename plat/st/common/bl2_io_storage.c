@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2025, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2026, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -30,11 +30,11 @@
 #include <drivers/spi_nand.h>
 #include <drivers/spi_nor.h>
 #include <drivers/st/stm32_fmc2_nand.h>
-#ifdef STM32MP1X
-#include <drivers/st/stm32_qspi.h>
-#endif
-#ifdef STM32MP2X
+#if STM32MP2X
 #include <drivers/st/stm32_ospi.h>
+#endif
+#if STM32MP1X
+#include <drivers/st/stm32_qspi.h>
 #endif
 #include <drivers/st/stm32_sdmmc2.h>
 #include <drivers/usb_device.h>
@@ -322,10 +322,10 @@ static void boot_spi_nor(boot_api_context_t *boot_context)
 {
 	int io_result __maybe_unused = 0;
 
-#ifdef STM32MP1X
+#if STM32MP1X
 	io_result = stm32_qspi_init();
 #endif
-#ifdef STM32MP2X
+#if STM32MP2X
 	io_result = stm32_ospi_init();
 #endif
 
@@ -414,10 +414,10 @@ static void boot_spi_nand(boot_api_context_t *boot_context)
 
 	plat_setup_try_img_ops(&try_img_ops);
 
-#ifdef STM32MP1X
+#if STM32MP1X
 	io_result = stm32_qspi_init();
 #endif
-#ifdef STM32MP2X
+#if STM32MP2X
 	io_result = stm32_ospi_init();
 #endif
 	assert(io_result == 0);

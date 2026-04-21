@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2025, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2026, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -80,7 +80,7 @@ unsigned int plat_get_syscnt_freq2(void)
 
 static uintptr_t boot_ctx_address;
 static uint16_t boot_itf_selected;
-#ifdef STM32MP1X
+#if STM32MP1X
 static uint32_t boot_action_saved;
 #endif
 
@@ -90,7 +90,7 @@ void stm32mp_save_boot_ctx_address(uintptr_t address)
 
 	boot_ctx_address = address;
 	boot_itf_selected = boot_context->boot_interface_selected;
-#ifdef STM32MP1X
+#if STM32MP1X
 	boot_action_saved = boot_context->boot_action;
 #endif
 }
@@ -105,7 +105,7 @@ uint16_t stm32mp_get_boot_itf_selected(void)
 	return boot_itf_selected;
 }
 
-#ifdef STM32MP1X
+#if STM32MP1X
 uint32_t stm32mp_get_boot_action(void)
 {
 	return boot_action_saved;
@@ -644,7 +644,7 @@ int stm32_get_boot_mode_cell(struct nvmem_cell *boot_mode)
 	return 0;
 }
 
-#ifdef STM32MP2X
+#if STM32MP2X
 int stm32_get_stop2_entrypoint_cell(struct nvmem_cell *stop2_entrypoint)
 {
 	static bool initialized = false;
