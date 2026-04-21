@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2013-2026, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -7,6 +7,7 @@
 #ifndef RUNTIME_SVC_H
 #define RUNTIME_SVC_H
 
+#include <context.h>
 #include <common/bl_common.h>		/* to include exception types */
 #include <lib/cassert.h>
 #include <lib/utils_def.h>
@@ -125,6 +126,8 @@ static inline uint32_t get_unique_oen_from_smc_fid(uint32_t fid)
 /*******************************************************************************
  * Function & variable prototypes
  ******************************************************************************/
+void handler_interrupt_exception(cpu_context_t *ctx);
+void handler_sync_exception(cpu_context_t *ctx);
 void runtime_svc_init(void);
 uintptr_t handle_runtime_svc(uint32_t smc_fid, void *cookie, void *handle,
 						unsigned int flags);
