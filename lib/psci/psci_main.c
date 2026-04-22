@@ -454,9 +454,15 @@ u_register_t psci_smc_handler(uint32_t smc_fid,
 	(void)handle;
 	u_register_t ret;
 
+#if PSCI_CALLS_FROM_SECURE
+	if (!is_caller_secure(flags)) {
+		return (u_register_t)SMC_UNK;
+	}
+#else
 	if (!is_caller_non_secure(flags)) {
 		return (u_register_t)SMC_UNK;
 	}
+#endif
 
 	/* Check the fid against the capabilities */
 	if ((psci_caps & define_psci_cap(smc_fid)) == 0U) {

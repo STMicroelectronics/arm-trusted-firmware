@@ -92,6 +92,10 @@ ifeq ($(SPMC_AT_EL3_SEL0_SP),1)
         endif
 endif
 endif #(SPD=spmd)
+
+ifneq ($(PSCI_CALLS_FROM_SECURE),0)
+        $(error "PSCI call from secure world is not supported with an SPD")
+endif
 endif #(SPD!=none)
 
 # USE_DEBUGFS experimental feature recommended only in debug builds
@@ -288,6 +292,9 @@ ifeq (${ARCH},aarch32)
 	endif
 	ifneq (${PLATFORM_NODE_COUNT},1)
                 $(error "NUMA AWARE PER CPU is not supported with ARCH=aarch32")
+	endif
+	ifneq ($(PSCI_CALLS_FROM_SECURE),0)
+                $(error "PSCI call from secure world is not supported with ARCH=aarch32")
 	endif
 endif #(ARCH=aarch32)
 

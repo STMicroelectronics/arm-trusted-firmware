@@ -912,6 +912,69 @@ void psci_release_pwr_domain_locks(unsigned int end_pwrlvl,
  * PSCI entrypoint on power on/resume and returns it.
  ******************************************************************************/
 #ifdef __aarch64__
+#if PSCI_CALLS_FROM_SECURE
+static int psci_get_s_ep_info(entry_point_info_t *ep,
+			       uintptr_t entrypoint,
+			       u_register_t context_id)
+{
+	u_register_t ep_attr, sctlr;
+	unsigned int daif, ee, mode;
+	u_register_t s_scr_el3 = read_scr_el3();
+	u_register_t s_esr_el3 = read_esr_el3();
+	u_register_t s_sctlr_el1 = read_sctlr_el1();
+
+	sctlr = ((s_scr_el3 & SCR_EEL2_BIT) != 0U) ?
+		read_sctlr_el2() : s_sctlr_el1;
+	ee = 0;
+
+	ep_attr = EP_ST_DISABLE;
+	if ((sctlr & SCTLR_EE_BIT) != 0U) {
+		ep_attr |= EP_EE_BIG;
+		ee = 1;
+	}
+	SET_PARAM_HEAD(ep, PARAM_EP, VERSION_1, ep_attr);
+
+	ep->pc = entrypoint;
+	zeromem(&ep->args, sizeof(ep->args));
+	ep->args.arg0 = context_id;
+
+	/*
+	 * Figure out whether the cpu enters the secure address space
+	 * in aarch32 or aarch64 from ESR first, or SCR elsewhere.
+	 */
+	if ((EC_BITS(s_esr_el3) != EC_AARCH32_SMC) &&
+	    ((s_scr_el3 & SCR_RW_BIT) != 0U)) {
+
+		/*
+		 * Check whether a Thumb entry point has been provided for an
+		 * aarch64 EL
+		 */
+		if ((entrypoint & 0x1UL) != 0UL) {
+			return PSCI_E_INVALID_ADDRESS;
+		}
+
+		mode = ((s_scr_el3 & SCR_EEL2_BIT) != 0U) ? MODE_EL2 : MODE_EL1;
+
+		ep->spsr = SPSR_64((uint64_t)mode, MODE_SP_ELX,
+				   DISABLE_ALL_EXCEPTIONS);
+	} else {
+
+		mode = ((s_scr_el3 & SCR_EEL2_BIT) != 0U) ?
+			MODE32_hyp : MODE32_svc;
+
+		/*
+		 * TODO: Choose async. exception bits if HYP mode is not
+		 * implemented according to the values of SCR.{AW, FW} bits
+		 */
+		daif = DAIF_ABT_BIT | DAIF_IRQ_BIT | DAIF_FIQ_BIT;
+
+		ep->spsr = SPSR_MODE32((uint64_t)mode, entrypoint & 0x1, ee,
+				       daif);
+	}
+
+	return PSCI_E_SUCCESS;
+}
+#else
 static int psci_get_ns_ep_info(entry_point_info_t *ep,
 			       uintptr_t entrypoint,
 			       u_register_t context_id)
@@ -973,6 +1036,7 @@ static int psci_get_ns_ep_info(entry_point_info_t *ep,
 
 	return PSCI_E_SUCCESS;
 }
+#endif
 #else /* !__aarch64__ */
 static int psci_get_ns_ep_info(entry_point_info_t *ep,
 			       uintptr_t entrypoint,
@@ -1045,7 +1109,11 @@ int psci_validate_entry_point(entry_point_info_t *ep,
 	 * the non-secure world from the non-secure state from
 	 * where this call originated.
 	 */
+#if PSCI_CALLS_FROM_SECURE
+	rc = psci_get_s_ep_info(ep, entrypoint, context_id);
+#else
 	rc = psci_get_ns_ep_info(ep, entrypoint, context_id);
+#endif
 	return rc;
 }
 
@@ -1132,7 +1200,11 @@ void psci_warmboot_entrypoint(unsigned int cpu_idx)
 	 * information that we had stashed away during the cpu_on
 	 * call to set this cpu on its way.
 	 */
+#if PSCI_CALLS_FROM_SECURE
+	cm_prepare_el3_exit(SECURE);
+#else
 	cm_prepare_el3_exit_ns();
+#endif
 
 	/*
 	 * Set the requested and target state of this CPU and all the higher

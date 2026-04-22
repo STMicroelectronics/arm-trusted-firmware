@@ -217,6 +217,9 @@ PL011_GENERIC_UART		:= 0
 # The platform Makefile is free to override this value.
 PROGRAMMABLE_RESET_ADDRESS	:= 0
 
+# Allow PSCI stack to receive calls from Secure World
+PSCI_CALLS_FROM_SECURE		:= 0
+
 # Flag used to choose the power state format: Extended State-ID or Original
 PSCI_EXTENDED_STATE_ID		:= 0
 

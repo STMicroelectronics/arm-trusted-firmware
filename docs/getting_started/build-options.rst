@@ -929,6 +929,11 @@ Common build options
    can be optimised. The ``plat_get_my_entrypoint()`` platform porting interface
    does not need to be implemented in this case.
 
+-  ``PSCI_CALLS_FROM_SECURE``: Enable this flag to allow PSCI calls from
+   secure world. This is disabled by default. This can be used when there is
+   no non-secure software running, and the secure software could call PSCI
+   functions like CPU_ON.
+
 -  ``PSCI_EXTENDED_STATE_ID``: As per PSCI1.0 Specification, there are 2 formats
    possible for the PSCI power-state parameter: original and extended State-ID
    formats. This flag if set to 1, configures the generic PSCI layer to use the

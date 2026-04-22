@@ -30,7 +30,11 @@ CASSERT(PLATFORM_CORE_COUNT <= (PSCI_MAX_CPUS_INDEX + 1U), assert_psci_cores_ove
  * TODO: Use the memory allocator to set aside memory for the contexts instead
  * of relying on platform defined constants.
  ******************************************************************************/
+#if PSCI_CALLS_FROM_SECURE
+static PER_CPU_DEFINE(cpu_context_t, psci_s_context);
+#else
 static PER_CPU_DEFINE(cpu_context_t, psci_ns_context);
+#endif
 static entry_point_info_t warmboot_ep_info[PLATFORM_CORE_COUNT];
 
 /******************************************************************************
@@ -78,10 +82,17 @@ static void __init psci_init_pwr_domain_node(uint16_t node_idx,
 		psci_flush_dcache_range((uintptr_t)svc_cpu_data,
 						 sizeof(*svc_cpu_data));
 
+#if PSCI_CALLS_FROM_SECURE
+		cm_set_context_by_index(node_idx,
+					(void *) PER_CPU_BY_INDEX(psci_s_context,
+					node_idx),
+					SECURE);
+#else
 		cm_set_context_by_index(node_idx,
 					(void *) PER_CPU_BY_INDEX(psci_ns_context,
 					node_idx),
 					NON_SECURE);
+#endif
 	}
 }
 
