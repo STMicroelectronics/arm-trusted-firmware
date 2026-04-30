@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2022, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2026, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -296,7 +296,8 @@ endfunc plat_crash_console_putc
 
 	/* ----------------------------------------------------------
 	 * void plat_panic_handler(void) __dead2;
-	 * Report exception + endless loop.
+	 * Report exception + endless loop if STM32MP_HALT_ON_PANIC is
+	 * set, system reset otherwise.
 	 *
 	 * r6 holds the address where the fault occurred.
 	 * Filling lr with this value allows debuggers to reconstruct
@@ -307,8 +308,12 @@ func plat_panic_handler
 	mrs	r0, cpsr
 	and	r0, #MODE32_MASK
 	bl	plat_report_exception
+#if STM32MP_HALT_ON_PANIC
 	mov	lr, r6
 	b	.
+#else
+	bl	stm32mp_system_reset
+#endif
 endfunc plat_panic_handler
 
 #if DEBUG

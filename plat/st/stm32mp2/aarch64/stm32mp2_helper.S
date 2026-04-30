@@ -18,6 +18,7 @@
 	.globl	plat_crash_console_init
 	.globl	plat_crash_console_flush
 	.globl	plat_crash_console_putc
+	.globl	plat_panic_handler
 	.globl	plat_report_exception
 	.globl	stm32_stop2_entrypoint
 
@@ -188,6 +189,21 @@ func plat_crash_console_putc
 1:
 	b	console_stm32_core_putc
 endfunc plat_crash_console_putc
+
+	/* -----------------------------------------------------
+	 * void plat_panic_handler(void) __dead2;
+	 * Endless loop if STM32MP_HALT_ON_PANIC is set, system
+	 * reset otherwise.
+	 * -----------------------------------------------------
+	 */
+func plat_panic_handler
+#if STM32MP_HALT_ON_PANIC
+	wfi
+	b	plat_panic_handler
+#else
+	bl	stm32mp_system_reset
+#endif
+endfunc plat_panic_handler
 
 #ifdef IMAGE_BL2
 	/* ---------------------------------------------
