@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2025, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2013-2026, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -28,7 +28,7 @@ static void opteed_cpu_on_handler(u_register_t target_cpu)
  ******************************************************************************/
 static int32_t opteed_cpu_off_handler(u_register_t unused)
 {
-	int32_t rc = 0;
+	uint64_t rc = 0U;
 	uint32_t linear_id = plat_my_core_pos();
 	optee_context_t *optee_ctx = &opteed_sp_context[linear_id];
 
@@ -47,7 +47,7 @@ static int32_t opteed_cpu_off_handler(u_register_t unused)
 	 * Read the response from OPTEE. A non-zero return means that
 	 * something went wrong while communicating with OPTEE.
 	 */
-	if (rc != 0)
+	if (rc != 0U)
 		panic();
 
 	/*
@@ -102,7 +102,7 @@ static void opteed_cpu_suspend_handler(u_register_t max_off_pwrlvl)
  ******************************************************************************/
 void opteed_cpu_on_finish_handler(u_register_t unused)
 {
-	int32_t rc = 0;
+	uint64_t rc = 0U;
 	uint32_t linear_id = plat_my_core_pos();
 	optee_context_t *optee_ctx = &opteed_sp_context[linear_id];
 	entry_point_info_t optee_on_entrypoint;
@@ -125,7 +125,7 @@ void opteed_cpu_on_finish_handler(u_register_t unused)
 	 * Read the response from OPTEE. A non-zero return means that
 	 * something went wrong while communicating with OPTEE.
 	 */
-	if (rc != 0)
+	if (rc != 0U)
 		panic();
 
 	/* Update its context to reflect the state OPTEE is in */
@@ -139,7 +139,7 @@ void opteed_cpu_on_finish_handler(u_register_t unused)
  ******************************************************************************/
 static void opteed_cpu_suspend_finish_handler(u_register_t max_off_pwrlvl, bool abandon)
 {
-	int32_t rc = 0;
+	uint64_t rc = 0U;
 	uint32_t linear_id = plat_my_core_pos();
 	optee_context_t *optee_ctx = &opteed_sp_context[linear_id];
 
@@ -164,7 +164,7 @@ static void opteed_cpu_suspend_finish_handler(u_register_t max_off_pwrlvl, bool 
 	 * Read the response from OPTEE. A non-zero return means that
 	 * something went wrong while communicating with OPTEE.
 	 */
-	if (rc != 0)
+	if (rc != 0U)
 		panic();
 
 	/* Update its context to reflect the state OPTEE is in */
