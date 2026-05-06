@@ -367,7 +367,7 @@ static int sd_switch(unsigned int mode, unsigned char group,
 		     unsigned char func)
 {
 	unsigned int group_shift = (group - 1U) * 4U;
-	unsigned int group_mask = GENMASK(group_shift + 3U,  group_shift);
+	unsigned int group_mask = GENMASK_32(group_shift + 3U,  group_shift);
 	unsigned int arg;
 	int ret;
 
