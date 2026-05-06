@@ -61,7 +61,11 @@ int psci_cpu_suspend(unsigned int power_state,
 {
 	int rc;
 	unsigned int target_pwrlvl, is_power_down_state;
+#if PSCI_OS_INIT_MODE
+	psci_power_state_t state_info = { {PSCI_LOCAL_STATE_RUN}, 0U };
+#else
 	psci_power_state_t state_info = { {PSCI_LOCAL_STATE_RUN} };
+#endif
 	plat_local_state_t cpu_pd_state;
 	unsigned int cpu_idx = plat_my_core_pos();
 

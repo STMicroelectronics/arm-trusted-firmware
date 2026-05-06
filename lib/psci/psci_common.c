@@ -1062,7 +1062,11 @@ void psci_warmboot_entrypoint(unsigned int cpu_idx)
 {
 	unsigned int end_pwrlvl;
 	unsigned int parent_nodes[PLAT_MAX_PWR_LVL] = {0};
+#if PSCI_OS_INIT_MODE
+	psci_power_state_t state_info = { {PSCI_LOCAL_STATE_RUN}, 0U };
+#else
 	psci_power_state_t state_info = { {PSCI_LOCAL_STATE_RUN} };
+#endif
 
 	/*
 	 * Verify that we have been explicitly turned ON or resumed from
