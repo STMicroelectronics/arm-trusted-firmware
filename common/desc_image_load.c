@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2025, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2016-2026, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -166,6 +166,7 @@ bl_params_t *get_next_bl_params_from_mem_params_desc(void)
 	 * This bounded loop is to make sure that we are not looping forever.
 	 */
 	for (count = 0U; count < bl_mem_params_desc_num; count++) {
+		int next_index;
 
 		desc_ptr = &bl_mem_params_desc_ptr[link_index];
 
@@ -197,9 +198,10 @@ bl_params_t *get_next_bl_params_from_mem_params_desc(void)
 			break;
 
 		/* Get the index for the next hand-off image */
-		link_index = get_bl_params_node_index(img_id);
-		assert((link_index > 0U) &&
-			(link_index < bl_mem_params_desc_num));
+		next_index = get_bl_params_node_index(img_id);
+		assert(next_index > 0);
+		link_index = (unsigned int)next_index;
+		assert(link_index < bl_mem_params_desc_num);
 	}
 
 	/* Invalid image is expected to terminate the loop */
