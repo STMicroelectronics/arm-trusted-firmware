@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2023, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2026, Arm Limited and Contributors. All rights reserved.
  * Portions copyright (c) 2021-2022, ProvenRun S.A.S. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -177,7 +177,11 @@ bool plat_ic_is_ppi(unsigned int id)
 
 bool plat_ic_is_sgi(unsigned int id)
 {
+#if (MIN_SGI_ID > 0)
 	return (id >= MIN_SGI_ID) && (id < MIN_PPI_ID);
+#else
+	return (id < MIN_PPI_ID);
+#endif
 }
 
 unsigned int plat_ic_get_interrupt_active(unsigned int id)
