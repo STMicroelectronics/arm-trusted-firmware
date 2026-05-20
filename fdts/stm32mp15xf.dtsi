@@ -1,0 +1,7 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause)
+/*
+ * Copyright (C) STMicroelectronics 2026 - All Rights Reserved
+ * Author: Maxime Méré <maxime.mere@st.com> for STMicroelectronics.
+ */
+
+#include "stm32mp15xc.dtsi"
