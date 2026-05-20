@@ -349,6 +349,7 @@ int stm32_mce_get_address_encryption_state(uint32_t address, uint32_t *state)
 
 void stm32_mce_reload_configuration(void)
 {
+#if STM32MP_SUPPORT_PM
 	uint32_t idx;
 
 	for (idx = 0U; idx < MCE_IP_MAX_REGION_NB; idx++) {
@@ -367,6 +368,7 @@ void stm32_mce_reload_configuration(void)
 			panic();
 		}
 	}
+#endif
 }
 
 static int fconf_populate_mce(uintptr_t config)
@@ -416,7 +418,9 @@ static int fconf_populate_mce(uintptr_t config)
 			panic();
 		}
 
+#if STM32MP_SUPPORT_PM
 		stm32mp1_pm_save_mce_region(i, &region);
+#endif
 	}
 
 	return 0;
