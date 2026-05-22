@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2025, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2026, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -37,7 +37,7 @@
  * image's translation tables are located such that the tables will have
  * read-only permissions.
  ******************************************************************************/
-#if PLAT_RO_XLAT_TABLES
+#ifdef PLAT_RO_XLAT_TABLES
 void arm_xlat_make_tables_readonly(void)
 {
 	int rc = xlat_make_tables_readonly();
