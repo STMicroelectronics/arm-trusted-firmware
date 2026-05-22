@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2025, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2013-2026, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -130,10 +130,9 @@ static uint64_t opteed_sel1_interrupt_handler(uint32_t id,
  */
 static void register_opteed_interrupt_handler(void)
 {
-	u_register_t flags;
+	uint32_t flags = 0U;
 	uint64_t rc;
 
-	flags = 0;
 	set_interrupt_rm_flag(flags, NON_SECURE);
 	rc = register_interrupt_type_handler(INTR_TYPE_S_EL1,
 			opteed_sel1_interrupt_handler,
@@ -256,7 +255,7 @@ static int32_t opteed_setup(void)
  * OPTEE. OPTEE passes control back to this routine through a SMC. This returns
  * a non-zero value on success and zero on failure.
  ******************************************************************************/
-static int32_t
+static uint64_t
 opteed_init_with_entry_point(entry_point_info_t *optee_entry_point)
 {
 	uint32_t linear_id = plat_my_core_pos();
@@ -285,7 +284,11 @@ static int32_t opteed_init(void)
 	 * absence is a critical failure.
 	 */
 	optee_entry_point = bl31_plat_get_next_image_ep_info(SECURE);
-	return opteed_init_with_entry_point(optee_entry_point);
+	if (opteed_init_with_entry_point(optee_entry_point) == 0U) {
+		return 0;
+	}
+
+	return 1;
 }
 #endif  /* !OPTEE_ALLOW_SMC_LOAD */
 
@@ -585,7 +588,7 @@ static int32_t opteed_handle_smc_load(uint64_t data_size, uint64_t data_pa)
 				   arg2,
 				   arg3,
 				   &opteed_sp_context[linear_id]);
-	if (opteed_init_with_entry_point(&optee_ep_info) == 0) {
+	if (opteed_init_with_entry_point(&optee_ep_info) == 0U) {
 		rc = -EFAULT;
 	}
 
