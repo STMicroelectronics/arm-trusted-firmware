@@ -386,14 +386,14 @@ int stm32_rng_init(void)
 
 		if (dt_rng.reset >= 0) {
 
-			ret = stm32mp_reset_assert((unsigned long)dt_rng.reset, TIMEOUT_US_1MS);
+			ret = stm32mp_reset_assert((uint32_t)dt_rng.reset, TIMEOUT_US_1MS);
 			if (ret != 0) {
 				panic();
 			}
 
 			udelay(20);
 
-			ret = stm32mp_reset_deassert((unsigned long)dt_rng.reset, TIMEOUT_US_1MS);
+			ret = stm32mp_reset_deassert((uint32_t)dt_rng.reset, TIMEOUT_US_1MS);
 			if (ret != 0) {
 				panic();
 			}

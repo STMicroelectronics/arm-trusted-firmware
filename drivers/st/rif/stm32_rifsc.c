@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2023-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -175,7 +175,7 @@ void stm32_rifsc_ip_configure(int rimu_id, int rifsc_id, uint32_t param)
 	assert(rifsc_id < STM32MP25_RIFSC_MAX_ID);
 #endif /* STM32MP25 */
 
-	bit = BIT(rifsc_id % U(32));
+	bit = BIT_32(rifsc_id % U(32));
 
 	/* Set peripheral accesses to Secure/Privilege only */
 	mmio_setbits_32(RIFSC_BASE + _RIFSC_RISC_SECCFGR(rifsc_id), bit);
