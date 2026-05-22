@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2024-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -47,7 +47,7 @@ static uint32_t otp_bank(uint32_t otp)
 
 static uint32_t otp_bit_mask(uint32_t otp)
 {
-	return BIT(otp & BSEC_OTP_MASK);
+	return BIT_32(otp & BSEC_OTP_MASK);
 }
 
 /*
