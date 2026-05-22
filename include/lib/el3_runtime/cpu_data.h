@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2025, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2014-2026, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -145,7 +145,7 @@ typedef struct cpu_data {
 #if ENABLE_RUNTIME_INSTRUMENTATION
 	uint64_t cpu_data_pmf_ts[CPU_DATA_PMF_TS_COUNT];
 #endif
-#if PLAT_PCPU_DATA_SIZE
+#if defined(PLAT_PCPU_DATA_SIZE) && (PLAT_PCPU_DATA_SIZE > 0)
 	uint8_t platform_cpu_data[PLAT_PCPU_DATA_SIZE];
 #endif
 #if EL3_EXCEPTION_HANDLING
@@ -176,7 +176,7 @@ CPU_DATA_ASSERT_OFFSET(CRASH_BUF, crash_buf);
 #if ENABLE_RUNTIME_INSTRUMENTATION
 CPU_DATA_ASSERT_OFFSET(CPU_DATA_PMF_TS, cpu_data_pmf_ts);
 #endif
-#if PLAT_PCPU_DATA_SIZE
+#if defined(PLAT_PCPU_DATA_SIZE) && (PLAT_PCPU_DATA_SIZE > 0)
 CPU_DATA_ASSERT_OFFSET(PLATFORM_CPU_DATA, platform_cpu_data);
 #endif
 #if EL3_EXCEPTION_HANDLING
