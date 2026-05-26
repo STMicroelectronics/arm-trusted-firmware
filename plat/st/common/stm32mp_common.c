@@ -65,7 +65,7 @@
 #define FWU_INFO_CNT_OFF		U(4)
 
 static console_t console;
-static unsigned long console_clk;
+static unsigned long console_clk = ULONG_MAX;
 static struct spinlock lock;
 
 uintptr_t plat_get_ns_image_entrypoint(void)
@@ -347,8 +347,13 @@ bool stm32mp_uart_console_is_running(void) {
 
 	uint32_t en_bits = USART_CR1_UE | USART_CR1_TE;
 
-	if(!clk_is_enabled(console_clk))
+	if (console_clk == ULONG_MAX) {
 		return false;
+	}
+
+	if (!clk_is_enabled(console_clk)) {
+		return false;
+	}
 
 	return (mmio_read_32(console.base + USART_CR1) & en_bits) == en_bits;
 }
@@ -374,7 +379,7 @@ int stm32mp_uart_console_setup(void)
 		return -ENODEV;
 	}
 
-	console_clk = dt_uart_info.clock;
+	console_clk = (unsigned long)dt_uart_info.clock;
 
 #if (STM32MP_UART_PROGRAMMER || !defined(IMAGE_BL2)) && !STM32MP_SSP
 	if ((stm32_get_boot_interface(&boot_itf, &boot_instance) != 0) ||
