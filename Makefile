@@ -651,6 +651,7 @@ $(eval $(call assert_booleans,\
 	HOB_LIST \
 	LFA_SUPPORT \
 	SDEI_SUPPORT \
+	SMC_PCI_SUPPORT \
 )))
 
 # Numeric_Flags
@@ -909,6 +910,7 @@ $(eval $(call add_defines,\
 	LFA_SUPPORT \
 	SDEI_SUPPORT \
 	USE_GIC_DRIVER \
+	SMC_PCI_SUPPORT \
 )))
 
 ifeq (${PLATFORM_REPORT_CTX_MEM_USE}, 1)
