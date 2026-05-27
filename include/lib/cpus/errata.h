@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2026, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -30,6 +30,10 @@
 /* Errata ID for smc workarounds */
 #define ARCH_WORKAROUND_2		2
 #define ARCH_WORKAROUND_3		3
+
+#ifndef REPORT_ERRATA
+#define REPORT_ERRATA			0
+#endif
 
 #define INCLUDE_ERRATA_LIST	(		\
 	REPORT_ERRATA			|	\

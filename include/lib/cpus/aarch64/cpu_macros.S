@@ -97,7 +97,7 @@
 	.quad \_name\()_errata_list_start
 	.quad \_name\()_errata_list_end
 
-#if REPORT_ERRATA
+#if defined(REPORT_ERRATA) && REPORT_ERRATA
 	.ifndef \_name\()_cpu_str
 	  /*
 	   * Place errata reported flag, and the spinlock to arbitrate access to
@@ -123,7 +123,7 @@
 	.quad \_name\()_errata_lock
 	.quad \_name\()_errata_reported
 #endif /* IMAGE_BL31 */
-#endif /* REPORT_ERRATA */
+#endif /* defined(REPORT_ERRATA) && REPORT_ERRATA */
 
 #if defined(IMAGE_BL31) && CRASH_REPORTING
 	.quad \_name\()_cpu_reg_dump

@@ -50,7 +50,7 @@
 #define CPU_ERRATA_LIST_START_SIZE	CPU_WORD_SIZE
 #define CPU_ERRATA_LIST_END_SIZE	CPU_WORD_SIZE
 /* Fields required to print errata status  */
-#if REPORT_ERRATA
+#if defined(REPORT_ERRATA) && REPORT_ERRATA
 #define CPU_CPU_STR_SIZE	CPU_WORD_SIZE
 /* BL1 doesn't require mutual exclusion and printed flag. */
 #if defined(IMAGE_BL31) || defined(IMAGE_BL32)
@@ -64,7 +64,7 @@
 #define CPU_CPU_STR_SIZE	0
 #define CPU_ERRATA_LOCK_SIZE	0
 #define CPU_ERRATA_PRINTED_SIZE	0
-#endif /* REPORT_ERRATA */
+#endif /* defined(REPORT_ERRATA) && REPORT_ERRATA */
 
 #if defined(IMAGE_BL31) && CRASH_REPORTING
 #define CPU_REG_DUMP_SIZE	CPU_WORD_SIZE
@@ -117,13 +117,13 @@ struct cpu_ops {
 #endif /* (defined(IMAGE_BL31) || defined(IMAGE_BL32)) && CPU_MAX_PWR_DWN_OPS */
 	void *errata_list_start;
 	void *errata_list_end;
-#if REPORT_ERRATA
+#if defined(REPORT_ERRATA) && REPORT_ERRATA
 	char *cpu_str;
 #if defined(IMAGE_BL31) || defined(IMAGE_BL32)
 	spinlock_t *errata_lock;
 	unsigned int *errata_reported;
 #endif /* defined(IMAGE_BL31) || defined(IMAGE_BL32) */
-#endif /* REPORT_ERRATA */
+#endif /* defined(REPORT_ERRATA) && REPORT_ERRATA */
 #if defined(IMAGE_BL31) && CRASH_REPORTING
 	void (*reg_dump)(void);
 #endif /* defined(IMAGE_BL31) && CRASH_REPORTING */
