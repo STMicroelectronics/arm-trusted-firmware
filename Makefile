@@ -723,6 +723,7 @@ $(eval $(call assert_numerics,\
 	SVE_VECTOR_LEN \
 	IMPDEF_SYSREG_TRAP \
 	W \
+	USE_GIC_DRIVER \
 )))
 
 ifdef KEY_SIZE
@@ -907,6 +908,7 @@ $(eval $(call add_defines,\
 	HW_CONFIG_BASE \
 	LFA_SUPPORT \
 	SDEI_SUPPORT \
+	USE_GIC_DRIVER \
 )))
 
 ifeq (${PLATFORM_REPORT_CTX_MEM_USE}, 1)
