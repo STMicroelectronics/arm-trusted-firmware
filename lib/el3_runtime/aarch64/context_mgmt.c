@@ -18,7 +18,9 @@
 #include <common/bl_common.h>
 #include <common/debug.h>
 #include <context.h>
+#if CTX_INCLUDE_EL2_REGS
 #include <drivers/arm/gicv3.h>
+#endif
 #include <lib/cpus/cpu_ops.h>
 #include <lib/cpus/errata.h>
 #include <lib/el3_runtime/context_mgmt.h>
