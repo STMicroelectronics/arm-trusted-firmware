@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2013-2025, Arm Limited and Contributors. All rights reserved.
+# Copyright (c) 2013-2026, Arm Limited and Contributors. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -231,7 +231,6 @@ $(eval $(call assert_booleans,\
     $(sort \
 	CRASH_REPORTING \
 	EL3_EXCEPTION_HANDLING \
-	SDEI_SUPPORT \
 	USE_DSU_DRIVER \
 )))
 
@@ -245,6 +244,5 @@ $(eval $(call add_defines,\
     $(sort \
 	CRASH_REPORTING \
 	EL3_EXCEPTION_HANDLING \
-	SDEI_SUPPORT \
 	USE_DSU_DRIVER \
 )))

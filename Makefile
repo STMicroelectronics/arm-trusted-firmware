@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2013-2025, Arm Limited and Contributors. All rights reserved.
+# Copyright (c) 2013-2026, Arm Limited and Contributors. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -650,6 +650,7 @@ $(eval $(call assert_booleans,\
 	PRESERVE_DSU_PMU_REGS \
 	HOB_LIST \
 	LFA_SUPPORT \
+	SDEI_SUPPORT \
 )))
 
 # Numeric_Flags
@@ -905,6 +906,7 @@ $(eval $(call add_defines,\
 	HOB_LIST \
 	HW_CONFIG_BASE \
 	LFA_SUPPORT \
+	SDEI_SUPPORT \
 )))
 
 ifeq (${PLATFORM_REPORT_CTX_MEM_USE}, 1)
