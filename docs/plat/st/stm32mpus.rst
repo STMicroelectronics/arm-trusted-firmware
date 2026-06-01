@@ -55,6 +55,10 @@ Other configuration flags:
   | Default: stm32mp157c-ev1.dtb
 - | ``DWL_BUFFER_BASE``: the 'serial boot' load address of FIP,
   | default location (end of the first 128MB) is used when absent
+- | ``STM32MP_PSA_FWU_AB_SUPPORT``: to support PSA FWU A/B system.
+  | It requires ``PSA_FWU_SUPPORT`` to be enabled and is only supported on block
+  | devices with a GPT partition table like SD or eMMC.
+  | Default: 0 (disabled)
 - | ``STM32MP_RECONFIGURE_CONSOLE``: to re-configure crash console (especially after BL2).
   | Default: 0 (disabled)
 - | ``STM32MP_UART_BAUDRATE``: to select UART baud rate.
