@@ -1679,8 +1679,10 @@ int plat_setup_psci_ops(uintptr_t sec_entrypoint,
 	stm32_percpu_data[STM32MP_PRIMARY_CPU].state[STATE_START] = true;
 	stm32_percpu_data[STM32MP_PRIMARY_CPU].state[STATE_RUNNING] = true;
 	stm32_percpu_data[STM32MP_PRIMARY_CPU].state[STATE_DDR] = true;
+#if !STM32MP21
 	stm32_percpu_data[STM32MP_SECONDARY_CPU].state[STATE_START] = false;
 	stm32_percpu_data[STM32MP_SECONDARY_CPU].state[STATE_RUNNING] = false;
+#endif
 
 	/* Get nvmem for entry point on STOP2 exit */
 	ret = stm32_get_stop2_entrypoint_cell(&stop2_entrypoint_cell);

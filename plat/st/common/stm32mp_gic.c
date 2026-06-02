@@ -30,7 +30,13 @@ static const interrupt_prop_t stm32mp_interrupt_props[] = {
 };
 
 /* Fix target_mask_array as secondary core is not able to initialize it */
+#if PLATFORM_CORE_COUNT == 2
 static unsigned int target_mask_array[PLATFORM_CORE_COUNT] = {1, 2};
+#elif PLATFORM_CORE_COUNT == 1
+static unsigned int target_mask_array[PLATFORM_CORE_COUNT] = {1};
+#else
+#error "Unsupported PLATFORM_CORE_COUNT"
+#endif
 
 static gicv2_driver_data_t platform_gic_data = {
 	.interrupt_props = stm32mp_interrupt_props,
