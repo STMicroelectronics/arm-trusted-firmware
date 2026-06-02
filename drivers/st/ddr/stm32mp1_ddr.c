@@ -845,16 +845,14 @@ void stm32mp1_ddr_init(struct stm32mp_ddr_priv *priv,
 	}
 
 	ret = stm32mp1_ddrphy_init(priv->phy, pir);
-	if (ret != 0) {
-		panic();
-	}
 
 	if (config->self_refresh) {
 		/* Re-init PHY with ZQ calibration */
 		ret = stm32mp1_self_refresh_zcal(priv, config->zdata);
-		if (ret != 0) {
-			panic();
-		}
+	}
+
+	if (ret != 0) {
+		panic();
 	}
 
 	/*
