@@ -172,7 +172,7 @@ int stm32_pwr_down_wfi_load(bool is_cstop, uint32_t mode)
 		stm32mp1_power_unlock();
 	}
 
-	if (soc_mode == (uint32_t)STM32_PM_CSTOP_ALLOW_LPLV_STOP2) {
+	if (soc_mode == (uint32_t)STM32_PM_CSTANDBY_ALLOW_LPLV_STOP2) {
 #if STM32MP15
 		ERROR("LPLV-Stop2 mode not supported\n");
 		panic();
@@ -194,7 +194,7 @@ int stm32_pwr_down_wfi_load(bool is_cstop, uint32_t mode)
 
 	/* Shutdown with STPMIC switch OFF mode when supported */
 	if (soc_mode == (uint32_t)STM32_PM_SHUTDOWN ||
-	    soc_mode == (uint32_t)STM32_PM_CSTOP_ALLOW_STANDBY_DDR_OFF) {
+	    soc_mode == (uint32_t)STM32_PM_CSTANDBY_ALLOW_STANDBY_DDR_OFF) {
 		shutdown_critic_enter(soc_mode);
 	}
 
