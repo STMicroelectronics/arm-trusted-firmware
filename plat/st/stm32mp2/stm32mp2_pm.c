@@ -946,7 +946,7 @@ static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
 	console_switch_state(CONSOLE_FLAG_RUNTIME);
 }
 
-static void stm32_pwr_domain_pwr_down_wfi(const psci_power_state_t *target_state)
+static void stm32_pwr_domain_pwr_down(const psci_power_state_t *target_state)
 {
 	u_register_t mpidr = read_mpidr();
 	uintptr_t pwr_base __maybe_unused = stm32mp_pwr_base();
@@ -1459,7 +1459,7 @@ static const plat_psci_ops_t stm32_psci_ops = {
 	.pwr_domain_suspend = stm32_pwr_domain_suspend,
 	.pwr_domain_on_finish = stm32_pwr_domain_on_finish,
 	.pwr_domain_suspend_finish = stm32_pwr_domain_suspend_finish,
-	.pwr_domain_pwr_down = stm32_pwr_domain_pwr_down_wfi,
+	.pwr_domain_pwr_down = stm32_pwr_domain_pwr_down,
 	.system_off = stm32_system_off,
 	.system_reset = stm32_system_reset,
 	.system_reset2 = stm32_system_reset2,
