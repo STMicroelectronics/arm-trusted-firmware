@@ -147,10 +147,9 @@ static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
 	/* Nothing to do, power domain is not disabled */
 }
 
-static void __dead2 stm32_pwr_domain_pwr_down_wfi(const psci_power_state_t
-						  *target_state)
+static void __dead2 stm32_pwr_domain_pwr_down(const psci_power_state_t *target_state)
 {
-	ERROR("stm32mpu1 Power Down WFI: operation not handled.\n");
+	ERROR("stm32mpu1 Power Down: operation not handled.\n");
 	panic();
 }
 
@@ -227,7 +226,7 @@ static const plat_psci_ops_t stm32_psci_ops = {
 	.pwr_domain_suspend = stm32_pwr_domain_suspend,
 	.pwr_domain_on_finish = stm32_pwr_domain_on_finish,
 	.pwr_domain_suspend_finish = stm32_pwr_domain_suspend_finish,
-	.pwr_domain_pwr_down = stm32_pwr_domain_pwr_down_wfi,
+	.pwr_domain_pwr_down = stm32_pwr_domain_pwr_down,
 	.system_off = stm32_system_off,
 	.system_reset = stm32_system_reset,
 	.validate_power_state = stm32_validate_power_state,
