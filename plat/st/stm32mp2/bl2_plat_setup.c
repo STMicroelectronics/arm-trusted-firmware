@@ -805,6 +805,15 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 		}
 #endif
 
+#if PSA_FWU_SUPPORT
+		/* This must be done before the device tree unmapped */
+		err = stm32_fwu_set_boot_idx();
+		if (err != 0) {
+			ERROR("FWU: Failed to set boot index\n");
+			panic();
+		}
+#endif /* PSA_FWU_SUPPORT */
+
 		/*
 		 * After this step, the BL2 device tree area will be overwritten
 		 * with BL31 binary, no other data should be read from BL2 DT.
@@ -849,16 +858,6 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 		}
 		break;
 #endif
-
-	case BL33_IMAGE_ID:
-#if PSA_FWU_SUPPORT
-		err = stm32_fwu_set_boot_idx();
-		if (err != 0) {
-			panic();
-		}
-#endif /* PSA_FWU_SUPPORT */
-		break;
-
 	default:
 		/* Do nothing in default case */
 		break;
