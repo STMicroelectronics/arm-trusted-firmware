@@ -104,6 +104,7 @@ void stm32mp_ca35_lpi_restore(void)
 {
 	uint64_t timeout = 0;
 	uint32_t counter = UINT32_MAX;
+	uint64_t reference = read_cntpct_el0();
 
 	/* Use write set registers to set bits */
 	mmio_write_32(A35SSC_BASE + CA35SS_SSC_LPI_STGEN_NTS(WS1),
@@ -112,6 +113,19 @@ void stm32mp_ca35_lpi_restore(void)
 	while ((mmio_read_32(A35SSC_BASE + CA35SS_SSC_LPI_STGEN_NTS(WS1))
 		& CA35SS_SSC_LPI_STGEN_CSYSACK) == 0U) {
 		/* With STGEN isolated, timer is not functional */
+		counter--;
+		if (counter == 0U) {
+			panic();
+		}
+	}
+
+	/*
+	 * With STGEN isolated, timer is not functional.
+	 * Wait for the ARM timer to be incremented at least once
+	 * to avoid that next timeout_init_us() reads a bad value.
+	 */
+	counter = UINT32_MAX;
+	while (read_cntpct_el0() == reference) {
 		counter--;
 		if (counter == 0U) {
 			panic();
