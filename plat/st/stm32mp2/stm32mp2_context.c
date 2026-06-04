@@ -21,6 +21,7 @@
 #include <stm32mp2_context.h>
 
 #define BACKUP_CTX_ADDR		STM32MP_BACKUP_RAM_BASE
+#define BACKUP_CTX_MAX_SIZE	SZ_4K
 #define BACKUP_CTX_CLK		CK_BUS_BKPSRAM
 #define ENC_KEY_SIZE_IN_BYTES	RISAF_KEY_SIZE_IN_BYTES
 
@@ -56,6 +57,9 @@ struct backup_data_s {
 	uintptr_t fdt_bl31;
 	uint8_t data[DATA_SIZE];
 };
+
+CASSERT(sizeof(struct backup_data_s) < BACKUP_CTX_MAX_SIZE,
+	backup_data_s_size_too_large);
 
 #if STM32MP_CONTEXT_VERSION
 static uint32_t stm32mp_pm_crc_check(struct backup_data_s *data)
