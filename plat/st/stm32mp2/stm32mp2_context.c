@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <common/ep_info.h>
 #include <common/tf_crc32.h>
 #include <drivers/clk.h>
 #include <lib/el3_runtime/context_mgmt.h>
@@ -46,7 +47,7 @@ struct backup_data_s {
 	uint8_t enc_mkey[ENC_KEY_SIZE_IN_BYTES];
 	psci_power_state_t standby_pwr_state;
 	cpu_context_t saved_cpu_s_context[PLATFORM_CORE_COUNT];
-	cpu_context_t saved_cpu_ns_context[PLATFORM_CORE_COUNT];
+	entry_point_info_t saved_warmboot_ep[PLATFORM_CORE_COUNT];
 	suspend_mode_t psci_suspend_mode;
 #if defined(SPD_opteed)
 	uintptr_t optee_vector;
@@ -161,12 +162,12 @@ void stm32_pm_context_save(const psci_power_state_t *state, const void *data, si
 
 	backup_data->magic = CONTEXT_MAGIC;
 
-	/* Retrieve non-secure CPU context struct address */
-	cpu_context = cm_get_context(NON_SECURE);
+	for (unsigned int i = 0U; i < PLATFORM_CORE_COUNT; i++) {
+		entry_point_info_t *ep = get_cpu_data_by_index(i, warmboot_ep_info);
 
-	/* Save context in Backup SRAM */
-	memcpy(&backup_data->saved_cpu_ns_context[0], cpu_context,
-	       sizeof(cpu_context_t) * PLATFORM_CORE_COUNT);
+		memcpy(&backup_data->saved_warmboot_ep[i], ep,
+		       sizeof(entry_point_info_t));
+	}
 
 	/* Retrieve secure CPU context struct address */
 	cpu_context = cm_get_context(SECURE);
@@ -215,12 +216,12 @@ void stm32_pm_context_restore(void *data, size_t size)
 	clk_enable(BACKUP_CTX_CLK);
 	backup_data = (struct backup_data_s *)BACKUP_CTX_ADDR;
 
-	/* Retrieve non-secure CPU context struct address */
-	cpu_context = cm_get_context(NON_SECURE);
+	for (unsigned int i = 0U; i < PLATFORM_CORE_COUNT; i++) {
+		entry_point_info_t *ep = get_cpu_data_by_index(i, warmboot_ep_info);
 
-	/* Restore data from Backup SRAM */
-	memcpy(cpu_context, backup_data->saved_cpu_ns_context,
-	       sizeof(cpu_context_t) * PLATFORM_CORE_COUNT);
+		memcpy(ep, &backup_data->saved_warmboot_ep[i],
+		       sizeof(entry_point_info_t));
+	}
 
 	/* Retrieve non-secure CPU context struct address */
 	cpu_context = cm_get_context(SECURE);
