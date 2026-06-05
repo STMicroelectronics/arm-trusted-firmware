@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2023-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -869,6 +869,15 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 
 void bl2_el3_plat_prepare_exit(void)
 {
+	/*
+	 * The cache has just been disabled by the caller function.
+	 * The flush of the data sections should then be done at the beginning
+	 * of this function before accessing data that have not been flushed.
+	 * This is the case for the storage data, or the timer ops for example.
+	 */
+	flush_dcache_range(BSS_START, BSS_END - BSS_START);
+	flush_dcache_range(DATA_START, DATA_END - DATA_START);
+
 #if STM32MP_M33_TDCID
 #if TRUSTED_BOARD_BOOT
 	if (rse_platform_stm32_share_key_stop(0) != PSA_SUCCESS) {
@@ -880,9 +889,6 @@ void bl2_el3_plat_prepare_exit(void)
 		panic();
 	}
 #endif
-
-	flush_dcache_range(BSS_START, BSS_END - BSS_START);
-	flush_dcache_range(DATA_START, DATA_END - DATA_START);
 
 	stm32mp_io_exit();
 
