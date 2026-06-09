@@ -45,14 +45,18 @@ static void cstop_critic_enter(uint32_t mode)
 	}
 }
 
-static void shutdown_critic_enter(void)
+static void shutdown_critic_enter(uint32_t mode)
 {
 	if (dt_pmic_status() > 0) {
 		if (!initialize_pmic_i2c()) {
 			panic();
 		}
 
-		pmic_switch_off();
+		/*
+		 * Force shutdown when requested by OP-TEE (legacy)
+		 * or when indicated by DT with "system-power-controller"
+		 */
+		pmic_switch_off(mode == (uint32_t)STM32_PM_SHUTDOWN);
 	}
 }
 
@@ -188,8 +192,10 @@ int stm32_pwr_down_wfi_load(bool is_cstop, uint32_t mode)
 		cstop_critic_enter(soc_mode);
 	}
 
-	if (soc_mode == (uint32_t)STM32_PM_SHUTDOWN) {
-		shutdown_critic_enter();
+	/* Shutdown with STPMIC switch OFF mode when supported */
+	if (soc_mode == (uint32_t)STM32_PM_SHUTDOWN ||
+	    soc_mode == (uint32_t)STM32_PM_CSTOP_ALLOW_STANDBY_DDR_OFF) {
+		shutdown_critic_enter(soc_mode);
 	}
 
 	/*

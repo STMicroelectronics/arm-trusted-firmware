@@ -24,6 +24,7 @@
 
 static struct i2c_handle_s i2c_handle;
 static uint32_t pmic_i2c_addr;
+static bool stpmic1_system_power_controller;
 
 static int register_pmic(void);
 
@@ -254,8 +255,14 @@ int pmic_voltages_init(void)
 	return 0;
 }
 
-void pmic_switch_off(void)
+/* Execute STPMIC sotfware switch off if requested or configured in DT */
+void pmic_switch_off(bool force)
 {
+	if (!force && !stpmic1_system_power_controller)
+		return;
+
+	INFO("STPMIC1: software switch off\n");
+	console_flush();
 	if (stpmic1_switch_off() == 0) {
 		udelay(100);
 	}
@@ -414,6 +421,12 @@ static int register_pmic(void)
 	pmic_node = dt_get_pmic_node(fdt);
 	if (pmic_node < 0) {
 		return pmic_node;
+	}
+
+	if (fdt_getprop(fdt, pmic_node, "system-power-controller", NULL) == NULL) {
+		stpmic1_system_power_controller = false;
+	} else {
+		stpmic1_system_power_controller = true;
 	}
 
 	regulators_node = fdt_subnode_offset(fdt, pmic_node, "regulators");

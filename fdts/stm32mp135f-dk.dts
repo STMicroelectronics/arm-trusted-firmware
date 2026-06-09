@@ -80,6 +80,7 @@
 	pmic: stpmic@33 {
 		compatible = "st,stpmic1";
 		reg = <0x33>;
+		system-power-controller;
 
 		status = "okay";
 

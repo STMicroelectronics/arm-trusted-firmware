@@ -371,6 +371,7 @@ struct pmic_handle_s {
 	uint32_t i2c_addr;
 	unsigned int pmic_status;
 	uint8_t ref_id;
+	bool system_power_controller;
 };
 
 int stpmic2_register_read(struct pmic_handle_s *pmic,

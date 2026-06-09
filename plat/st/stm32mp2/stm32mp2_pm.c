@@ -20,6 +20,7 @@
 #include <drivers/st/bsec3_reg.h>
 #include <drivers/st/stm32mp_clkfunc.h>
 #include <drivers/st/stm32mp_ddr.h>
+#include <drivers/st/stm32mp_pmic.h>
 #include <drivers/st/stm32mp_reset.h>
 #include <drivers/st/stm32mp2_ddr_helpers.h>
 #include <lib/mmio.h>
@@ -1201,6 +1202,11 @@ static void stm32_system_off(void)
 
 	INFO("BL31: power off\n");
 	console_flush();
+
+	if (dt_pmic_status() > 0) {
+		/* STPMIC switch off when requested in BL31 device tree */
+		pmic_switch_off(false);
+	}
 
 	stm32mp_ca35_lpi_isolate();
 

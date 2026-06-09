@@ -63,6 +63,6 @@ int pmic_voltages_init(void);
  *
  * Panics on errors
  */
-void pmic_switch_off(void);
+void pmic_switch_off(bool force);
 
 #endif /* STM32MP_PMIC_H */

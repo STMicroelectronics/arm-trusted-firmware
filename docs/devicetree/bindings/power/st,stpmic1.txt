@@ -45,6 +45,11 @@ Required parent device properties:
 	IT_TWARN_R=30
 	IT_TWARN_F=31
 
+Optional properties:
+- system-power-controller: This indicates that STPMIC is the power supply master of the
+  system. With this flag, the driver will initiate an software switch OFF
+  for system poweroff.
+
 STPMIC1 consists in a varied group of sub-devices.
 Each sub-device binding is be described in own documentation file.
 
