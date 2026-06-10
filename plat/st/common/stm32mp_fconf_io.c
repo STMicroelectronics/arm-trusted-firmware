@@ -32,6 +32,14 @@ static io_block_spec_t metadata_block_spec = {
 	.offset = 0,    /* To be filled at runtime */
 	.length = 0,    /* To be filled at runtime */
 };
+static io_block_spec_t bootfs_block_spec = {
+	.offset = 0,    /* To be filled at runtime */
+	.length = 0,    /* To be filled at runtime */
+};
+static io_block_spec_t rootfs_block_spec = {
+	.offset = 0,    /* To be filled at runtime */
+	.length = 0,    /* To be filled at runtime */
+};
 #endif
 
 /* By default, STM32 platforms load images from the FIP */
@@ -69,6 +77,18 @@ struct plat_io_policy policies[MAX_NUMBER_IDS] = {
 		.dev_handle = &storage_dev_handle,
 		.image_spec = (uintptr_t)&metadata_block_spec,
 		.img_type_guid = NULL_GUID,
+		.check = open_storage
+	},
+	[FWU_BOOTFS_ID] = {
+		.dev_handle = &storage_dev_handle,
+		.image_spec = (uintptr_t)&bootfs_block_spec,
+		.img_type_guid = XBOOTLDR_GUID,
+		.check = open_storage
+	},
+	[FWU_ROOTFS_ID] = {
+		.dev_handle = &storage_dev_handle,
+		.image_spec = (uintptr_t)&rootfs_block_spec,
+		.img_type_guid = LINUX_FILE_SYSTEM_DATA_GUID,
 		.check = open_storage
 	},
 #endif /* PSA_FWU_SUPPORT */
