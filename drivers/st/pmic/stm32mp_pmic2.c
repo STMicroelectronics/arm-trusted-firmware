@@ -337,20 +337,6 @@ static int pmic2_set_flag(const struct regul_description *desc, uint16_t flag)
 	return 0;
 }
 
-int stpmic2_set_prop(const struct regul_description *desc, uint16_t prop, uint32_t value)
-{
-	struct regul_handle_s *regul = (struct regul_handle_s *)desc->driver_data;
-	int ret;
-
-	VERBOSE("%s: set_prop 0x%x val=%u\n", desc->node_name, prop, value);
-
-	ret = stpmic2_regulator_set_prop(pmic2, regul->id, prop, value);
-	if (ret != 0)
-		return -EPERM;
-
-	return 0;
-}
-
 static const struct regul_ops pmic2_ops = {
 	.set_state = pmic2_set_state,
 	.get_state = pmic2_get_state,

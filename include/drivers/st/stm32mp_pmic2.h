@@ -35,13 +35,6 @@ bool initialize_pmic_i2c(void);
 void initialize_pmic(void);
 
 /*
- * stpmic2_set_prop - Set PMIC2 proprietary property
- *
- * Returns non zero on errors
- */
-int stpmic2_set_prop(const struct regul_description *desc, uint16_t prop, uint32_t value);
-
-/*
  * pmic_switch_off - switch off the platform with PMIC
  *
  * Panics on errors
