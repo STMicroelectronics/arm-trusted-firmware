@@ -24,7 +24,7 @@
 #include <drivers/st/stm32mp2_ddr_helpers.h>
 #include <drivers/st/stm32mp2_ram.h>
 #include <drivers/st/stm32mp2_risaf.h>
-#include <drivers/st/stm32mp_pmic2.h>
+#include <drivers/st/stm32mp_pmic.h>
 #include <drivers/st/stm32mp_reset.h>
 #include <drivers/st/stm32mp_risab_regs.h>
 #include <lib/fconf/fconf.h>

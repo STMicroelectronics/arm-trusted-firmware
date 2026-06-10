@@ -11,7 +11,7 @@
 #include <drivers/delay_timer.h>
 #include <drivers/st/regulator.h>
 #include <drivers/st/stm32_i2c.h>
-#include <drivers/st/stm32mp_pmic2.h>
+#include <drivers/st/stm32mp_pmic.h>
 #include <drivers/st/stpmic2.h>
 #include <lib/mmio.h>
 #include <lib/spinlock.h>

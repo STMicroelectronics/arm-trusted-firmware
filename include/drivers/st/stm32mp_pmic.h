@@ -2,6 +2,9 @@
  * Copyright (c) 2017-2026, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
+ *
+ * Generic API of PMIC drivers used by STM32MP series
+ * (STPMIC1 or STPMCI2 family = STPMIC25 STPMIC2L STPMIC1L)
  */
 
 #ifndef STM32MP_PMIC_H
