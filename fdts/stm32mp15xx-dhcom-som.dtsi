@@ -49,7 +49,7 @@
 	i2c-scl-falling-time-ns = <20>;
 	status = "okay";
 
-	pmic: stpmic@33 {
+	stpmic1: pmic@33 {
 		compatible = "st,stpmic1";
 		reg = <0x33>;
 		interrupts-extended = <&gpioa 0 IRQ_TYPE_EDGE_FALLING>;

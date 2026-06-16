@@ -66,7 +66,7 @@
 	clock-frequency = <400000>;
 	status = "okay";
 
-	pmic: stpmic@33 {
+	stpmic1: pmic@33 {
 		compatible = "st,stpmic1";
 		reg = <0x33>;
 		interrupts-extended = <&exti_pwr 55 IRQ_TYPE_EDGE_FALLING>;
