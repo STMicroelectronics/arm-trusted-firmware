@@ -1208,6 +1208,8 @@ static void stm32_system_off(void)
 		pmic_switch_off(false);
 	}
 
+	stm32_set_scmi_sys_pwr(SCMI_SYS_PWR_SHUTDOWN);
+
 	stm32mp_ca35_lpi_isolate();
 
 	dsb();
