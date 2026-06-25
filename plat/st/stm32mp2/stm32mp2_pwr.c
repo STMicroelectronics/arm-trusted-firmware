@@ -84,9 +84,9 @@ static const struct pwr_regu pwr_regulators[] = {
 static bool stm32mp2_pwr_domain_is_enabled(const struct pwr_regu *regu)
 {
 	uint32_t val = mmio_read_32(stm32mp_pwr_base() + regu->enable_reg);
-	bool status = (val & (regu->valid_mask | regu->enable_reg)) != 0U;
+	bool status = (val & regu->valid_mask) != 0U;
 
-	VERBOSE("pwr: IO doamin status for %s is %d\n", regu->node_name, status);
+	VERBOSE("pwr: IO domain status for %s is %d\n", regu->node_name, status);
 
 	return status;
 
