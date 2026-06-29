@@ -176,7 +176,7 @@
 		     &ospi_port1_cs0_pins_a>;
 	status = "okay";
 
-	spi@40430000 {
+	spi@0 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		status = "okay";
