@@ -122,7 +122,7 @@
 #define _OSPI_MAX_CS		2U
 
 #define _DT_IOM_COMPAT		"st,stm32mp25-omm"
-#define _DT_OSPI_COMPAT		"st,stm32mp25-omi"
+#define _DT_OSPI_COMPAT		"st,stm32mp25-ospi"
 
 #define _FREQ_100MHZ		100000000U
 #define _DLYB_FREQ_50MHZ	50000000U
@@ -1290,7 +1290,7 @@ int stm32_ospi_init(void)
 			return -FDT_ERR_NOTFOUND;
 		}
 
-		ret = fdt_get_reg_props_by_name(fdt, iom_node, "omm_mm",
+		ret = fdt_get_reg_props_by_name(fdt, iom_node, "memory_map",
 						&mm_base, &mm_size);
 		if (ret != 0) {
 			return ret;
