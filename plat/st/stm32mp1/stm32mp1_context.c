@@ -47,8 +47,12 @@
 #define MAGIC_ID(magic)			((magic) & GENMASK_32(31, 16))
 #define MAGIC_AREA_SIZE(magic)		((magic) & GENMASK_32(15, 0))
 
+/* Fixed Value used by previous version of context, no more used */
+#define PLAT_MAX_OPP_NB			U(2)
+#define PLAT_MAX_PLLCFG_NB		U(6)
+
 #if (PLAT_MAX_OPP_NB != 2U) || (PLAT_MAX_PLLCFG_NB != 6U)
-#error MAILBOX_MAGIC_V2/_V3 does not support expected PLL1 settings
+#error MAILBOX does not support expected PLL1 settings
 #endif
 
 /* pll_settings structure size definitions (reference to clock driver) */
