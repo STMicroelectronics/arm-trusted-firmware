@@ -358,10 +358,8 @@ Clocks and Operating Performance Points
 =======================================
 
 - st,clk_opp node: This node will contain all operating point configurations.
-		   We can have 3 operating points:
+		   We can have device operating points:
 		     - st,ck_mpu
-		     - st,ck_axi
-		     - ck_mlahbs
 		   These nodes are not mandatory, but we have to respect the naming.
 
                    Each node will contain a list of operating point configurations (cfg_1, cfg_2...)
@@ -602,36 +600,6 @@ Example of clock tree initialization and Operating Points Performance
 					cfg_5 {
 						hz = <24000000>;
 						st,clksrc = <CLK_MPU_HSE>;
-					};
-				};
-
-				st,ck_axi {
-					cfg_1 {
-						hz = <266500000>;
-						st,clksrc = <CLK_AXI_PLL2P>;
-						st,clkdiv = <DIV(DIV_AXI, 0)>;
-						st,pll = <&pll2_cfg1>;
-					};
-
-					cfg_2 {
-						hz = <64000000>;
-						st,clksrc = <CLK_AXI_HSI>;
-						st,clkdiv = <DIV(DIV_AXI, 0)>;
-					};
-				};
-
-				st,ck_mlahbs {
-					cfg_1 {
-						hz = <208877930>;
-						st,clksrc = <CLK_MLAHBS_PLL3>;
-						st,clkdiv = <DIV(DIV_MLAHB, 0)>;
-						st,pll = <&pll3_cfg1>;
-					};
-
-					cfg_2 {
-						hz = <12000000>;
-						st,clksrc = <CLK_MLAHBS_HSE>;
-						st,clkdiv = <DIV(DIV_MLAHB, 1)>;
 					};
 				};
 			};
