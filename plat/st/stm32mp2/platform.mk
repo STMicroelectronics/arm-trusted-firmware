@@ -6,6 +6,13 @@
 
 STM32MP_M33_TDCID		?=	0
 
+ifeq (${STM32MP_M33_TDCID},1)
+ifeq (${STM32MP_HALT_ON_PANIC},0)
+$(warning Forcing STM32MP_HALT_ON_PANIC=1: reset-on-panic is not supported with STM32MP_M33_TDCID=1)
+endif
+override STM32MP_HALT_ON_PANIC	:=	1
+endif
+
 # Extra partitions used to find FIP, contains:
 ifeq (${STM32MP_M33_TDCID},1)
 # fsbl-m (2), m33ddr (2), m33lp (2), m33fw (2), metadata (2) and the
