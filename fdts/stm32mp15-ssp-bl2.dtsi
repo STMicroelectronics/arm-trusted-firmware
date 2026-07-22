@@ -27,19 +27,19 @@
 
 	soc {
 		efuse@5c005000 {
-			cfg2_otp: cfg2_otp@8 {
+			cfg2_otp: cfg2-otp@8 {
 				reg = <0x8 0x4>;
 			};
 
-			ssp_otp: ssp_otp@20 {
+			ssp_otp: ssp-otp@20 {
 				reg = <0x20 0x4>;
 			};
 
-			chip_otp: chip_otp@a0 {
+			chip_otp: chip-otp@a0 {
 				reg = <0xa0 0x40>;
 			};
 
-			rma_otp: rma_otp@e0 {
+			rma_otp: rma-otp@e0 {
 				reg = <0xe0 0x4>;
 			};
 		};

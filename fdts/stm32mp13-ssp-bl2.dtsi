@@ -16,23 +16,11 @@
 
 	soc {
 		efuse@5c005000 {
-			cfg0_otp: cfg0_otp@0 {
-				reg = <0x0 0x2>;
-			};
-			cfg2_otp: cfg2_otp@8 {
-				reg = <0x8 0x4>;
-			};
-			ssp_otp: cfg9_otp@24 {
-				reg = <0x24 0x4>;
-			};
-			chip_otp: chip_otp@a0 {
+			chip_otp: chip-otp@a0 {
 				reg = <0xa0 0x40>;
 			};
-			rma_otp: rma_otp@e0 {
+			rma_otp: rma-otp@e0 {
 				reg = <0xe0 0x4>;
-			};
-			pkh_otp: pkh_otp@60 {
-				reg = <0x60 0x20>;
 			};
 		};
 
