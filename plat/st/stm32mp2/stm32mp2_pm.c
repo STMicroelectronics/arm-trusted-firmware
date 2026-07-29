@@ -665,7 +665,6 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 #endif
 		(void)nvmem_cell_write(&stop2_entrypoint_cell, (uint8_t *)&stop2_entrypoint,
 				       sizeof(stop2_entrypoint));
-		stm32mp_gic_cpuif_disable();
 		stm32mp_gic_save();
 		stm32mp2_pll1_disable();
 		stm32_set_scmi_sys_pwr(SCMI_SYS_PWR_SUSPEND);
@@ -680,7 +679,6 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 		}
 		(void)nvmem_cell_write(&stop2_entrypoint_cell, (uint8_t *)&stop2_entrypoint,
 				       sizeof(stop2_entrypoint));
-		stm32mp_gic_cpuif_disable();
 		stm32mp_gic_save();
 		stm32mp2_pll1_disable();
 		break;
@@ -695,7 +693,6 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
 		}
 		(void)nvmem_cell_write(&stop2_entrypoint_cell, (uint8_t *)&stop2_entrypoint,
 				       sizeof(stop2_entrypoint));
-		stm32mp_gic_cpuif_disable();
 		stm32mp_gic_save();
 		stm32mp2_pll1_disable();
 		break;
@@ -871,6 +868,7 @@ static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
 		VERBOSE("STOP2 exit\n");
 		/* Restore STGEN and generic timer with current clock */
 		stm32mp_stgen_config(clk_get_rate(CK_KER_STGEN));
+		stm32mp_ca35_lpi_restore();
 		/* restore PLL1 configuration for CA35 */
 		stm32mp2_pll1_enable();
 
@@ -950,6 +948,7 @@ static void stm32_pwr_domain_pwr_down(const psci_power_state_t *target_state)
 {
 	u_register_t mpidr = read_mpidr();
 	uintptr_t pwr_base __maybe_unused = stm32mp_pwr_base();
+	uintptr_t rcc_base __maybe_unused = stm32mp_rcc_base();
 	unsigned int core_id = MPIDR_AFFLVL0_VAL(mpidr);
 
 	/* Core is no more running (stopped or suspended) */
@@ -990,6 +989,25 @@ static void stm32_pwr_domain_pwr_down(const psci_power_state_t *target_state)
 		mmio_write_32(STM32MP_EXTI2_BASE + EXTI2_SWIER2, EXTI2_C1SEV);
         }
 #endif /* !STM32MP_M33_TDCID */
+
+	if (stm32_get_stateid(target_state->pwr_domain_state) != PWRSTATE_STANDBY) {
+		/* Synchronize instruction flow */
+		isb();
+		dsb();
+		/* Try low power mode with auto-reset from WFI*/
+		wfi();
+		/* Sleep abandonned on pending interruption */
+		VERBOSE("BL31: abandon sleep on core%u\n", core_id);
+		console_flush();
+		/* Jump manually to entry point, with mmu disabled. */
+		disable_mmu_el3();
+		isb();
+		dsb();
+		stm32_stop2_entrypoint();
+
+		/* This shouldn't be reached */
+		panic();
+	}
 
 	/* Synchronize instruction flow before auto-reset from WFI */
 	isb();
