@@ -524,7 +524,7 @@ static uint32_t ca35ss_clk_svc_handler_set_rate(uint64_t target_rate)
 
 static uint32_t ca35ss_clk_svc_pll1_set(uint64_t target_rate)
 {
-	uint32_t status;
+	uint32_t status = STM32_SMC_FAILED;
 
 	/* Change OPP/RM(overdrive) when moving OPP Nominal to Overdrive */
 	if (target_rate > NOMINAL_RATE) {
@@ -532,7 +532,9 @@ static uint32_t ca35ss_clk_svc_pll1_set(uint64_t target_rate)
 	}
 
 	/* Change PLL1 rate  */
-	status = stm32mp2_pll1_set_rate(target_rate);
+	if (stm32mp2_pll1_set_rate(target_rate) == 0) {
+		status = STM32_SMC_OK;
+	}
 
 	/* Back to base state */
 	ca35ss_set_state_base();
