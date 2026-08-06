@@ -503,11 +503,11 @@ void bl2_el3_plat_arch_setup(void)
 #if STM32MP_UART_PROGRAMMER
 	/* Reset USB sub-system to avoid all spurious transactions */
 #if STM32MP21
-	stm32mp_reset_assert(OTG_R, TIMEOUT_US_1MS);
+	(void)stm32mp_reset_assert(OTG_R, TIMEOUT_US_1MS);
 #else /* !STM32MP21 */
-	stm32mp_reset_assert(USB3DR_R, TIMEOUT_US_1MS);
+	(void)stm32mp_reset_assert(USB3DR_R, TIMEOUT_US_1MS);
 #endif /* STM32MP21 */
-	stm32mp_reset_assert(USB2PHY2_R, TIMEOUT_US_1MS);
+	(void)stm32mp_reset_assert(USB2PHY2_R, TIMEOUT_US_1MS);
 #endif /* STM32MP_UART_PROGRAMMER */
 
 #if STM32MP_DDR_FIP_IO_STORAGE || TRUSTED_BOARD_BOOT
