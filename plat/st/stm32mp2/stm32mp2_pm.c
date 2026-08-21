@@ -1628,7 +1628,7 @@ static void stm32_pm_tdcid_init(void *fdt)
 	mmio_write_32(pwr_base + PWR_CR10, PWR_CR10_RETRBSEN_STANDBY);
 
 	/* Prevent RETRAM erase */
-	mmio_write_32(RAMCFG_BASE + RAMCFG_RETRAMCR, SRAMHWERDIS);
+	mmio_setbits_32(RAMCFG_BASE + RAMCFG_RETRAMCR, SRAMHWERDIS);
 
 #if !STM32MP21
 	/* System standby not set (D3) */
