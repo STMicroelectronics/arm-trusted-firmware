@@ -15,7 +15,9 @@
 #define DDR_NS_BASE	STM32MP_DDR_BASE
 #ifdef AARCH32_SP_OPTEE
 /* OP-TEE secure memory: located at DDR top */
+#ifndef DDR_SEC_SIZE
 #define DDR_SEC_SIZE	STM32MP_DDR_S_SIZE
+#endif
 #define DDR_SEC_BASE	(STM32MP_DDR_BASE + (DDR_SIZE - DDR_SEC_SIZE))
 #define DDR_NS_SIZE	(DDR_SEC_BASE - DDR_NS_BASE)
 #else /* !AARCH32_SP_OPTEE */
