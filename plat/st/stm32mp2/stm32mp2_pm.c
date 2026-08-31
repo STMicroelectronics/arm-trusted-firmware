@@ -48,9 +48,6 @@
 #define DEFAULT_LPLVDLY_D2	0U		/* 6xLSI cycle = 187 us */
 #define DEFAULT_LPSTOP1DLY	100U		/* LP-Stop1 PWRLP_DLY to wait VTT */
 
-#define RAMCFG_RETRAMCR		0x180U
-#define SRAMHWERDIS		BIT(12)
-
 /* GIC interrupt number */
 #define CPU2_SEV_IRQn		252
 #define RCC_WAKEUP_IRQn		254
@@ -1626,9 +1623,6 @@ static void stm32_pm_tdcid_init(void *fdt)
 #endif
 	/* Maintain RETRAM content in Standby */
 	mmio_write_32(pwr_base + PWR_CR10, PWR_CR10_RETRBSEN_STANDBY);
-
-	/* Prevent RETRAM erase */
-	mmio_setbits_32(RAMCFG_BASE + RAMCFG_RETRAMCR, SRAMHWERDIS);
 
 #if !STM32MP21
 	/* System standby not set (D3) */

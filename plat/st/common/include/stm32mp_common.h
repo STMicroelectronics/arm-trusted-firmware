@@ -150,7 +150,8 @@ void stm32mp_io_exit(void);
 int stm32mp_map_ddr_non_cacheable(void);
 int stm32mp_unmap_ddr(void);
 
-/* Functions to map RETRAM, and unmap it */
+/* Functions for RETRAM memory: init, map and unmap */
+void stm32mp_init_retram(void);
 int stm32mp_map_retram(void);
 int stm32mp_unmap_retram(void);
 

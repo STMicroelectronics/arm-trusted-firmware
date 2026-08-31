@@ -9,6 +9,7 @@
 
 #include <drivers/st/stm32_iwdg.h>
 #include <lib/mmio.h>
+#include <lib/mmio_poll.h>
 #include <lib/xlat_tables/xlat_tables_v2.h>
 
 #include <platform_def.h>
@@ -128,6 +129,57 @@ void configure_mmu(void)
 	init_xlat_tables();
 
 	enable_mmu_el3(0);
+}
+
+#define RAMCFG_RETRAMCR		0x180U
+#define RAMCFG_RETRAMICR	0x194U
+#define RAMCFG_RETRAMECCKEYR	0x1A4U
+#define RAMCFG_RETRAMERKEYR	0x1A8U
+
+#define RAMCFG_CR_SRAMHWERDIS	BIT(12)
+#define RAMCFG_CR_SRAMER	BIT(8)
+#define RAMCFG_CR_ALE		BIT(4)
+#define RAMCFG_CR_ECCE		BIT(0)
+
+void stm32mp_init_retram(void)
+{
+	uint32_t cr = mmio_read_32(RAMCFG_BASE + RAMCFG_RETRAMCR);
+	int ret;
+
+	mmio_write_32(RAMCFG_BASE + RAMCFG_RETRAMICR, 0x3);
+	/* Default configuration for TF-A */
+	cr |= RAMCFG_CR_SRAMHWERDIS | RAMCFG_CR_ALE;
+	mmio_write_32(RAMCFG_BASE + RAMCFG_RETRAMCR, cr);
+
+	/* ECC seems deactivated after Standby + write so read again */
+	cr = mmio_read_32(RAMCFG_BASE + RAMCFG_RETRAMCR);
+	/* Activate ECC on RETRAM when not yet done */
+	if ((cr & RAMCFG_CR_ECCE) != RAMCFG_CR_ECCE) {
+		/* ECC write protection key */
+		mmio_write_32(RAMCFG_BASE + RAMCFG_RETRAMECCKEYR, 0xAE);
+		mmio_write_32(RAMCFG_BASE + RAMCFG_RETRAMECCKEYR, 0x75);
+		/* Activate ECC and, for cold boot, erase memory */
+		cr |= RAMCFG_CR_ECCE;
+		if (!stm32mp_is_wakeup_from_standby()) {
+			/* Erase Protection key */
+			mmio_write_32(RAMCFG_BASE + RAMCFG_RETRAMERKEYR, 0xCA);
+			mmio_write_32(RAMCFG_BASE + RAMCFG_RETRAMERKEYR, 0x53);
+			cr |= RAMCFG_CR_SRAMER;
+		}
+		mmio_write_32(RAMCFG_BASE + RAMCFG_RETRAMCR, cr);
+		if ((cr & RAMCFG_CR_SRAMER) == RAMCFG_CR_SRAMER) {
+			ret = mmio_read_32_poll_timeout(RAMCFG_BASE + RAMCFG_RETRAMCR,
+							cr,
+							(cr & RAMCFG_CR_SRAMER) == 0,
+							1000);
+			if (ret != 0) {
+				panic();
+			}
+		}
+	}
+	/* Activate write protection on ECC bit and SRAM erase bit */
+	mmio_write_32(RAMCFG_BASE + RAMCFG_RETRAMECCKEYR, 0x0);
+	mmio_write_32(RAMCFG_BASE + RAMCFG_RETRAMERKEYR, 0x0);
 }
 
 int stm32mp_map_retram(void)

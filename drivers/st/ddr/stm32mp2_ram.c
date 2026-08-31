@@ -116,6 +116,8 @@ static int stm32mp2_ddr_setup(void)
 		config.self_refresh = true;
 	}
 
+	stm32mp_init_retram();
+
 	/*  Map dynamically RETRAM area to save or restore PHY retention registers */
 	if (stm32mp_map_retram() != 0) {
 		panic();
