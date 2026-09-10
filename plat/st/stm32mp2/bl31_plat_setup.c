@@ -218,8 +218,41 @@ static void __dead2 stm32_system_reset(void)
 	stm32mp_system_reset();
 }
 
+#if PSCI_OS_INIT_MODE
+static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
+{
+}
+
+static void stm32_pwr_domain_suspend_finish(const psci_power_state_t
+					    *target_state)
+{
+}
+
+static int stm32_validate_power_state(unsigned int power_state,
+				      psci_power_state_t *req_state)
+{
+	return PSCI_E_INVALID_PARAMS;
+}
+
+static void stm32_get_sys_suspend_power_state(psci_power_state_t *req_state)
+{
+	unsigned int i;
+
+	for (i = 0U; i <= PLAT_MAX_PWR_LVL; i++) {
+		req_state->pwr_domain_state[i] = STM32MP_LOCAL_STATE_RUN;
+	}
+	req_state->last_at_pwrlvl = 0x0;
+}
+#endif
+
 static const plat_psci_ops_t stm32_psci_ops = {
 	.system_reset = stm32_system_reset,
+#if PSCI_OS_INIT_MODE
+	.pwr_domain_suspend = stm32_pwr_domain_suspend,
+	.pwr_domain_suspend_finish = stm32_pwr_domain_suspend_finish,
+	.validate_power_state = stm32_validate_power_state,
+	.get_sys_suspend_power_state = stm32_get_sys_suspend_power_state,
+#endif
 };
 
 /* Stub PSCI platform functions */
