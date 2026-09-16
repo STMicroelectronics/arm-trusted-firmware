@@ -885,6 +885,8 @@ void bl2_el3_plat_prepare_exit(void)
 	flush_dcache_range(BSS_START, BSS_END - BSS_START);
 	flush_dcache_range(DATA_START, DATA_END - DATA_START);
 
+	stm32mp_erase_mbedtls_heap();
+
 #if STM32MP_M33_TDCID
 #if TRUSTED_BOARD_BOOT
 	if (rse_platform_stm32_share_key_stop(0) != PSA_SUCCESS) {

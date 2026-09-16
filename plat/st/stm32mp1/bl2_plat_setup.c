@@ -790,6 +790,8 @@ void bl2_el3_plat_prepare_exit(void)
 	flush_dcache_range(DATA_START, DATA_END - DATA_START);
 #endif
 
+	stm32mp_erase_mbedtls_heap();
+
 #if !defined(DECRYPTION_SUPPORT_none)
 	if (stm32_lock_enc_key_otp() != 0) {
 		panic();
