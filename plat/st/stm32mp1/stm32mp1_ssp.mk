@@ -40,13 +40,20 @@ PLAT_BL_COMMON_SOURCES	+=	drivers/arm/tzc/tzc400.c				\
 				drivers/st/gpio/stm32_gpio.c				\
 				drivers/st/i2c/stm32_i2c.c				\
 				drivers/st/iwdg/stm32_iwdg.c				\
-				drivers/st/pmic/stm32mp_pmic.c				\
-				drivers/st/pmic/stpmic1.c				\
 				drivers/st/reset/stm32mp1_reset.c			\
 				plat/st/common/stm32mp_dt.c				\
 				plat/st/stm32mp1/stm32mp1_dbgmcu.c			\
 				plat/st/stm32mp1/stm32mp1_helper.S			\
 				plat/st/stm32mp1/stm32mp1_syscfg.c
+
+# Match platform.mk PMIC driver selection: SSP also builds with STPMIC1L PMICs.
+ifeq ($(STM32MP_STPMIC1L),1)
+PLAT_BL_COMMON_SOURCES	+=	drivers/st/pmic/stm32mp_pmic2.c				\
+				drivers/st/pmic/stpmic2.c
+else
+PLAT_BL_COMMON_SOURCES	+=	drivers/st/pmic/stm32mp_pmic.c				\
+				drivers/st/pmic/stpmic1.c
+endif
 
 ifeq ($(STM32MP13),1)
 PLAT_BL_COMMON_SOURCES	+=	drivers/st/clk/clk-stm32-core.c				\
