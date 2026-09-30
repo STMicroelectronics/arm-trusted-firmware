@@ -107,6 +107,11 @@ $(PLAT_PARTITION_MAX_ENTRIES)")
 endif
 endif
 
+# Use unique DDR_FW_HASH_OID (default with STM32MP_LEGACY_DDR_FW_OID = 0)
+# Or the former version compatible with previous ST TF-A versions (STM32MP_LEGACY_DDR_FW_OID = 1),
+# but conflicting with ETHOSN_NPU_FW_CONTENT_CERT_PK_OID
+STM32MP_LEGACY_DDR_FW_OID	:=	0
+
 $(eval DTC_V = $(shell $($(ARCH)-dtc) -v | awk '{print $$NF}'))
 $(eval DTC_VERSION = $(shell printf "%d" $(shell echo ${DTC_V} | cut -d- -f1 | sed "s/\./0/g" | grep -o "[0-9]*")))
 DTC_CPPFLAGS			+=	${INCLUDES}
@@ -163,6 +168,7 @@ $(eval $(call assert_booleans,\
 		STM32MP_EMMC_BOOT \
 		STM32MP_HALT_ON_PANIC \
 		STM32MP_HYPERFLASH \
+		STM32MP_LEGACY_DDR_FW_OID \
 		STM32MP_PSA_FWU_AB_SUPPORT \
 		STM32MP_RAW_NAND \
 		STM32MP_RECONFIGURE_CONSOLE \
@@ -189,6 +195,7 @@ $(eval $(call add_defines,\
 		STM32MP_EMMC_BOOT \
 		STM32MP_HALT_ON_PANIC \
 		STM32MP_HYPERFLASH \
+		STM32MP_LEGACY_DDR_FW_OID \
 		STM32MP_PSA_FWU_AB_SUPPORT \
 		STM32MP_RAW_NAND \
 		STM32MP_RECONFIGURE_CONSOLE \

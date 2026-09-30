@@ -4,4 +4,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#if STM32MP_LEGACY_DDR_FW_OID
+#define DDR_FW_HASH_OID		"1.3.6.1.4.1.4128.2300.1"
+#else
 #define DDR_FW_HASH_OID		"1.3.6.1.4.1.7616.2100.1401"
+#endif
