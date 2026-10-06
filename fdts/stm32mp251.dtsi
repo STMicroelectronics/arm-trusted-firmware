@@ -26,17 +26,17 @@
 		domain-idle-states {
 			domain-stop1 {
 				compatible = "domain-idle-state";
-				arm,psci-suspend-param = <0x00000011>;
+				arm,psci-suspend-param = <0x00000012>;
 			};
 
 			domain-lp-stop1 {
 				compatible = "domain-idle-state";
-				arm,psci-suspend-param = <0x00000021>;
+				arm,psci-suspend-param = <0x00000022>;
 			};
 
 			domain-lplv-stop1 {
 				compatible = "domain-idle-state";
-				arm,psci-suspend-param = <0x00000211>;
+				arm,psci-suspend-param = <0x00000222>;
 			};
 
 			domain-stop2 {

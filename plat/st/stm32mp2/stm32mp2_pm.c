@@ -124,21 +124,21 @@ static struct nvmem_cell stop2_entrypoint_cell;
 	 ((uint32_t)((pwr_domain_state[LVL_D1_LPLV] == STM32MP_LOCAL_STATE_OFF) ? \
 		     PSTATE_TYPE_POWERDOWN : 0) << PSTATE_TYPE_SHIFT))
 
-/* State-id - 0x00000001 */
+/* State-id - 0x00000002 */
 #define PWRSTATE_RUN \
-	stm32_make_pwrstate(RUN, RUN, RUN, RUN, RET, PSTATE_TYPE_STANDBY)
+	stm32_make_pwrstate(RUN, RUN, RUN, RUN, LP, PSTATE_TYPE_STANDBY)
 
-/* State-id - 0x00000011 Stop1 */
+/* State-id - 0x00000012 Stop1 */
 #define PWRSTATE_STOP1 \
-	stm32_make_pwrstate(RUN, RUN, RUN, RET, RET, PSTATE_TYPE_STANDBY)
+	stm32_make_pwrstate(RUN, RUN, RUN, RET, LP, PSTATE_TYPE_STANDBY)
 
-/* State-id - 0x00000021 LP-Stop1*/
+/* State-id - 0x00000022 LP-Stop1*/
 #define PWRSTATE_LP_STOP1 \
-	stm32_make_pwrstate(RUN, RUN, RUN, LP, RET, PSTATE_TYPE_STANDBY)
+	stm32_make_pwrstate(RUN, RUN, RUN, LP, LP, PSTATE_TYPE_STANDBY)
 
-/* State-id - 0x00000211 LPLV-Stop1*/
+/* State-id - 0x00000222 LPLV-Stop1*/
 #define PWRSTATE_LPLV_STOP1 \
-	stm32_make_pwrstate(RUN, RUN, LP, RET, RET, PSTATE_TYPE_STANDBY)
+	stm32_make_pwrstate(RUN, RUN, LP, LP, LP, PSTATE_TYPE_STANDBY)
 
 /* State-id - 0x40001333 Stop2 */
 #define PWRSTATE_STOP2 \
@@ -279,7 +279,7 @@ static void stm32_cpu_standby(plat_local_state_t cpu_state)
 	u_register_t mpidr = read_mpidr();
 	unsigned int core_id = MPIDR_AFFLVL0_VAL(mpidr);
 
-	assert(cpu_state == STM32MP_LOCAL_STATE_RET);
+	assert(cpu_state == STM32MP_LOCAL_STATE_LP);
 
 	stm32mp_state_set(core_id, STATE_RUNNING, false);
 
