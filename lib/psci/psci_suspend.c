@@ -138,11 +138,11 @@ int psci_cpu_suspend_start(unsigned int idx,
 	psci_acquire_pwr_domain_locks(end_pwrlvl, parent_nodes);
 
 	/*
-	 * We check if there are any pending interrupts after the delay
+	 * We check if there are any pending NS interrupts (IRQ) after the delay
 	 * introduced by lock contention to increase the chances of early
 	 * detection that a wake-up interrupt has fired.
 	 */
-	if (read_isr_el1() != 0U) {
+	if ((read_isr_el1() & BIT(ISR_I_SHIFT)) != 0U) {
 		goto suspend_exit;
 	}
 
